@@ -1,0 +1,83 @@
+[gd_scene load_steps=7 format=3 uid="uid://dr6qnsfg5v8bf"]
+
+[ext_resource type="Script" uid="uid://cn0v4jk621ejf" path="res://assets/scripts/jigsaw_puzzle_1.gd" id="1_p57kp"]
+[ext_resource type="Texture2D" uid="uid://7d68ij6kdk3x" path="res://assets/images/puzzle_background.jpg" id="2_1s5nt"]
+[ext_resource type="Texture2D" uid="uid://fdsqaxc6rx0h" path="res://assets/puzzles/seattle.jpg" id="3_p7ub0"]
+[ext_resource type="Script" uid="uid://dff2jx1ums0vv" path="res://assets/scripts/Camera2D.gd" id="4_823ux"]
+[ext_resource type="FontFile" uid="uid://dbfwm247cqnhw" path="res://assets/scripts/LinLibertine_I.otf" id="5_a27gv"]
+[ext_resource type="Theme" uid="uid://0xk2aimn5x6r" path="res://assets/themes/main_menu_buttons.tres" id="6_nllai"]
+
+[node name="Node2D" type="Node2D"]
+script = ExtResource("1_p57kp")
+
+[node name="TextureRect" type="TextureRect" parent="." groups=["dropable"]]
+offset_left = -11355.0
+offset_top = -6755.0
+offset_right = 12014.0
+offset_bottom = 8128.0
+texture = ExtResource("2_1s5nt")
+expand_mode = 1
+
+[node name="Image" type="Sprite2D" parent="." groups=["dropable"]]
+position = Vector2(-17993, 1014)
+scale = Vector2(1.37158, 1.12207)
+texture = ExtResource("3_p7ub0")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(958, 542)
+zoom = Vector2(0.35, 0.35)
+script = ExtResource("4_823ux")
+
+[node name="Label" type="Label" parent="."]
+offset_left = -156.0
+offset_top = -197.0
+offset_right = 2065.0
+offset_bottom = -59.0
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("5_a27gv")
+theme_override_font_sizes/font_size = 120
+horizontal_alignment = 1
+
+[node name="referenceImage" type="TextureRect" parent="."]
+offset_left = 2438.0
+offset_top = -805.0
+offset_right = 3444.0
+offset_bottom = 70.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="MainMenu" type="Button" parent="."]
+visible = false
+custom_minimum_size = Vector2(250, 50)
+offset_left = 517.0
+offset_top = -311.0
+offset_right = 1378.0
+offset_bottom = 11.0
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme = ExtResource("6_nllai")
+theme_override_font_sizes/font_size = 70
+text = "Main Menu"
+
+[node name="UI_Button" type="CanvasLayer" parent="."]
+
+[node name="Back" type="Button" parent="UI_Button"]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 3.0
+offset_top = -105.0
+offset_right = 1069.0
+offset_bottom = 150.0
+grow_vertical = 0
+scale = Vector2(0.4, 0.4)
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme = ExtResource("6_nllai")
+theme_override_font_sizes/font_size = 70
+text = "Return to Select Puzzle"
+
+[node name="OnlineMode" type="Label" parent="UI_Button"]
+offset_right = 40.0
+offset_bottom = 23.0

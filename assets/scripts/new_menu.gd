@@ -1,0 +1,223 @@
+extends Control
+
+# this menu is the start screen
+# Called when the node enters the scene tree for the first time.
+var progress_arr = []
+var network_manager = null
+var connection_dialog = null
+
+func _ready():	
+	#await Firebase.Auth.remove_auth()
+	
+	# Prevents pieces from being loaded multiple times
+	if(PuzzleVar.open_first_time):
+		print("Adding Puzzles")
+		load(PuzzleVar.path)
+		var dir = DirAccess.open(PuzzleVar.path)
+		if dir:
+			dir.list_dir_begin()
+			var file_name = dir.get_next()
+			# the below code is to parse through the image folder in order to put
+			# the appropriate image files into the list for reference for the puzzle
+			while file_name != "":
+				if !file_name.begins_with(".") and file_name.ends_with(".import"):
+					# apend the image into the image list
+					PuzzleVar.images.append(file_name.replace(".import",""))
+				file_name = dir.get_next()
+			PuzzleVar.images.sort()
+			
+		else:
+			print("An error occured trying to access the path")
+			
+		PuzzleVar.open_first_time = false
+	
+	# below is where the user anonymous login happens	
+	# if the user doesn't need to log in, check their stored auth data
+	check_internet_connection()
+	
+	if(FireAuth.offlineMode == 0):
+		if not FireAuth.needs_login():		
+			await FireAuth.check_auth_file()
+			print("\n Account Found: ", FireAuth.get_user_id())
+			await FireAuth.get_progress()
+		else:
+			## attempt anonymous login if login is required
+			print("Making new account")
+			await FireAuth.attempt_anonymous_login()
+	
+	# Setup network manager
+	network_manager = get_node_or_null("/root/NetworkManager")
+	if not network_manager:
+		var network_script = load("res://assets/scripts/NetworkManager.gd")
+		network_manager = network_script.new()
+		network_manager.name = "NetworkManager"
+		get_tree().root.add_child(network_manager)
+	
+	# Connect to network signals
+	network_manager.client_connected.connect(_on_client_connected)
+	network_manager.connection_failed.connect(_on_connection_failed)
+
+# Check for an internet connection
+func check_internet_connection():
+	# Create an HTTP request node and connect its completion signal
+	var http_request = HTTPRequest.new()
+	add_child(http_request)
+	
+	# Connect the request_completed signal properly
+	http_request.request_completed.connect(_on_request_completed)
+	
+	# Perform a GET request to a reliable URL
+	var error = http_request.request("https://www.google.com/")
+	
+	if error != OK:
+		print("Error sending HTTP request:", error)
+		FireAuth.offlineMode = 1
+
+func _on_request_completed(result, response_code, headers, body):
+	if response_code == 200:
+		print("Internet connection available")
+	else:
+		print("No internet connection or bad response, code:", response_code)
+		FireAuth.offlineMode = 1
+
+# Called every frame. 'delta' is the elapsed time since the previous frame.
+func _process(delta):
+	pass
+
+func _on_start_random_pressed():
+	if(FireAuth.offlineMode == 0):
+		await FireAuth.addUserMode("Single Player")
+	$AudioStreamPlayer.play()
+	randomize() # initialize a random seed for the random number generator
+	# choose a random image from the list PuzzleVar.images
+	PuzzleVar.choice = randi_range(0,PuzzleVar.images.size()-1)
+	# choose a random size for the puzzle ranging from 2x2 to 10x10
+	var val = randi_range(2,10)
+	PuzzleVar.col = val
+	PuzzleVar.row = val
+	# load the texture and get the size of the puzzle image so that the game
+	# can slice it up into pieces and start the puzzle
+	var image_texture = load(PuzzleVar.path+"/"+PuzzleVar.images[PuzzleVar.choice])
+	var image_size = image_texture.get_size()
+	PuzzleVar.size = image_size
+	# change to actual game scene
+	get_tree().change_scene_to_file("res://assets/scenes/jigsaw_puzzle_1.tscn")
+
+func _on_logged_in() -> void:
+	pass
+
+func _on_select_puzzle_pressed():
+	$AudioStreamPlayer.play() # doesn't work, switches scenes too fast
+	# switches to a new scene that will ask you to
+	# actually select what image you want to solve
+	if(FireAuth.offlineMode == 0):
+		await FireAuth.addUserMode("Single Player")
+	get_tree().change_scene_to_file("res://assets/scenes/select_puzzle.tscn")
+
+func _on_play_online_pressed():
+	$AudioStreamPlayer.play()
+	
+	# Check if we have network connectivity
+	if FireAuth.offlineMode == 1:
+		# Show a message about being offline
+		var popup = AcceptDialog.new()
+		popup.title = "Offline Mode"
+		popup.dialog_text = "Cannot play online while in offline mode. Please check your internet connection."
+		add_child(popup)
+		popup.popup_centered()
+		return
+	
+	# Update Firebase mode
+	if FireAuth.offlineMode == 0:
+		FireAuth.addUserMode("Multiplayer")
+	
+	# Attempt to connect to the hard-coded server
+	print("Attempting to connect to server...")
+	if network_manager.join_server():
+		# Show simple connecting message
+		var connecting_label = Label.new()
+		connecting_label.name = "ConnectingLabel"
+		connecting_label.text = "Connecting to server..."
+		connecting_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		connecting_label.position = Vector2(get_viewport_rect().size.x / 2 - 100, get_viewport_rect().size.y / 2)
+		add_child(connecting_label)
+	else:
+		print("Failed to initiate connection")
+		# Show error message
+		var error_popup = AcceptDialog.new()
+		error_popup.title = "Connection Error"
+		error_popup.dialog_text = "Failed to connect to server."
+		add_child(error_popup)
+		error_popup.popup_centered()
+
+# Network signal handlers
+func _on_client_connected():
+	print("Connected to server successfully")
+	
+	# Remove connecting label if it exists
+	var connecting_label = get_node_or_null("ConnectingLabel")
+	if connecting_label:
+		connecting_label.queue_free()
+	
+	# Update the puzzle choice to match server's choice
+	if network_manager:
+		PuzzleVar.choice = network_manager.current_puzzle_id if network_manager.current_puzzle_id != null else 0
+	
+	# Ensure choice is valid
+	if PuzzleVar.choice < 0 or PuzzleVar.choice >= PuzzleVar.images.size():
+		PuzzleVar.choice = 0
+	
+	# Load the texture and get the size of the puzzle image
+	var image_texture = load(PuzzleVar.path+"/"+PuzzleVar.images[PuzzleVar.choice])
+	var image_size = image_texture.get_size()
+	PuzzleVar.size = image_size
+	
+	# Instead of changing scenes directly, flag the NetworkManager to do it
+	if network_manager:
+		print("Setting flags for scene change")
+		network_manager.should_load_game = true
+		
+		# Use a timer to set the ready flag
+		var timer = Timer.new()
+		add_child(timer)
+		timer.wait_time = 0.5
+		timer.one_shot = true
+		timer.timeout.connect(func(): 
+			network_manager.ready_to_load = true
+			print("Ready to load flag set to true")
+		)
+		timer.start()
+	else:
+		print("ERROR: network_manager is null!")
+
+func _on_connection_failed():
+	# Remove connecting label if it exists
+	var connecting_label = get_node_or_null("ConnectingLabel")
+	if connecting_label:
+		connecting_label.queue_free()
+	
+	print("Connection to server failed")
+	
+	# Show error message
+	var error_popup = AcceptDialog.new()
+	error_popup.title = "Connection Error"
+	error_popup.dialog_text = "Connection to server failed."
+	add_child(error_popup)
+	error_popup.popup_centered()
+
+func _on_quit_pressed():
+	# quit the game
+	$AudioStreamPlayer.play() # doesn't work, quits too fast
+	get_tree().quit() # closes the scene tree to leave the game
+
+# this is used to check for events such as a key press
+func _input(event):
+	if event is InputEventKey and event.pressed and event.echo == false:
+		if event.keycode == 68: # if key that is pressed is d
+				# toggle debug mode
+				PuzzleVar.debug = !PuzzleVar.debug
+				if PuzzleVar.debug:
+					$Label.show()
+				else:
+					$Label.hide()
+				print("debug mode is: "+str(PuzzleVar.debug))

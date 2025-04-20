@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://fy0lqdbxmdpw"]
+
+[ext_resource type="Script" uid="uid://bfhajvfqrgdml" path="res://assets/scripts/headless_server.gd" id="1_tqdos"]
+
+[node name="Node" type="Node"]
+script = ExtResource("1_tqdos")
