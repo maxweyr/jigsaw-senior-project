@@ -1,0 +1,7 @@
+[gd_resource type="Theme" load_steps=2 format=3 uid="uid://cfxebjeqy3ke7"]
+
+[ext_resource type="FontFile" uid="uid://0gktlfmg4dws" path="res://assets/fonts/ArchitectsDaughter.ttf" id="1_lh6nh"]
+
+[resource]
+default_font = ExtResource("1_lh6nh")
+default_font_size = 60

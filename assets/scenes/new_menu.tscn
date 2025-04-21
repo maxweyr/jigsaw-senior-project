@@ -57,8 +57,18 @@ Puzzle"
 label_settings = SubResource("LabelSettings_75luh")
 horizontal_alignment = 1
 
-[node name="PlayOnline" type="Button" parent="VBoxContainer"]
+[node name="select puzzle" type="Button" parent="VBoxContainer"]
+custom_minimum_size = Vector2(0, 125)
 layout_mode = 2
+theme = ExtResource("3_ro0bn")
+theme_override_font_sizes/font_size = 50
+text = "Select Puzzle"
+
+[node name="PlayOnline" type="Button" parent="VBoxContainer"]
+custom_minimum_size = Vector2(0, 125)
+layout_mode = 2
+theme = ExtResource("3_ro0bn")
+theme_override_font_sizes/font_size = 50
 text = "Play Online"
 
 [node name="start random" type="Button" parent="VBoxContainer"]
@@ -67,13 +77,6 @@ layout_mode = 2
 theme = ExtResource("3_ro0bn")
 theme_override_font_sizes/font_size = 50
 text = "Start Random Game"
-
-[node name="select puzzle" type="Button" parent="VBoxContainer"]
-custom_minimum_size = Vector2(0, 125)
-layout_mode = 2
-theme = ExtResource("3_ro0bn")
-theme_override_font_sizes/font_size = 50
-text = "Select Puzzle"
 
 [node name="quit" type="Button" parent="VBoxContainer"]
 custom_minimum_size = Vector2(0, 125)
@@ -95,7 +98,7 @@ offset_bottom = 101.0
 theme_override_font_sizes/font_size = 50
 text = "Debug"
 
+[connection signal="pressed" from="VBoxContainer/select puzzle" to="." method="_on_select_puzzle_pressed"]
 [connection signal="pressed" from="VBoxContainer/PlayOnline" to="." method="_on_play_online_pressed"]
 [connection signal="pressed" from="VBoxContainer/start random" to="." method="_on_start_random_pressed"]
-[connection signal="pressed" from="VBoxContainer/select puzzle" to="." method="_on_select_puzzle_pressed"]
 [connection signal="pressed" from="VBoxContainer/quit" to="." method="_on_quit_pressed"]

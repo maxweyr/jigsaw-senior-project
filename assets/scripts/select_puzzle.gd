@@ -16,10 +16,14 @@ var page_num = 1
 var total_pages # gets calculated in ready, is based off the amount of images
 var page_string = "%d out of %d"
 @onready var pageind = $PageIndicator # actual reference for PageIndicator
-
 # buttons reference:
+@onready var go_back_menu = $GoBackToMenu
 @onready var left_button = $"HBoxContainer/left button"
 @onready var right_button = $"HBoxContainer/right button"
+@onready var size_label = $Panel/VBoxContainer/Thumbnail/size_label
+@onready var hbox = $"HBoxContainer"
+@onready var panel = $"Panel"
+@onready var thumbnail = $Panel/VBoxContainer/Thumbnail
 
 # grid reference:
 #have an array of images to pull from that will correspond to an integer returned by the buttons
@@ -28,11 +32,17 @@ var page_string = "%d out of %d"
 
 var list = []
 
+var local_puzzle_list = []
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	# this code will iterate through the children of the grid which are buttons
 	# and will link them so that they all carry out the same function
 	# that function being button_pressed
+	print("SELECT_PUZZLE")
+	# populate local_puzzle_list with puzzles and size
+	local_puzzle_list = PuzzleVar.get_avail_puzzles()
+	print(local_puzzle_list)
 	for i in grid.get_children():
 		var button := i as BaseButton
 		if is_instance_valid(button):
@@ -40,10 +50,11 @@ func _ready():
 			# actual code connecting the button_pressed function to
 			# the buttons in the grid
 			button.pressed.connect(button_pressed.bind(button))
-	
+	#
 	# this code gets the number of total pages
 	var num_buttons = grid.get_child_count()
-	var imgsize = float(PuzzleVar.images.size())
+	#var imgsize = float(PuzzleVar.images.size())
+	var imgsize = local_puzzle_list.size() * 3.0 # assume each image in path will get 3 sizes (10, 100, 1000
 	var nb = float(num_buttons)
 	total_pages = ceil(imgsize/nb) # round up always to get total_pages
 	# disable the buttons logic that controls switching pages depending on
@@ -55,8 +66,10 @@ func _ready():
 	await get_tree().process_frame
 	# populates the buttons in the grid with actual images so that you can
 	# preview which puzzle you want to select
-	self.populate_grid()
+	self.populate_grid_2()
 
+		
+	
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
 	# this code updates the display so that you know which page you are on
@@ -75,7 +88,7 @@ func _on_left_button_pressed():
 		right_button.disabled = false
 	
 	# repopulates the grid with a new selection of images
-	self.populate_grid()
+	self.populate_grid_2()
 
 func _on_right_button_pressed():
 	$AudioStreamPlayer.play()
@@ -96,7 +109,7 @@ func _on_right_button_pressed():
 		left_button.disabled = false
 	
 	# repopulates the grid with a new selection of images
-	self.populate_grid()
+	self.populate_grid_2()
 
 # this function selects the image that is previewed on the button for the puzzle
 func button_pressed(button):
@@ -124,11 +137,68 @@ func button_pressed(button):
 	
 	var name = String(button.name)
 	var chosen = index + int(name[-1])
+	var row_selected = ceil((chosen % 9)/ 3)
+	var sizes = [10, 100, 1000]
+	var size_selected = sizes[chosen % 3]
+			
+	#print(row_selected, " from page ", page_num)
+	# now we need to select the row corresponding to the page num
+	var start_image = (page_num - 1) * 3
+	var end_image = min(local_puzzle_list.size() * 3, start_image + 3)
+	var puzzles_on_page = local_puzzle_list.slice(start_image, end_image)
+	if !(row_selected < puzzles_on_page.size()):
+		return
+	print(puzzles_on_page[row_selected]["base_name"])
 	# if the selection is valid, proceed to the puzzle size selection menu
-	if chosen < PuzzleVar.images.size():
-		PuzzleVar.choice = index + int(name[-1])
-		get_tree().change_scene_to_file("res://assets/scenes/menu.tscn")
+	puzzles_on_page[row_selected]["size"] = size_selected
+	PuzzleVar.choice = puzzles_on_page[row_selected]
+	
+	# Show Continue panel
+	hbox.hide()
+	pageind.hide()
+	thumbnail.texture = load(puzzles_on_page[row_selected]["file_path"])
+	size_label.text = str(size_selected)
+	panel.show()
+	
 
+func populate_grid_2():
+	var buttons = grid.get_children()
+	var columns = grid.columns
+	var rows = buttons.size() / columns
+	var base_index = (page_num - 1) * rows
+
+	for row in range(rows):
+		var img_index = base_index + row
+		if img_index >= local_puzzle_list.size():
+			# Clear all buttons in this row
+			for col in range(columns):
+				var button = buttons[row * columns + col]
+				var tex_node = button.get_child(0)
+				if tex_node and tex_node is TextureRect:
+					tex_node.texture = null
+			continue
+
+		var file_path = local_puzzle_list[img_index]["file_path"]
+		var res = load(file_path)
+
+		for col in range(columns):
+			var button = buttons[row * columns + col]
+			if is_instance_valid(button):
+				var tex_node = button.get_child(0)
+				if tex_node and tex_node is TextureRect:
+					tex_node.texture = res
+					tex_node.size = button.size
+
+				## Optional: show different progress info per size
+				#if FireAuth.offlineMode == 0:
+					#var global_index = img_index * columns + col
+					#print(GlobalProgress.progress_arr)
+					#add_custom_label(button, GlobalProgress.progress_arr[global_index])
+				#else:
+					#add_custom_label(button, 0)
+
+			
+			
 # this function is what populates the grid with images so that you can
 # preview which image you want to select
 func populate_grid():
@@ -142,11 +212,14 @@ func populate_grid():
 		var button := i as BaseButton
 		if is_instance_valid(button):
 			if index < PuzzleVar.images.size():
-				var res = load(PuzzleVar.path+"/"+PuzzleVar.images[index])
+				var file_path = PuzzleVar.path+"/"+PuzzleVar.images[index]
+				var res = load(file_path)
+				print("file_path: ", file_path, " loaded")
 				button.get_child(0).texture = res
 				button.get_child(0).size = button.size
 				if FireAuth.offlineMode == 0:
-					add_custom_label(button, GlobalProgress.progress_arr[index])
+					print(GlobalProgress.progress_arr)
+					#add_custom_label(button, GlobalProgress.progress_arr[index])
 				else:
 					add_custom_label(button, 0)
 				
@@ -199,3 +272,17 @@ func add_custom_label(button, percentage):
 	label.anchor_right = 1.0
 	label.anchor_top = 0.8
 	label.anchor_bottom = 1.0
+
+
+func _on_start_puzzle_pressed() -> void:
+	get_tree().change_scene_to_file("res://assets/scenes/jigsaw_puzzle_1.tscn")
+
+
+func _on_go_back_pressed() -> void:
+	panel.hide()
+	pageind.show()
+	hbox.show()
+
+
+func _on_go_back_to_menu_pressed() -> void:
+	get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn")

@@ -13,10 +13,13 @@ var network_manager = null
 var is_online_mode = false
 var connected_players = []
 
+var selected_puzzle_dir = {}
+var selected_puzzle_name = ""
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	name = "JigsawPuzzleNode"
-	
+	selected_puzzle_dir = PuzzleVar.choice["base_file_path"] + "_" + str(PuzzleVar.choice["size"])
+	selected_puzzle_name = PuzzleVar.choice["base_name"] + str(PuzzleVar.choice["size"])
 	is_muted = false
 	
 	# Check if NetworkManager exists and if we're in online mode
@@ -32,11 +35,9 @@ func _ready():
 		create_online_status_label()
 	
 	# load up reference image
-	print("ref_image: " + (PuzzleVar.path+"/"+PuzzleVar.images[PuzzleVar.choice]))
-	print("image choice: " + str(PuzzleVar.choice))
-	
+	var ref_image = PuzzleVar.choice["file_path"]
 	# Load the image
-	$Image.texture = load(PuzzleVar.path+"/"+PuzzleVar.images[PuzzleVar.choice])
+	$Image.texture = load(ref_image)
 	
 	PuzzleVar.background_clicked = false
 	PuzzleVar.piece_clicked = false
@@ -62,9 +63,8 @@ func _ready():
 		var sprite = piece.get_node("Sprite2D")
 		
 		# Set the texture rect for the sprite
-		var piece_image_path = PuzzleVar.path+"/"+PuzzleVar.images[PuzzleVar.choice]
-		piece_image_path = piece_image_path.split('.') # remove the trailing .jpg extension
-		piece_image_path = piece_image_path[0] + "/size-100/raster/" + str(x) + ".png" 
+		var piece_image_path = selected_puzzle_dir + "/pieces/raster/" + str(x) + ".png" 
+		print(piece_image_path)
 		piece.ID = x # set the piece ID here
 		piece.z_index = 2
 		sprite.texture = load(piece_image_path) # load the image
@@ -84,7 +84,8 @@ func _ready():
 		piece.position = Vector2(randi_range(50,spawnarea.size.x),randi_range(50,spawnarea.size.y))
 		
 		# Add the sprite to the Grid node	
-		get_parent().call_deferred("add_child", piece)
+		#get_parent().call_deferred("add_child", piece)
+		add_child(piece)
 	
 	# Handle saved piece data for offline or online mode
 	if is_online_mode and network_manager.current_puzzle_id:
@@ -95,8 +96,8 @@ func _ready():
 		load_firebase_state()
 		
 	if not is_online_mode and FireAuth.offlineMode == 0:
-		FireAuth.add_active_puzzle(PuzzleVar.choice)
-		FireAuth.add_favorite_puzzle(PuzzleVar.choice)
+		FireAuth.add_active_puzzle(selected_puzzle_name, PuzzleVar.global_num_pieces)
+		FireAuth.add_favorite_puzzle(selected_puzzle_name)
 	
 	# Connect the back button signal
 	var back_button = $UI_Button/Back
@@ -104,7 +105,7 @@ func _ready():
 
 # Load state from Firebase (for offline mode)
 func load_firebase_state():
-	var saved_piece_data: Array = await FireAuth.get_puzzle_loc(PuzzleVar.choice)
+	var saved_piece_data: Array = await FireAuth.get_puzzle_loc(selected_puzzle_name)
 	var notComplete = 0
 	var groupArray = []
 	for idx in range(len(saved_piece_data)):
@@ -149,7 +150,7 @@ func load_firebase_state():
 				for other_piece in group_pieces.slice(1, group_pieces.size()):
 					reference_piece.snap_and_connect(other_piece.ID, 1)
 	else:
-		FireAuth.write_temp_to_location(PuzzleVar.choice)
+		FireAuth.write_temp_to_location(selected_puzzle_name)
 
 # Network event handlers
 func _on_player_joined(client_id, client_name):
@@ -236,47 +237,39 @@ func _input(event):
 func parse_pieces_json():
 	print("Calling parse_pieces_json")
 	
-	PuzzleVar.image_file_names["0"] = "china_10"
-	PuzzleVar.image_file_names["1"] = "china_100"
-	PuzzleVar.image_file_names["2"] = "china_1000"
-	PuzzleVar.image_file_names["3"] = "dogs_10"
-	PuzzleVar.image_file_names["4"] = "dogs_100"
-	PuzzleVar.image_file_names["5"] = "dogs_1000"
-	PuzzleVar.image_file_names["6"] = "elephant_10"
-	PuzzleVar.image_file_names["7"] = "elephant_100"
-	PuzzleVar.image_file_names["8"] = "elephant_1000"
-	PuzzleVar.image_file_names["9"] = "fpeacock_10"
-	PuzzleVar.image_file_names["10"] = "fpeacock_100"
-	PuzzleVar.image_file_names["11"] = "fpeacock_1000"
+	var json_path_new = selected_puzzle_dir + "/pieces/pieces.json"
 	
-	
+	print(json_path_new)
 	# Load the JSON file for the pieces.json
-	var json_path = "res://assets/puzzles/jigsawpuzzleimages/" + PuzzleVar.image_file_names[str(PuzzleVar.choice)] + "/size-100/pieces.json"
-	var file = FileAccess.open(json_path, FileAccess.READ)
+	var file = FileAccess.open(json_path_new, FileAccess.READ)
 
-	if file:
-		var json = file.get_as_text()
-		file.close()
+	if !file:
+		print("ERROR LOADING FILE")
+		get_tree().quit(-1)
+	var json = file.get_as_text()
+	file.close()
 
-		# Parse the JSON data
-		var json_parser = JSON.new()
-		var data = json_parser.parse(json)
+	# Parse the JSON data
+	var json_parser = JSON.new()
+	var data = json_parser.parse(json)
+	
+	if data == OK: # if the data is valid, go ahead and parse
+		var temp_id = 0
+		var num_pieces = json_parser.data.size()
+		print("Number of pieces" + str(num_pieces))
 		
-		if data == OK: # if the data is valid, go ahead and parse
-			var temp_id = 0
-			var num_pieces = json_parser.data.size()
-			print("Number of pieces" + str(num_pieces))
-			
-			for n in num_pieces: # for each piece, add it to the global coordinates list
-				PuzzleVar.global_coordinates_list[str(n)] =  json_parser.data[str(n)]
-			
+		for n in num_pieces: # for each piece, add it to the global coordinates list
+			PuzzleVar.global_coordinates_list[str(n)] =  json_parser.data[str(n)]
+	else:
+		print("INVALID DATA")
+	print("GCL: ", PuzzleVar.global_coordinates_list)
 # This function parses adjacent.json which contains information about which pieces are 
 # adjacent to a given piece
 func parse_adjacent_json():
 	print("Calling parse_adjacent_json")
 	
 	# Load the JSON file for the pieces.json
-	var json_path = "res://assets/puzzles/jigsawpuzzleimages/" + PuzzleVar.image_file_names[str(PuzzleVar.choice)] + "/adjacent.json"
+	var json_path = selected_puzzle_dir + "/adjacent.json"
 	var file = FileAccess.open(json_path, FileAccess.READ)
 
 	if file: #if the file was opened successfully
@@ -445,4 +438,17 @@ func show_win_screen():
 	if is_online_mode and network_manager:
 		network_manager.leave_puzzle()
 	elif not is_online_mode and FireAuth.offlineMode == 0:
-		FireAuth.remove_current_user_from_activePuzzle(PuzzleVar.choice)
+		FireAuth.remove_current_user_from_activePuzzle(selected_puzzle_name)
+
+
+func _on_back_pressed() -> void:
+	for piece in get_tree().get_nodes_in_group("puzzle_pieces"):
+		piece.queue_free()
+
+	PuzzleVar.ordered_pieces_array.clear()
+	PuzzleVar.global_coordinates_list.clear()
+	PuzzleVar.adjacent_pieces_list.clear()
+	PuzzleVar.global_num_pieces = 0
+	
+	#FireAuth.save_puzzle_loc(PuzzleVar.ordered_pieces_array, selected_puzzle_name, PuzzleVar.global_num_pieces)
+	get_tree().change_scene_to_file("res://assets/scenes/select_puzzle.tscn")

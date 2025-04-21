@@ -10,10 +10,12 @@ signal player_joined(client_id, client_name)
 signal player_left(client_id, client_name)
 signal pieces_connected(piece_id, connected_piece_id, new_group_number, piece_positions)
 
-# Constants
-const DEFAULT_PORT = 32223
+## Constants
+var DEFAULT_PORT = 8080
 const MAX_PLAYERS = 8
-const SERVER_IP = "127.0.0.1"  # Hard-coded server IP
+var SERVER_IP = "127.0.0.1"  
+
+
 
 # Network status
 var is_online = false
@@ -26,6 +28,13 @@ var should_load_game = false
 var ready_to_load = false
 
 func _ready():
+	var env = ConfigFile.new()
+	var err = env.load("res://env.cfg")
+	if err != OK:
+		print("could not read env file\n",err)
+	else: 
+		DEFAULT_PORT = env.get_value("server", "PORT", 8080)
+		SERVER_IP = str(env.get_value("server", "SERVER_IP", "127.0.0.1"))
 	# Make NetworkManager persist across scenes
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	
@@ -62,7 +71,7 @@ func _process(delta):
 
 # Start a headless server with a default puzzle
 func start_headless_server():
-	print("Starting headless server on port ", DEFAULT_PORT)
+	print("Starting headless server at ", str(SERVER_IP), " and port ", DEFAULT_PORT)
 	
 	# For headless server, just pick a default puzzle ID (can be changed via args later)
 	var puzzle_id = 0

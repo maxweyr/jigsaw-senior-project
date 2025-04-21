@@ -81,3 +81,5 @@ text = "Return to Select Puzzle"
 [node name="OnlineMode" type="Label" parent="UI_Button"]
 offset_right = 40.0
 offset_bottom = 23.0
+
+[connection signal="pressed" from="UI_Button/Back" to="." method="_on_back_pressed"]

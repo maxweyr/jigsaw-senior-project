@@ -16,7 +16,7 @@ var last_mouse_position = Vector2()
 var camera_bounds = Rect2(Vector2(-3700, -2700), Vector2(6000, 4100))
 
 # Reference image path and texture loading
-var reference_image_path = (PuzzleVar.path+"/"+PuzzleVar.images[PuzzleVar.choice])
+var reference_image_path = PuzzleVar.choice["file_path"]
 var reference_texture = load(reference_image_path) 
 
 # Called when the node enters the scene tree for the first time.

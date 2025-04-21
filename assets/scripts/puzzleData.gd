@@ -16,7 +16,7 @@ var size = 0
 var active_piece= -1
 
 # choice corresponds to the index of a piece in the list images
-var choice = -1
+var choice = {}
 
 var path = "res://assets/puzzles/jigsawpuzzleimages" # path for the images
 var images = [] # this will be loaded up in the new menu scene
@@ -30,7 +30,7 @@ var number_correct = 0 # this is the number of pieces that have been placed
 # boolean value to trigger debug mode
 var debug = false
 
-var global_coordinates_list = {} #a dictionary of global coordinates for each piece
+var global_coordinates_list = {} # a dictionary of global coordinates for each piece
 var adjacent_pieces_list = {} #a dictionary of adjacent pieces for each piece
 var image_file_names = {} #a dictionary containing a mapping of selection numbers to image names
 var global_num_pieces = 0 #the number of pieces in the current puzzle
@@ -43,3 +43,36 @@ var background_clicked = false
 
 # New variables for online mode
 var is_online_mode = false
+
+
+func get_avail_puzzles():
+	# Your existing function is fine
+	var ret_arr = []
+	var dir = DirAccess.open(PuzzleVar.path)
+	if not dir:
+		get_tree().quit(-1)
+	dir.list_dir_begin()
+	# get first file_name
+	var file_name = dir.get_next()
+	while file_name != "":
+		# only add to ret_arr if valid path
+		if not dir.current_is_dir() and (file_name.ends_with(".png") or file_name.ends_with(".jpg")):
+			# in fact, we only want to say avail if the puzzle dirs exist for all 3 puzzle sizes
+			# ie puzzle_name_[10, 100, 1000]
+			var file_path = PuzzleVar.path + '/' + file_name
+			var size10 = file_path.get_basename() + "_10"
+			var size100 = file_path.get_basename() + "_100"
+			var size1000 = file_path.get_basename() + "_1000"
+			if !(DirAccess.dir_exists_absolute(size10) and DirAccess.dir_exists_absolute(size100) and DirAccess.dir_exists_absolute(size1000)):
+				file_name = dir.get_next()
+				continue
+			ret_arr.append(
+				{
+					"file_name": file_name,
+					"file_path": file_path,
+					"base_name": file_name.get_basename(),
+					"base_file_path": file_path.get_basename()
+				}
+			)
+		file_name = dir.get_next()
+	return ret_arr

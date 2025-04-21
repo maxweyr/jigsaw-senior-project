@@ -145,9 +145,9 @@ func write_playing_time() -> void:
 	userCollection.update(userDoc)
 # add active puzzle to firebase
 
-func add_active_puzzle(puzzleId: int) -> void:
-	var GRID_SIZE = puzzleNames[puzzleId][1]
-	var PUZZLE_NAME = puzzleNames[puzzleId][0]
+func add_active_puzzle(puzzleId: String, grid_size: int) -> void:
+	var GRID_SIZE = grid_size
+	var PUZZLE_NAME = puzzleId
 	# add puzzle to active puzzle or add user to currently active puzzle
 	var puzzleCollection: FirestoreCollection = Firebase.Firestore.collection("puzzles")
 	var userCollection: FirestoreCollection = Firebase.Firestore.collection("users")
@@ -192,8 +192,8 @@ func add_active_puzzle(puzzleId: int) -> void:
 		userDoc.add_or_update_field("activePuzzles", activePuzzleList)
 		userCollection.update(userDoc)
 
-func remove_current_user_from_activePuzzle(puzzleID: int):
-	var PUZZLE_NAME = puzzleNames[puzzleID][0]
+func remove_current_user_from_activePuzzle(puzzleID: String):
+	var PUZZLE_NAME = puzzleID
 	var userCollection: FirestoreCollection = Firebase.Firestore.collection("users")
 	var puzzleCollection: FirestoreCollection = Firebase.Firestore.collection("puzzles")
 	var userDoc = await userCollection.get_doc(FireAuth.get_user_id())
@@ -257,8 +257,8 @@ func add_user_completed_puzzles(completedPuzzle: Dictionary) -> void:
 	userCollection.update(userDoc)
 	
 # add favorite puzzles to firebase
-func add_favorite_puzzle(puzzleId: int) -> void:
-	var PUZZLE_NAME = puzzleNames[puzzleId][0]
+func add_favorite_puzzle(puzzleId: String) -> void:
+	var PUZZLE_NAME = puzzleId
 	# grab the use collection and user doc
 	var userCollection: FirestoreCollection = Firebase.Firestore.collection("users")
 	var userDoc = await userCollection.get_doc(FireAuth.get_user_id())
@@ -328,54 +328,59 @@ func addUserMode(mode: String) -> void:
 		userDoc.add_or_update_field("currentMode", mode)
 		await userCollection.update(userDoc)
 		
-func save_puzzle_loc(ordered_arr : Array, puzzleId : int) -> void:
-	
+func save_puzzle_loc(ordered_arr: Array, puzzleId: String, size: int) -> void:
 	var progressCollection: FirestoreCollection = Firebase.Firestore.collection("progress")
 	var progressDoc = await progressCollection.get_doc(FireAuth.get_user_id())
-	var PUZZLE_NAME = puzzleNames[puzzleId][0]
-	
+	if not progressDoc:
+		print("ProgressDoc == nil")
+		get_tree().quit(-1)
+
 	var puzzle_data = []
-	var puzzlePercentage = {}
-	for i in range(len(ordered_arr)):
-		var piece = ordered_arr[i]
+	var group_ids = {}
+
+	for piece in ordered_arr:
 		var piece_ID = piece.ID
 		var piece_group_number = piece.group_number
-		var global_pos = Vector2.ZERO  
-		global_pos = piece.global_position
-		var global_pos_dict = {"x": global_pos.x, "y": global_pos.y}
-		puzzle_data.append({"ID": piece_ID, "GroupID": piece_group_number, "CenterLocation": global_pos_dict})	
-		puzzlePercentage[piece_group_number] = null;
-	
-	var percentage_done = (1 - (float(puzzlePercentage.keys().size()) / float(puzzleNames[puzzleId][1])) + (1 / float(puzzleNames[puzzleId][1])))* 100
-	await progressDoc.add_or_update_field(PUZZLE_NAME, puzzle_data)
-	await progressDoc.add_or_update_field(str(PUZZLE_NAME + "progress"), percentage_done)
+		var global_pos = piece.global_position
+		puzzle_data.append({
+			"ID": piece_ID,
+			"GroupID": piece_group_number,
+			"CenterLocation": {
+				"x": global_pos.x,
+				"y": global_pos.y
+			}
+		})
+		group_ids[piece_group_number] = true
+
+	var percentage_done = (1.0 - float(group_ids.keys().size()) / float(size) + (1.0 / float(size))) * 100.0
+	var wrapped = Utilities.dict2fields({ puzzleId: puzzle_data })["fields"][puzzleId]
+	await progressDoc.add_or_update_field(puzzleId, wrapped)
+	await progressDoc.add_or_update_field(puzzleId + "progress", { "doubleValue": str(percentage_done) })
 	await progressCollection.update(progressDoc)
 
-	
-func get_puzzle_loc(puzzleId: int) -> Array:
-	var PUZZLE_NAME = puzzleNames[puzzleId][0]
-	var progressCollection: FirestoreCollection = await Firebase.Firestore.collection("progress")
-	var userProgressDoc = await progressCollection.get_doc(FireAuth.get_user_id())
-	var puzzle_data = userProgressDoc.document.get(PUZZLE_NAME)
-	
 
-	if puzzle_data == { "arrayValue": { "values": [{ "mapValue": { "fields": { "temp": { "stringValue": "temp" } } } }] } }:
+	
+func get_puzzle_loc(puzzleId: String) -> Array:
+	var progressCollection: FirestoreCollection = Firebase.Firestore.collection("progress")
+	var userProgressDoc = await progressCollection.get_doc(FireAuth.get_user_id())
+	print("Document keys:", userProgressDoc.document.keys())
+
+	var puzzle_json = userProgressDoc.document.get(puzzleId)
+	print(" Raw value for", puzzleId, ":", puzzle_json)
+
+	if not puzzle_json or "stringValue" not in puzzle_json:
+		print("No saved puzzle data for:", puzzleId)
 		return []
 
-	var simplified_data = []
-	if puzzle_data.has("arrayValue") and puzzle_data["arrayValue"].has("values"):
-		for item in puzzle_data["arrayValue"]["values"]:
-			var fields = item["mapValue"]["fields"]
-			var group_id = int(fields["GroupID"]["integerValue"])
-			var center_location = {
-				"x": float(fields["CenterLocation"]["mapValue"]["fields"]["x"]["doubleValue"]),
-				"y": float(fields["CenterLocation"]["mapValue"]["fields"]["y"]["doubleValue"])
-			}
-			simplified_data.append({"GroupID": group_id, "CenterLocation": center_location})
-	return simplified_data
+	var parsed_result = JSON.parse_string(puzzle_json["stringValue"])
+	if typeof(parsed_result) != TYPE_ARRAY:
+		print("Malformed puzzle data for:", puzzleId)
+		return []
 
-func write_temp_to_location(puzzleId: int) -> void:
-	var PUZZLE_NAME = puzzleNames[puzzleId][0]
+	return parsed_result
+
+func write_temp_to_location(puzzleId: String) -> void:
+	var PUZZLE_NAME = puzzleId
 	var progressCollection: FirestoreCollection = await Firebase.Firestore.collection("progress")
 	var userProgressDoc = await progressCollection.get_doc(FireAuth.get_user_id())
 

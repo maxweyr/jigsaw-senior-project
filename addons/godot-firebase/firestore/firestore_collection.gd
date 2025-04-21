@@ -80,6 +80,7 @@ func add(document_id : String, data : Dictionary = {}) -> FirestoreDocument:
 ## @return FirestoreDocument
 # used to UPDATE a document, specify the document
 func update(document : FirestoreDocument) -> FirestoreDocument:
+	#print("UPDATE: DOC = ", document)
 	var task : FirestoreTask = FirestoreTask.new()
 	task.action = FirestoreTask.Task.TASK_PATCH
 	task.data = collection_name + "/" + document.doc_name
@@ -108,7 +109,7 @@ func update(document : FirestoreDocument) -> FirestoreDocument:
 				child.replace(result, true)
 				break
 	
-	if temp_transforms != null:
+	if temp_transforms != null and result != null:
 		result._transforms = temp_transforms
 	
 	return result

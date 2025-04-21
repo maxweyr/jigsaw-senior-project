@@ -36,7 +36,7 @@ func _ready():
 	check_internet_connection()
 	
 	if(FireAuth.offlineMode == 0):
-		if not FireAuth.needs_login():		
+		if not FireAuth.needs_login():
 			await FireAuth.check_auth_file()
 			print("\n Account Found: ", FireAuth.get_user_id())
 			await FireAuth.get_progress()
@@ -90,17 +90,14 @@ func _on_start_random_pressed():
 	$AudioStreamPlayer.play()
 	randomize() # initialize a random seed for the random number generator
 	# choose a random image from the list PuzzleVar.images
-	PuzzleVar.choice = randi_range(0,PuzzleVar.images.size()-1)
+	var local_puzzle_list = PuzzleVar.get_avail_puzzles()
+	var selected = local_puzzle_list[randi_range(0,local_puzzle_list.size()-1)]
 	# choose a random size for the puzzle ranging from 2x2 to 10x10
-	var val = randi_range(2,10)
-	PuzzleVar.col = val
-	PuzzleVar.row = val
+	var sizes = [10, 100, 1000]
+	var random_size = sizes[randi_range(0, 2)]
+	selected["size"] = random_size
+	PuzzleVar.choice = selected
 	# load the texture and get the size of the puzzle image so that the game
-	# can slice it up into pieces and start the puzzle
-	var image_texture = load(PuzzleVar.path+"/"+PuzzleVar.images[PuzzleVar.choice])
-	var image_size = image_texture.get_size()
-	PuzzleVar.size = image_size
-	# change to actual game scene
 	get_tree().change_scene_to_file("res://assets/scenes/jigsaw_puzzle_1.tscn")
 
 func _on_logged_in() -> void:
@@ -207,7 +204,7 @@ func _on_connection_failed():
 
 func _on_quit_pressed():
 	# quit the game
-	$AudioStreamPlayer.play() # doesn't work, quits too fast
+	#$AudioStreamPlayer.play() # doesn't work, quits too fast
 	get_tree().quit() # closes the scene tree to leave the game
 
 # this is used to check for events such as a key press

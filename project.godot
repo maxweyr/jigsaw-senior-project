@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="jigsaw"
-run/main_scene="uid://dye8ygfcvmig0"
+run/main_scene="uid://fy0lqdbxmdpw"
 config/features=PackedStringArray("4.4", "GL Compatibility")
 config/icon="res://icon.svg"
 
@@ -21,7 +21,6 @@ PuzzleVar="*res://assets/scripts/puzzleData.gd"
 Firebase="*res://addons/godot-firebase/firebase/firebase.tscn"
 FireAuth="*res://assets/scripts/FirebaseAuth.gd"
 GlobalTimer="*res://assets/scripts/Timer.gd"
-GlobalCursor="res://assets/scripts/globalCursor.gd"
 GlobalProgress="*res://assets/scripts/new_menu.gd"
 NetworkManager="*res://assets/scripts/NetworkManager.gd"
 
