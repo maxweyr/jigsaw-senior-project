@@ -74,12 +74,12 @@ func start_headless_server():
 	print("Starting headless server at ", str(SERVER_IP), " and port ", DEFAULT_PORT)
 	
 	# For headless server, just pick a default puzzle ID (can be changed via args later)
-	var puzzle_id = 0
+	var puzzle_id = PuzzleVar.default_path 
 	if OS.get_cmdline_args().size() > 1:
 		var args = OS.get_cmdline_args()
 		for i in range(args.size()):
 			if args[i] == "--puzzle" and i + 1 < args.size():
-				puzzle_id = int(args[i + 1])
+				puzzle_id = args[i + 1]
 	
 	if start_server(puzzle_id):
 		print("Headless server started successfully with puzzle ID: ", puzzle_id)
@@ -88,7 +88,7 @@ func start_headless_server():
 		OS.crash("Failed to start server")
 
 # Start a server for a specific puzzle
-func start_server(puzzle_id: int) -> bool:
+func start_server(puzzle_id: String) -> bool:
 	if is_online:
 		return false  # Already in a network session
 	
@@ -109,7 +109,7 @@ func start_server(puzzle_id: int) -> bool:
 	return true
 
 # Connect to a server
-func join_server(puzzle_id: int = 0) -> bool:
+func join_server(puzzle_id: String = PuzzleVar.default_path) -> bool:
 	if is_online:
 		return false  # Already in a network session
 	
@@ -191,7 +191,7 @@ func _update_player_list(players: Dictionary):
 
 # Send the current puzzle ID to the joining client
 @rpc("authority", "call_remote", "reliable")
-func _send_puzzle_info(puzzle_id: int):
+func _send_puzzle_info(puzzle_id: String):
 	current_puzzle_id = puzzle_id
 	print("Received puzzle ID from server: ", puzzle_id)
 
@@ -219,7 +219,6 @@ func _on_peer_disconnected(id):
 func _on_connected_to_server():
 	print("Successfully connected to server")
 	client_connected.emit()
-	
 	# Register ourselves with the server
 	var player_name = "Player"
 	if FireAuth and FireAuth.get_user_id() != "":

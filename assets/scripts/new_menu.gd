@@ -88,15 +88,7 @@ func _on_start_random_pressed():
 	if(FireAuth.offlineMode == 0):
 		await FireAuth.addUserMode("Single Player")
 	$AudioStreamPlayer.play()
-	randomize() # initialize a random seed for the random number generator
-	# choose a random image from the list PuzzleVar.images
-	var local_puzzle_list = PuzzleVar.get_avail_puzzles()
-	var selected = local_puzzle_list[randi_range(0,local_puzzle_list.size()-1)]
-	# choose a random size for the puzzle ranging from 2x2 to 10x10
-	var sizes = [10, 100, 1000]
-	var random_size = sizes[randi_range(0, 2)]
-	selected["size"] = random_size
-	PuzzleVar.choice = selected
+	PuzzleVar.choice = PuzzleVar.get_random_puzzles()
 	# load the texture and get the size of the puzzle image so that the game
 	get_tree().change_scene_to_file("res://assets/scenes/jigsaw_puzzle_1.tscn")
 
@@ -158,19 +150,8 @@ func _on_client_connected():
 	
 	# Update the puzzle choice to match server's choice
 	if network_manager:
-		PuzzleVar.choice = network_manager.current_puzzle_id if network_manager.current_puzzle_id != null else 0
-	
-	# Ensure choice is valid
-	if PuzzleVar.choice < 0 or PuzzleVar.choice >= PuzzleVar.images.size():
-		PuzzleVar.choice = 0
-	
-	# Load the texture and get the size of the puzzle image
-	var image_texture = load(PuzzleVar.path+"/"+PuzzleVar.images[PuzzleVar.choice])
-	var image_size = image_texture.get_size()
-	PuzzleVar.size = image_size
-	
-	# Instead of changing scenes directly, flag the NetworkManager to do it
-	if network_manager:
+		PuzzleVar.choice = PuzzleVar.get_random_puzzles()
+
 		print("Setting flags for scene change")
 		network_manager.should_load_game = true
 		
