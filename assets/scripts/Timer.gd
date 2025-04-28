@@ -3,6 +3,7 @@ extends Node
 ## Called when the node enters the scene tree for the first time.
 func _ready():
 	update_user_playing_time()
+	
 ## runs periodically to update user playing time
 func update_user_playing_time() -> void:
 	while true:

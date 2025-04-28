@@ -63,7 +63,7 @@ func attempt_anonymous_login() -> void:
 # check if there's an existing auth session
 func check_auth_file() -> void:
 	await Firebase.Auth.check_auth_file()
-	FireAuth.write_last_login_time(FireAuth.get_user_id())
+	FireAuth.write_last_login_time()
 
 # check if login is needed
 func needs_login() -> bool:
@@ -72,6 +72,19 @@ func needs_login() -> bool:
 # get current user id
 func get_user_id() -> String:
 	return Firebase.Auth.get_user_id()
+	
+func get_box_id() -> String:
+	var env = ConfigFile.new()
+	var err = env.load("res://.env")
+	if err != OK:
+		print("Could not read envfile")
+		get_tree().quit(-1)
+	var res = env.get_value("credentials", "USER", "not found")
+	if(res == "not found"):
+		print("env user not found")
+		get_tree().quit(-1)
+	return res
+	
 	
 func get_current_puzzle() -> String:
 	return str(currentPuzzle)
@@ -122,29 +135,36 @@ func _on_signup_succeeded(auth_info: Dictionary) -> void:
 });
 	print("Anon Login Success: ", user_id)
 
-	
-# write the current time to the db	
-func write_last_login_time(user_id: String) -> void:
-	var userCollection: FirestoreCollection = Firebase.Firestore.collection("users")
-	var userTimeDoc = await userCollection.get_doc(user_id)
-	userTimeDoc.add_or_update_field("lastLogin", Time.get_datetime_string_from_system())
-	userCollection.update(userTimeDoc)
-# handle login failure
 
+func write_last_login_time():
+	if(NetworkManager.is_server):
+		return
+	var users: FirestoreCollection = Firebase.Firestore.collection("sp_users")
+	var user = await users.get_doc(get_box_id())
+	# this is first time we  find user, so if it doesnt exist lets add them to collection
+	if !user:
+		user = await users.add(get_box_id())
+	user.add_or_update_field("last_login", Time.get_datetime_string_from_system())
+	users.update(user)
+	
 func _on_login_failed(code: String, message: String) -> void:
 	login_failed.emit()
 	print("Login failed with code: ", code, " message: ", message)
 
 
 func write_playing_time() -> void:
-	var userCollection: FirestoreCollection = Firebase.Firestore.collection("users")
-	var userDoc = await userCollection.get_doc(FireAuth.get_user_id())
-	var currentUserTotalTime = int(userDoc.document.get("totalPlayingTime")["integerValue"])
-	var newTime = currentUserTotalTime + 1
-	userDoc.add_or_update_field("totalPlayingTime", newTime)
-	userCollection.update(userDoc)
+	var users: FirestoreCollection = Firebase.Firestore.collection("sp_users")
+	var user = await users.get_doc(get_box_id())
+	var current_user_time = user.get("total_playing_time")
+	if(!current_user_time):
+		user.set("total_playing_time", 1)
+		users.update(user)
+		return
+	var newTime = int(current_user_time) + 1
+	user.add_or_update_field("total_playing_time", newTime)
+	users.update(user)
+	
 # add active puzzle to firebase
-
 func add_active_puzzle(puzzleId: String, grid_size: int) -> void:
 	var GRID_SIZE = grid_size
 	var PUZZLE_NAME = puzzleId
