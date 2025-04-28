@@ -19,6 +19,7 @@ var active_piece= -1
 var choice = {}
 
 var path = "res://assets/puzzles/jigsawpuzzleimages" # path for the images
+var default_path = "res://assets/puzzles/jigsawpuzzleimages/dog.png"
 var images = [] # this will be loaded up in the new menu scene
 
 # these are the actual size of the puzzle piece, I am putting them in here so
@@ -44,7 +45,17 @@ var background_clicked = false
 # New variables for online mode
 var is_online_mode = false
 
-
+func get_random_puzzles():
+	randomize() # initialize a random seed for the random number generator
+	# choose a random image from the list PuzzleVar.images
+	var local_puzzle_list = PuzzleVar.get_avail_puzzles()
+	var selected = local_puzzle_list[randi_range(0,local_puzzle_list.size()-1)]
+	# choose a random size for the puzzle ranging from 2x2 to 10x10
+	var sizes = [10, 100, 1000]
+	var random_size = sizes[randi_range(0, 2)]
+	selected["size"] = random_size
+	return selected
+	
 func get_avail_puzzles():
 	# Your existing function is fine
 	var ret_arr = []

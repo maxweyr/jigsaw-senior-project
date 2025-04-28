@@ -31,15 +31,14 @@ func _ready():
 			
 		PuzzleVar.open_first_time = false
 	
-	# below is where the user anonymous login happens	
+	# below is where the user anonymous login happens
 	# if the user doesn't need to log in, check their stored auth data
 	check_internet_connection()
-	
-	if(FireAuth.offlineMode == 0):
+	if(FireAuth.is_online):
 		if not FireAuth.needs_login():
 			await FireAuth.check_auth_file()
-			print("\n Account Found: ", FireAuth.get_user_id())
-			await FireAuth.get_progress()
+			print("\nAccount Found: ", FireAuth.get_user_id())
+			#await FireAuth.get_progress()
 		else:
 			## attempt anonymous login if login is required
 			print("Making new account")
@@ -73,7 +72,7 @@ func check_internet_connection():
 		print("Error sending HTTP request:", error)
 		FireAuth.offlineMode = 1
 
-func _on_request_completed(result, response_code, headers, body):
+func _on_request_completed(_result, response_code, _headers, _body):
 	if response_code == 200:
 		print("Internet connection available")
 	else:
@@ -81,22 +80,14 @@ func _on_request_completed(result, response_code, headers, body):
 		FireAuth.offlineMode = 1
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
+func _process(_delta):
 	pass
 
 func _on_start_random_pressed():
-	if(FireAuth.offlineMode == 0):
+	if FireAuth.is_online:
 		await FireAuth.addUserMode("Single Player")
 	$AudioStreamPlayer.play()
-	randomize() # initialize a random seed for the random number generator
-	# choose a random image from the list PuzzleVar.images
-	var local_puzzle_list = PuzzleVar.get_avail_puzzles()
-	var selected = local_puzzle_list[randi_range(0,local_puzzle_list.size()-1)]
-	# choose a random size for the puzzle ranging from 2x2 to 10x10
-	var sizes = [10, 100, 1000]
-	var random_size = sizes[randi_range(0, 2)]
-	selected["size"] = random_size
-	PuzzleVar.choice = selected
+	PuzzleVar.choice = PuzzleVar.get_random_puzzles()
 	# load the texture and get the size of the puzzle image so that the game
 	get_tree().change_scene_to_file("res://assets/scenes/jigsaw_puzzle_1.tscn")
 
@@ -107,7 +98,7 @@ func _on_select_puzzle_pressed():
 	$AudioStreamPlayer.play() # doesn't work, switches scenes too fast
 	# switches to a new scene that will ask you to
 	# actually select what image you want to solve
-	if(FireAuth.offlineMode == 0):
+	if(FireAuth.is_online):
 		await FireAuth.addUserMode("Single Player")
 	get_tree().change_scene_to_file("res://assets/scenes/select_puzzle.tscn")
 
@@ -115,7 +106,7 @@ func _on_play_online_pressed():
 	$AudioStreamPlayer.play()
 	
 	# Check if we have network connectivity
-	if FireAuth.offlineMode == 1:
+	if !FireAuth.is_online:
 		# Show a message about being offline
 		var popup = AcceptDialog.new()
 		popup.title = "Offline Mode"
@@ -125,7 +116,7 @@ func _on_play_online_pressed():
 		return
 	
 	# Update Firebase mode
-	if FireAuth.offlineMode == 0:
+	if FireAuth.is_online:
 		FireAuth.addUserMode("Multiplayer")
 	
 	# Attempt to connect to the hard-coded server
@@ -158,19 +149,8 @@ func _on_client_connected():
 	
 	# Update the puzzle choice to match server's choice
 	if network_manager:
-		PuzzleVar.choice = network_manager.current_puzzle_id if network_manager.current_puzzle_id != null else 0
-	
-	# Ensure choice is valid
-	if PuzzleVar.choice < 0 or PuzzleVar.choice >= PuzzleVar.images.size():
-		PuzzleVar.choice = 0
-	
-	# Load the texture and get the size of the puzzle image
-	var image_texture = load(PuzzleVar.path+"/"+PuzzleVar.images[PuzzleVar.choice])
-	var image_size = image_texture.get_size()
-	PuzzleVar.size = image_size
-	
-	# Instead of changing scenes directly, flag the NetworkManager to do it
-	if network_manager:
+		PuzzleVar.choice = PuzzleVar.get_random_puzzles()
+
 		print("Setting flags for scene change")
 		network_manager.should_load_game = true
 		
