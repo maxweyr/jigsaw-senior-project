@@ -34,7 +34,7 @@ func _ready():
 	# below is where the user anonymous login happens
 	# if the user doesn't need to log in, check their stored auth data
 	check_internet_connection()
-	if(FireAuth.offlineMode == 0): # online
+	if(FireAuth.is_online):
 		if not FireAuth.needs_login():
 			await FireAuth.check_auth_file()
 			print("\nAccount Found: ", FireAuth.get_user_id())
@@ -72,7 +72,7 @@ func check_internet_connection():
 		print("Error sending HTTP request:", error)
 		FireAuth.offlineMode = 1
 
-func _on_request_completed(result, response_code, headers, body):
+func _on_request_completed(_result, response_code, _headers, _body):
 	if response_code == 200:
 		print("Internet connection available")
 	else:
@@ -80,11 +80,11 @@ func _on_request_completed(result, response_code, headers, body):
 		FireAuth.offlineMode = 1
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
+func _process(_delta):
 	pass
 
 func _on_start_random_pressed():
-	if(FireAuth.offlineMode == 0):
+	if FireAuth.is_online:
 		await FireAuth.addUserMode("Single Player")
 	$AudioStreamPlayer.play()
 	PuzzleVar.choice = PuzzleVar.get_random_puzzles()
@@ -98,7 +98,7 @@ func _on_select_puzzle_pressed():
 	$AudioStreamPlayer.play() # doesn't work, switches scenes too fast
 	# switches to a new scene that will ask you to
 	# actually select what image you want to solve
-	if(FireAuth.offlineMode == 0):
+	if(FireAuth.is_online):
 		await FireAuth.addUserMode("Single Player")
 	get_tree().change_scene_to_file("res://assets/scenes/select_puzzle.tscn")
 
@@ -106,7 +106,7 @@ func _on_play_online_pressed():
 	$AudioStreamPlayer.play()
 	
 	# Check if we have network connectivity
-	if FireAuth.offlineMode == 1:
+	if !FireAuth.is_online:
 		# Show a message about being offline
 		var popup = AcceptDialog.new()
 		popup.title = "Offline Mode"
@@ -116,7 +116,7 @@ func _on_play_online_pressed():
 		return
 	
 	# Update Firebase mode
-	if FireAuth.offlineMode == 0:
+	if FireAuth.is_online:
 		FireAuth.addUserMode("Multiplayer")
 	
 	# Attempt to connect to the hard-coded server

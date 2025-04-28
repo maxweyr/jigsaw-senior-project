@@ -2,19 +2,19 @@
 .env
 *.pem
 
-# Godot engine files
-.import/
-.export/
+# Build files
 dist/
 build/
-tmp/
-*.import
-*.tmp
-*.log
-
-# Godot build files
-.godot/
 
 # OS / Editor junk
 .DS_Store
 Thumbs.db
+
+# Godot-specific
+.import/
+.export/
+tmp/
+*.import
+*.tmp
+*.log
+.godot/

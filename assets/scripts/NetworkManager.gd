@@ -13,9 +13,7 @@ signal pieces_connected(piece_id, connected_piece_id, new_group_number, piece_po
 ## Constants
 var DEFAULT_PORT = 8080
 const MAX_PLAYERS = 8
-var SERVER_IP = "127.0.0.1"  
-
-
+var SERVER_IP = "127.0.0.1"
 
 # Network status
 var is_online = false
@@ -23,7 +21,6 @@ var is_server = false
 var current_puzzle_id = null
 var peer = null
 var connected_players = {}
-var headless = false  # Flag for headless server mode
 var should_load_game = false
 var ready_to_load = false
 
@@ -46,12 +43,12 @@ func _ready():
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 	
 	# Check for command line arguments to start headless server
-	if OS.has_feature("server") or "--server" in OS.get_cmdline_args():
-		print("Starting in headless server mode")
-		headless = true
+	if OS.has_feature("server") or "--server" in OS.get_cmdline_args() or OS.has_feature("headless") or "--headless" in OS.get_cmdline_args():
+		print("NetworkManager: Starting headless server...")
+		is_server = true
 		start_headless_server()
 
-func _process(delta):
+func _process(_delta):
 	# Check if we should load the game
 	if should_load_game and ready_to_load:
 		var scene_path = "res://assets/scenes/jigsaw_puzzle_1.tscn"
@@ -150,7 +147,7 @@ func leave_puzzle():
 		return
 	
 	# If server, shut down completely
-	if is_server and not headless:
+	if is_server:
 		disconnect_from_server()
 	else:
 		# If client, just disconnect

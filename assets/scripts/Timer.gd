@@ -9,4 +9,3 @@ func update_user_playing_time() -> void:
 	while true:
 		await get_tree().create_timer(60.0).timeout
 		FireAuth.write_playing_time()
-	#
