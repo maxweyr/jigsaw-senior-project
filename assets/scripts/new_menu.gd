@@ -31,15 +31,14 @@ func _ready():
 			
 		PuzzleVar.open_first_time = false
 	
-	# below is where the user anonymous login happens	
+	# below is where the user anonymous login happens
 	# if the user doesn't need to log in, check their stored auth data
 	check_internet_connection()
-	
-	if(FireAuth.offlineMode == 0):
+	if(FireAuth.offlineMode == 0): # online
 		if not FireAuth.needs_login():
 			await FireAuth.check_auth_file()
-			print("\n Account Found: ", FireAuth.get_user_id())
-			await FireAuth.get_progress()
+			print("\nAccount Found: ", FireAuth.get_user_id())
+			#await FireAuth.get_progress()
 		else:
 			## attempt anonymous login if login is required
 			print("Making new account")
