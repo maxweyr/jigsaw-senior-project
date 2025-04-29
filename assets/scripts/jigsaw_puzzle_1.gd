@@ -253,7 +253,7 @@ func parse_pieces_json():
 	
 	if data == OK: # if the data is valid, go ahead and parse
 		var num_pieces = json_parser.data.size()
-		print("Number of pieces" + str(num_pieces))
+		print("Number of pieces " + str(num_pieces))
 		
 		for n in num_pieces: # for each piece, add it to the global coordinates list
 			PuzzleVar.global_coordinates_list[str(n)] =  json_parser.data[str(n)]
@@ -280,7 +280,7 @@ func parse_adjacent_json():
 		if data == OK:
 			var num_pieces = json_parser.data.size()
 			PuzzleVar.global_num_pieces = num_pieces
-			print("Number of pieces" + str(num_pieces))
+			print("Number of pieces " + str(num_pieces))
 			for n in num_pieces: # for each piece, add the adjacent pieces to the list
 				PuzzleVar.adjacent_pieces_list[str(n)] =  json_parser.data[str(n)]
 				

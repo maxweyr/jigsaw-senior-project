@@ -30,7 +30,7 @@ func _ready():
 	# Make NetworkManager persist across scenes
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	
-	check_internet_and_authenticate()
+	await check_internet_and_authenticate()
 	
 	# load env file for server info
 	var env = ConfigFile.new()
@@ -49,7 +49,10 @@ func _ready():
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 	
 	# Check for command line arguments to start headless server
-	if OS.has_feature("server") or "--server" in OS.get_cmdline_args() or OS.has_feature("headless") or "--headless" in OS.get_cmdline_args():
+	if OS.has_feature("server") \
+	or"--server" in OS.get_cmdline_args() \
+	or OS.has_feature("headless") \
+	or "--headless" in OS.get_cmdline_args():
 		print("NetworkManager: Starting headless server...")
 		is_server = true
 		start_server()
