@@ -44,6 +44,16 @@ var background_clicked = false
 
 # New variables for online mode
 var is_online_mode = false
+var lobby_number = 1
+
+func get_random_puzzles_1000():
+	randomize() # initialize a random seed for the random number generator
+	# choose a random image from the list PuzzleVar.images
+	var local_puzzle_list = PuzzleVar.get_avail_puzzles()
+	var selected = local_puzzle_list[randi_range(0,local_puzzle_list.size()-1)]
+	# choose a random size for the puzzle ranging from 2x2 to 10x10
+	selected["size"] = 1000
+	return selected
 
 func get_random_puzzles():
 	randomize() # initialize a random seed for the random number generator
@@ -86,4 +96,5 @@ func get_avail_puzzles():
 				}
 			)
 		file_name = dir.get_next()
+	print("SFSAFDJSFKHSFHDKJHFDKSJDHFJHSFSHFDKJHSDF\n", ret_arr)
 	return ret_arr

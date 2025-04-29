@@ -63,15 +63,18 @@ func _process(_delta):
 	if should_load_game and ready_to_load:
 		var scene_path = "res://assets/scenes/jigsaw_puzzle_1.tscn"
 		print("NetworkManager loading game scene inside process loop")
-		
 		# Get the main scene tree
 		var tree = Engine.get_main_loop()
 		if tree:
 			# Reset flags
 			should_load_game = false
 			ready_to_load = false
-			
 			# Change the scene
+			PuzzleVar.choice = { 
+				"file_name": "china.jpg",
+				 "file_path": "res://assets/puzzles/jigsawpuzzleimages/china.jpg",
+				 "base_name": "china", "base_file_path": "res://assets/puzzles/jigsawpuzzleimages/china",
+				 "size": 1000 }
 			tree.change_scene_to_file(scene_path)
 		else:
 			print("ERROR: NetworkManager unable to get scene tree")
@@ -177,6 +180,7 @@ func leave_puzzle():
 		disconnect_from_server()
 
 # Send piece connection info to all clients
+@rpc("any_peer", "call_remote", "reliable")
 func sync_connected_pieces(piece_id: int, connected_piece_id: int, new_group_number: int, piece_positions: Array):
 	if not is_online: # dont need to sync when not in a multiplayer game
 		return
