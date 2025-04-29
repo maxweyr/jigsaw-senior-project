@@ -7,6 +7,7 @@ extends Node
 # Signals
 signal server_started
 signal client_connected
+signal client_disconnected
 signal connection_failed
 signal player_joined(client_id, client_name)
 signal player_left(client_id, client_name)
@@ -236,7 +237,7 @@ func _on_connected_to_server():
 	var player_name = "Player"
 	if typeof(FireAuth) != TYPE_NIL and FireAuth.get_user_id() != "":
 		player_name = "Player_" + FireAuth.get_user_id().substr(0, 5)
-	rpc_id(1, "register_player", player_name)
+	rpc_id(1, "register_player", FireAuth.get_box_id())
 
 func _on_connection_failed():
 	print("Connection failed")

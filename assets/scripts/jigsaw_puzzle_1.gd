@@ -8,6 +8,7 @@ var unmute_button: Button
 var offline_button: Button
 var online_status_label: Label
 
+@onready var back_button = $UI_Button/Back
 @onready var loading = $LoadingScreen
 
 # Network-related variables
@@ -28,7 +29,7 @@ func _ready():
 		# Connect to network signals
 		NetworkManager.player_joined.connect(_on_player_joined)
 		NetworkManager.player_left.connect(_on_player_left)
-		
+		#back_button.pressed.connect(_on_back_pressed)
 		# Create online status label
 		create_online_status_label()
 	
@@ -101,8 +102,8 @@ func _ready():
 		#FireAuth.add_favorite_puzzle(selected_puzzle_name)
 	
 	# Connect the back button signal
-	var back_button = $UI_Button/Back
-	back_button.connect("pressed", Callable(self, "_on_back_button_pressed"))
+	#var back_button = $UI_Button/Back
+	#back_button.connect("pressed", Callable(self, "_on_back_button_pressed"))
 	loading.hide()
 
 # Load state from Firebase (for offline mode)
@@ -440,20 +441,43 @@ func show_win_screen():
 	elif !NetworkManager.is_online and FireAuth.is_online:
 		FireAuth.remove_current_user_from_activePuzzle(selected_puzzle_name)
 
-
+# Handles leaving the puzzle scene, saving state, and disconnecting if online client
 func _on_back_pressed() -> void:
-	await FireAuth.write_puzzle_state(
-		PuzzleVar.ordered_pieces_array,
-		PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]),
-		PuzzleVar.global_num_pieces)
-		
+	# 1. Save puzzle state if needed
+	#    Saving might be relevant even if NetworkManager.is_online is true,
+	#    if we use Firebase alongside the server for persistence
+	if FireAuth.is_online: # Check if Firebase is initialized/logged in
+		print("Saving puzzle state to Firebase before leaving...")
+		await FireAuth.write_puzzle_state(
+			PuzzleVar.ordered_pieces_array,
+			PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]),
+			PuzzleVar.global_num_pieces
+		)
+
+	# 2. Handle multiplayer disconnection if this is an online client
+	if NetworkManager.is_online and not NetworkManager.is_server:
+		print("Client leaving online session. Closing connection...")
+
+		# Access the MultiplayerAPI instance
+		if multiplayer:
+			NetworkManager.leave_puzzle()
+		else:
+			printerr("ERROR: NetworkManager.multiplayer is not available to close connection.")
+
+	# 3. Clean up local scene resources
+	print("Cleaning up puzzle scene resources...")
+
+	# Free all puzzle pieces currently in the scene
 	for piece in get_tree().get_nodes_in_group("puzzle_pieces"):
 		piece.queue_free()
 
+	# Clear global puzzle variables to reset state for the next puzzle
 	PuzzleVar.ordered_pieces_array.clear()
 	PuzzleVar.global_coordinates_list.clear()
 	PuzzleVar.adjacent_pieces_list.clear()
 	PuzzleVar.global_num_pieces = 0
-	
-	#FireAuth.save_puzzle_loc(PuzzleVar.ordered_pieces_array, selected_puzzle_name, PuzzleVar.global_num_pieces)
+	print("Puzzle resources cleared.")
+
+	# 4. Change back to the puzzle selection scene
+	print("Returning to puzzle selection screen.")
 	get_tree().change_scene_to_file("res://assets/scenes/select_puzzle.tscn")
