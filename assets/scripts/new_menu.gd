@@ -113,8 +113,6 @@ func _on_client_connected():
 	
 	# Update the puzzle choice to match server's choice
 	if NetworkManager:
-		PuzzleVar.choice = PuzzleVar.get_random_puzzles()
-
 		print("Setting flags for scene change")
 		NetworkManager.should_load_game = true
 		

@@ -140,48 +140,18 @@ func _on_signup_succeeded(auth_info: Dictionary) -> void:
 	user_id = auth_info.get("localid") # extract the user id
 	# save auth information locally
 	Firebase.Auth.save_auth(auth_info)
-	logged_in.emit()
-	var favorite_puzzles = [{"puzzleId": "temp", "rank": 1, "timesPlayed": 0}]
-	var collection: FirestoreCollection = Firebase.Firestore.collection("users")
-	var progressCollection: FirestoreCollection = Firebase.Firestore.collection("progress")
-	
-	# add user to firebase
-	var document = await collection.add(user_id, {'activePuzzles': [{"puzzleId": "0", "timeStarted": "0"}], 'lastLogin': Time.get_datetime_string_from_system(), "totalPlayingTime": 0, 'favoritePuzzles': favorite_puzzles, 'completedPuzzles': ["temp"], 'currentMode': 'temp'})
-	var progress_document = await progressCollection.add(user_id, {
-	'china10': [{"temp": "temp"}], 
-	'china10progress': 0, 
-	'china100': [{"temp": "temp"}], 
-	'china100progress': 0, 
-	'china1000': [{"temp": "temp"}], 
-	'china1000progress': 0, 
-	'elephant10': [{"temp": "temp"}], 
-	'elephant10progress': 0, 
-	'elephant100': [{"temp": "temp"}], 
-	'elephant100progress': 0, 
-	'elephant1000': [{"temp": "temp"}], 
-	'elephant1000progress': 0, 
-	'peacock10': [{"temp": "temp"}], 
-	'peacock10progress': 0, 
-	'peacock100': [{"temp": "temp"}], 
-	'peacock100progress': 0, 
-	'peacock1000': [{"temp": "temp"}], 
-	'peacock1000progress': 0, 
-	'dog10': [{"temp": "temp"}], 
-	'dog10progress': 0, 
-	'dog100': [{"temp": "temp"}], 
-	'dog100progress': 0, 
-	'dog1000': [{"temp": "temp"}], 
-	'dog1000progress': 0
-});
 	print("Anon Login Success: ", user_id)
+	logged_in.emit()
 
 ##==============================
 ## Quick Get/Set Helper Methods
 ##==============================
 
 func parse_firestore_puzzle_data(raw_array: Dictionary) -> Array:
+	''' Senior project
+	Used to convert ArrayObject back into an Array
+	'''
 	var result = []
-	
 	if not raw_array.has("values"):
 		return result  # Empty array
 	
@@ -206,7 +176,6 @@ func parse_firestore_puzzle_data(raw_array: Dictionary) -> Array:
 				"y": center_y
 			}
 		})
-	
 	return result
 
 
@@ -263,7 +232,7 @@ func write_last_login_time():
 		users.update(user)
 
 
-func _on_login_failed(code: String, message: String) -> void:
+func _on_login_failed(code, message):
 	login_failed.emit()
 	print("Login failed with code: ", code, " message: ", message)
 
@@ -284,7 +253,7 @@ func write_total_playing_time() -> void:
 	var newTime = int(current_user_time) + 1
 	print("UPDATING TOTAL PLAYTIME TO ", newTime)
 	user.add_or_update_field("total_playing_time", newTime)
-	users.update(user)
+	await users.update(user)
 
 
 func write_puzzle_time_spent(puzzle_name):
@@ -305,29 +274,35 @@ func write_puzzle_time_spent(puzzle_name):
 			current_puzzle.add_or_update_field("time_spent", int(time) + 1)
 		await active_puzzles.update(current_puzzle)
 
+func write_completed_puzzle(puzzle_name):
+	''' Senior project
+	Gets the user's info about puzzle and stores it in completed puzzles DB
+	'''
+	pass
 
-func add_user_completed_puzzles(completedPuzzle: Dictionary) -> void:
-	var userCollection: FirestoreCollection = Firebase.Firestore.collection("users")
-	var userDoc = await userCollection.get_doc(FireAuth.get_user_id())
-	var userCompletedPuzzleField = userDoc.document.get("completedPuzzles")
-	var completedPuzzlesList = []
-	
-	for puzzle in userCompletedPuzzleField["arrayValue"]["values"]:
-		if "mapValue" in puzzle:
-			var puzzleData = puzzle["mapValue"]["fields"]
-			completedPuzzlesList.append({
-				"puzzleId": puzzleData["puzzleId"]["stringValue"],
-				"timeStarted": puzzleData["timeStarted"]["stringValue"],
-				"timeFinished": puzzleData["timeFinished"]["stringValue"]
-				})
-	
-	completedPuzzlesList.append({
-			"puzzleId": completedPuzzle["puzzleId"]["stringValue"],
-			"timeStarted": completedPuzzle["timeStarted"]["stringValue"],
-			"timeFinished": Time.get_datetime_string_from_system()
-			})
-	userDoc.add_or_update_field("completedPuzzles", completedPuzzlesList)
-	userCollection.update(userDoc)
+
+#func add_user_completed_puzzles(completedPuzzle: Dictionary) -> void:
+	#var userCollection: FirestoreCollection = Firebase.Firestore.collection("users")
+	#var userDoc = await userCollection.get_doc(FireAuth.get_user_id())
+	#var userCompletedPuzzleField = userDoc.document.get("completedPuzzles")
+	#var completedPuzzlesList = []
+	#
+	#for puzzle in userCompletedPuzzleField["arrayValue"]["values"]:
+		#if "mapValue" in puzzle:
+			#var puzzleData = puzzle["mapValue"]["fields"]
+			#completedPuzzlesList.append({
+				#"puzzleId": puzzleData["puzzleId"]["stringValue"],
+				#"timeStarted": puzzleData["timeStarted"]["stringValue"],
+				#"timeFinished": puzzleData["timeFinished"]["stringValue"]
+				#})
+	#
+	#completedPuzzlesList.append({
+			#"puzzleId": completedPuzzle["puzzleId"]["stringValue"],
+			#"timeStarted": completedPuzzle["timeStarted"]["stringValue"],
+			#"timeFinished": Time.get_datetime_string_from_system()
+			#})
+	#userDoc.add_or_update_field("completedPuzzles", completedPuzzlesList)
+	#userCollection.update(userDoc)
 
 
 func update_active_puzzle(puzzle_name):
@@ -372,40 +347,45 @@ func write_puzzle_state(state_arr, puzzle_name, size):
 	# update current_puzzle
 	current_puzzle.add_or_update_field("piece_locations", puzzle_data)
 	current_puzzle.add_or_update_field("progress", int(percentage_done))
-	active_puzzles.update(current_puzzle)
+	await active_puzzles.update(current_puzzle)
 
-func save_puzzle_loc(ordered_arr: Array, puzzleId: String, size: int) -> void:
-	var progressCollection: FirestoreCollection = Firebase.Firestore.collection("progress")
-	var progressDoc = await progressCollection.get_doc(FireAuth.get_user_id())
-	if not progressDoc:
-		print("ProgressDoc == nil")
+func write_puzzle_state_server():
+	''' Senior Project
+	Writes State and Choice to DB for user's selected lobbby
+	'''
+	if(!NetworkManager.is_server):
+		return
+	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobby" + str(PuzzleVar.lobby_number))
+	var state = await lobby_puzzle.get_doc("state")
+	if not state:
+		print("ERROR: Server State Not Found in Lobby", PuzzleVar.lobby_number)
 		get_tree().quit(-1)
-
+		return
 	var puzzle_data = []
 	var group_ids = {}
-
-	for piece in ordered_arr:
-		var piece_ID = piece.ID
-		var piece_group_number = piece.group_number
-		var global_pos = piece.global_position
+	for p in PuzzleVar.ordered_pieces_array:
 		puzzle_data.append({
-			"ID": piece_ID,
-			"GroupID": piece_group_number,
+			"ID": p.ID,
+			"GroupID": p.group_number,
 			"CenterLocation": {
-				"x": global_pos.x,
-				"y": global_pos.y
+				"x": p.global_position.x,
+				"y": p.global_position.y
 			}
 		})
-		group_ids[piece_group_number] = true
-
-	var percentage_done = (1.0 - float(group_ids.keys().size()) / float(size) + (1.0 / float(size))) * 100.0
-	var wrapped = Utilities.dict2fields({ puzzleId: puzzle_data })["fields"][puzzleId]
-	await progressDoc.add_or_update_field(puzzleId, wrapped)
-	await progressDoc.add_or_update_field(puzzleId + "progress", { "doubleValue": str(percentage_done) })
-	await progressCollection.update(progressDoc)
-
+		group_ids[p.group_number] = true
+	var size = PuzzleVar.global_num_pieces
+	var percentage_done = float(size - group_ids.size()) / float(size - 1) * 100.0
+	#print("groups ", group_ids, " ", group_ids.size(), " ", percentage_done)
+	# update current_puzzle
+	state.add_or_update_field("puzzle_choice", PuzzleVar.choice)
+	state.add_or_update_field("piece_locations", puzzle_data)
+	state.add_or_update_field("progress", int(percentage_done))
+	await lobby_puzzle.update(state)
 
 func get_puzzle_state(puzzle_name):
+	''' Senior Project
+	Returns the puzzle state for the user
+	'''
 	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/active_puzzles")
 	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
 	var res = current_puzzle.get_value("piece_locations")
@@ -413,45 +393,36 @@ func get_puzzle_state(puzzle_name):
 		return []
 	return parse_firestore_puzzle_data(res)
 
-
-func get_puzzle_loc(puzzleId: String) -> Array:
-	var progressCollection: FirestoreCollection = Firebase.Firestore.collection("progress")
-	var userProgressDoc = await progressCollection.get_doc(FireAuth.get_user_id())
-	print("Document keys:", userProgressDoc.document.keys())
-
-	var puzzle_json = userProgressDoc.document.get(puzzleId)
-	print(" Raw value for", puzzleId, ":", puzzle_json)
-
-	if not puzzle_json or "stringValue" not in puzzle_json:
-		print("No saved puzzle data for:", puzzleId)
+func get_puzzle_state_server():
+	''' Senior Project
+	Returns the puzzle state for the user's selected lobby
+	'''
+	if(!NetworkManager.is_server):
+		return
+	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_server/lobby" + PuzzleVar.lobby_number)
+	var state = await lobby_puzzle.get_doc("state")
+	# set puzzle choice
+	var choice = state.get_value("puzzle_choice")
+	if !choice:
+		print("ERROR: Lobby", PuzzleVar.lobby_number, " has no puzzle choice")
+		get_tree().quit(-1)
+	# get location
+	var loc = state.get_value("piece_locations")
+	if(!loc):
 		return []
+	return parse_firestore_puzzle_data(loc)
 
-	var parsed_result = JSON.parse_string(puzzle_json["stringValue"])
-	if typeof(parsed_result) != TYPE_ARRAY:
-		print("Malformed puzzle data for:", puzzleId)
-		return []
-
-	return parsed_result
-
-func write_temp_to_location(puzzleId: String) -> void:
-	var PUZZLE_NAME = puzzleId
-	var progressCollection: FirestoreCollection = await Firebase.Firestore.collection("progress")
-	var userProgressDoc = await progressCollection.get_doc(FireAuth.get_user_id())
-
-	await userProgressDoc.add_or_update_field(PUZZLE_NAME, [{"temp" : "temp"}])	
-	await progressCollection.update(userProgressDoc)
-	
-func get_progress() -> void:
-	var progressCollection: FirestoreCollection = await Firebase.Firestore.collection("progress")
-	var userProgressDoc = await progressCollection.get_doc(FireAuth.get_user_id())
-	for i in range(0,12):
-		var PUZZLE_NAME = puzzleNames[i][0]
-		var puzzle_data = userProgressDoc.document.get(str(PUZZLE_NAME + "progress"))
-		if puzzle_data and puzzle_data is Dictionary:
-			if "doubleValue" in puzzle_data:
-				GlobalProgress.progress_arr.append(int(puzzle_data["doubleValue"]))
-			elif "integerValue" in puzzle_data:
-				GlobalProgress.progress_arr.append(int(puzzle_data["integerValue"]))
-	
-	return
-	
+#func get_progress() -> void:
+	#var progressCollection: FirestoreCollection = await Firebase.Firestore.collection("progress")
+	#var userProgressDoc = await progressCollection.get_doc(FireAuth.get_user_id())
+	#for i in range(0,12):
+		#var PUZZLE_NAME = puzzleNames[i][0]
+		#var puzzle_data = userProgressDoc.document.get(str(PUZZLE_NAME + "progress"))
+		#if puzzle_data and puzzle_data is Dictionary:
+			#if "doubleValue" in puzzle_data:
+				#GlobalProgress.progress_arr.append(int(puzzle_data["doubleValue"]))
+			#elif "integerValue" in puzzle_data:
+				#GlobalProgress.progress_arr.append(int(puzzle_data["integerValue"]))
+	#
+	#return
+	#

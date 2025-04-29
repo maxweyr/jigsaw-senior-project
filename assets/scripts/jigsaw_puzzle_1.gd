@@ -152,8 +152,6 @@ func load_firebase_state(p_name):
 				var reference_piece = group_pieces[0]
 				for other_piece in group_pieces.slice(1, group_pieces.size()):
 					reference_piece.snap_and_connect(other_piece.ID, 1)
-	else:
-		FireAuth.write_temp_to_location(selected_puzzle_name)
 
 # Network event handlers
 func _on_player_joined(_client_id, client_name):
@@ -264,7 +262,7 @@ func parse_pieces_json():
 			PuzzleVar.global_coordinates_list[str(n)] =  json_parser.data[str(n)]
 	else:
 		print("INVALID DATA")
-	print("GCL: ", PuzzleVar.global_coordinates_list)
+	#print("GCL: ", PuzzleVar.global_coordinates_list)
 # This function parses adjacent.json which contains information about which pieces are 
 # adjacent to a given piece
 func parse_adjacent_json():
