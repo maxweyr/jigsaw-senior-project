@@ -125,7 +125,6 @@ func _on_area_2d_input_event(_viewport, event, _shape_idx):
 						placed += 1
 						
 				print("remaining: " + str(placed-1))
-				
 				#do not trigger any more events after putting the piece down
 				get_viewport().set_input_as_handled()
 				
