@@ -148,7 +148,7 @@ func button_pressed(button):
 	var puzzles_on_page = local_puzzle_list.slice(start_image, end_image)
 	if !(row_selected < puzzles_on_page.size()):
 		return
-	print(puzzles_on_page[row_selected]["base_name"])
+	#print(puzzles_on_page[row_selected]["base_name"])
 	# if the selection is valid, proceed to the puzzle size selection menu
 	puzzles_on_page[row_selected]["size"] = size_selected
 	PuzzleVar.choice = puzzles_on_page[row_selected]

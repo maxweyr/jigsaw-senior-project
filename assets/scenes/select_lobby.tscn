@@ -15,6 +15,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="new background" type="TextureRect" parent="."]
+layout_mode = 0
 offset_left = -93.0
 offset_top = -64.0
 offset_right = 2124.0
@@ -204,6 +205,7 @@ text = "Join Puzzle"
 
 [node name="GoBackToMenu" type="Button" parent="."]
 custom_minimum_size = Vector2(300, 100)
+layout_mode = 0
 offset_left = 6.0
 offset_top = 8.0
 offset_right = 306.0

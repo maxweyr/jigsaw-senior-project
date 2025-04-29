@@ -58,7 +58,7 @@ func _ready():
 		
 		# Set the texture rect for the sprite
 		var piece_image_path = selected_puzzle_dir + "/pieces/raster/" + str(x) + ".png" 
-		print(piece_image_path)
+		#print(piece_image_path)
 		piece.ID = x # set the piece ID here
 		piece.z_index = 2
 		sprite.texture = load(piece_image_path) # load the image
@@ -85,13 +85,17 @@ func _ready():
 	if NetworkManager.is_online and NetworkManager.current_puzzle_id:
 		# If in online mode, request the current state from the server
 		update_online_status_label("Syncing puzzle state...")
-	elif !NetworkManager.is_online and FireAuth.is_online:
-		# Offline mode with Firebase
-		load_firebase_state()
 		
-	if !NetworkManager.is_online and FireAuth.is_online:
-		FireAuth.add_active_puzzle(selected_puzzle_name, PuzzleVar.global_num_pieces)
-		FireAuth.add_favorite_puzzle(selected_puzzle_name)
+	elif !NetworkManager.is_online and FireAuth.is_online:
+		# client is connected to firebase
+		var puzzle_name_with_size = PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"])
+		print("updating active puzzle: ", puzzle_name_with_size)
+		FireAuth.update_active_puzzle(puzzle_name_with_size)
+		#load_firebase_state()
+		
+	#if not is_online_mode and FireAuth.offlineMode == 0:
+		#FireAuth.add_active_puzzle(selected_puzzle_name, PuzzleVar.global_num_pieces)
+		#FireAuth.add_favorite_puzzle(selected_puzzle_name)
 	
 	# Connect the back button signal
 	var back_button = $UI_Button/Back
