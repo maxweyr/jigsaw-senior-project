@@ -248,7 +248,7 @@ func get_user_doc(id: String) -> FirestoreDocument:
 ## Firebase Interaction Methods
 ##==============================
 
-# writes the last login time to the firebase last_login field for a user
+# writes the last login time to firebase 'last_login' field for the user
 func write_last_login_time():
 	if(NetworkManager.is_server):
 		return
@@ -262,9 +262,11 @@ func write_last_login_time():
 		user.add_or_update_field("last_login", Time.get_datetime_string_from_system())
 		users.update(user)
 
+
 func _on_login_failed(code: String, message: String) -> void:
 	login_failed.emit()
 	print("Login failed with code: ", code, " message: ", message)
+
 
 # increments a users total_playing_time field by 1 (int)
 func write_total_playing_time() -> void:
@@ -283,7 +285,8 @@ func write_total_playing_time() -> void:
 	print("UPDATING TOTAL PLAYTIME TO ", newTime)
 	user.add_or_update_field("total_playing_time", newTime)
 	users.update(user)
-	
+
+
 func write_puzzle_time_spent(puzzle_name):
 	''' Senior Project
 	Updates the amount spent on a specific puzzle
@@ -325,8 +328,8 @@ func add_user_completed_puzzles(completedPuzzle: Dictionary) -> void:
 			})
 	userDoc.add_or_update_field("completedPuzzles", completedPuzzlesList)
 	userCollection.update(userDoc)
-	
-	
+
+
 func update_active_puzzle(puzzle_name):
 	''' Senior Project
 	On non-multiplayer puzzle select, adds active_puzzle
@@ -343,8 +346,7 @@ func update_active_puzzle(puzzle_name):
 		})
 	else:
 		current_puzzle.add_or_update_field("last_opened", Time.get_datetime_string_from_system())
-		await active_puzzles.update(current_puzzle)
-		
+		await active_puzzles.update(current_puzzle)	
 
 func write_puzzle_state(state_arr, puzzle_name, size):
 	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/active_puzzles")
@@ -371,9 +373,6 @@ func write_puzzle_state(state_arr, puzzle_name, size):
 	current_puzzle.add_or_update_field("piece_locations", puzzle_data)
 	current_puzzle.add_or_update_field("progress", int(percentage_done))
 	active_puzzles.update(current_puzzle)
-	
-
-
 
 func save_puzzle_loc(ordered_arr: Array, puzzleId: String, size: int) -> void:
 	var progressCollection: FirestoreCollection = Firebase.Firestore.collection("progress")
@@ -413,7 +412,8 @@ func get_puzzle_state(puzzle_name):
 	if(!res):
 		return []
 	return parse_firestore_puzzle_data(res)
-	
+
+
 func get_puzzle_loc(puzzleId: String) -> Array:
 	var progressCollection: FirestoreCollection = Firebase.Firestore.collection("progress")
 	var userProgressDoc = await progressCollection.get_doc(FireAuth.get_user_id())
