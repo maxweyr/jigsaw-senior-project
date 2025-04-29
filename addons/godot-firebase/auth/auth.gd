@@ -220,7 +220,6 @@ func signup_with_email_and_password(email : String, password : String) -> void:
 			is_busy = false
 			Firebase._printerr("Error signing up with password and email: %s" % err)
 
-
 # Called with Firebase.Auth.anonymous_login()
 # A successful request is indicated by a 200 OK HTTP status code.
 # The response contains the Firebase ID token and refresh token associated with the anonymous user.
