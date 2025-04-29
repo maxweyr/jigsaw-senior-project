@@ -143,115 +143,51 @@ func write_last_login_time():
 	var user = await users.get_doc(get_box_id())
 	# this is first time we  find user, so if it doesnt exist lets add them to collection
 	if !user:
-		user = await users.add(get_box_id())
-	user.add_or_update_field("last_login", Time.get_datetime_string_from_system())
-	users.update(user)
+		print("ADDING USER TO FB DB: ", get_box_id())
+		await users.add(get_box_id(), {"last_login": Time.get_datetime_string_from_system()})
+	else:
+		user.add_or_update_field("last_login", Time.get_datetime_string_from_system())
+		users.update(user)
 	
 func _on_login_failed(code: String, message: String) -> void:
 	login_failed.emit()
 	print("Login failed with code: ", code, " message: ", message)
 
 
-func write_playing_time() -> void:
+func write_total_playing_time() -> void:
+	''' Senior Project
+	Updates the amount of time the player has been playing
+	Note: this only counts up if the player is in a puzzle
+	'''
 	var users: FirestoreCollection = Firebase.Firestore.collection("sp_users")
 	var user = await users.get_doc(get_box_id())
-	var current_user_time = user.get("total_playing_time")
+	var current_user_time = user.get_value("total_playing_time")
 	if(!current_user_time):
 		user.set("total_playing_time", 1)
 		users.update(user)
 		return
 	var newTime = int(current_user_time) + 1
+	print("UPDATING TOTAL PLAYTIME TO ", newTime)
 	user.add_or_update_field("total_playing_time", newTime)
 	users.update(user)
 	
-# add active puzzle to firebase
-func add_active_puzzle(puzzleId: String, grid_size: int) -> void:
-	var GRID_SIZE = grid_size
-	var PUZZLE_NAME = puzzleId
-	# add puzzle to active puzzle or add user to currently active puzzle
-	var puzzleCollection: FirestoreCollection = Firebase.Firestore.collection("puzzles")
-	var userCollection: FirestoreCollection = Firebase.Firestore.collection("users")
-	var doc = await puzzleCollection.get_doc(PUZZLE_NAME)
-	if (doc == null || not doc):
-		# add doc here
-		await puzzleCollection.add(PUZZLE_NAME, {'complete': false, 'users': ["temp", FireAuth.get_user_id()], 'pieces': [], 'xDimension': GRID_SIZE, 'yDimension': GRID_SIZE, 'size': GRID_SIZE*GRID_SIZE})
+func write_puzzle_time_spent(puzzle_name):
+	''' Senior Project
+	Updates the amount spent on a specific puzzle
+	'''
+	var users: FirestoreCollection = Firebase.Firestore.collection("sp_users")
+	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/active_puzzles")
+	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
+	if not current_puzzle:
+		print("ERROR: ACCESSING WRONG PUZZLE")
+		get_tree().quit(-1)
 	else:
-		# get current doc and add new user
-		var puzzleDoc = await puzzleCollection.get_doc(PUZZLE_NAME)
-		var userField = await puzzleDoc.document.get("users")
-		var usersArray = []
-		if userField and "arrayValue" in userField and userField["arrayValue"]:
-			for value in userField["arrayValue"]["values"]:
-				if "stringValue" in value:
-					usersArray.append(value["stringValue"])
-		var currentUser = FireAuth.get_user_id()
-		if currentUser not in usersArray:
-			usersArray.append(FireAuth.get_user_id())
-			puzzleDoc.add_or_update_field("users", usersArray)
-			puzzleCollection.update(puzzleDoc)
-	# add to user active puzzle list
-	var userDoc = await FireAuth.get_user_puzzle_list(FireAuth.get_user_id())
-	var userActivePuzzleField = userDoc.document.get("activePuzzles")
-	var activePuzzleList = []
-	var curPuzzleAddedFlag = 0
-	
-	# check if the activePuzzles field exists and has array values
-	if userActivePuzzleField and "arrayValue" in userActivePuzzleField:
-		for puzzle in userActivePuzzleField["arrayValue"]["values"]:
-			if "mapValue" in puzzle:
-				var puzzleData = puzzle["mapValue"]["fields"]
-				if puzzleData["puzzleId"]["stringValue"] == PUZZLE_NAME:
-					curPuzzleAddedFlag = 1
-				activePuzzleList.append({
-					"puzzleId": puzzleData["puzzleId"]["stringValue"],
-					"timeStarted": puzzleData["timeStarted"]["stringValue"]
-					})
-
-	if not curPuzzleAddedFlag:
-		activePuzzleList.append({"puzzleId": PUZZLE_NAME, "timeStarted": Time.get_datetime_string_from_system()})
-		userDoc.add_or_update_field("activePuzzles", activePuzzleList)
-		userCollection.update(userDoc)
-
-func remove_current_user_from_activePuzzle(puzzleID: String):
-	var PUZZLE_NAME = puzzleID
-	var userCollection: FirestoreCollection = Firebase.Firestore.collection("users")
-	var puzzleCollection: FirestoreCollection = Firebase.Firestore.collection("puzzles")
-	var userDoc = await userCollection.get_doc(FireAuth.get_user_id())
-	var puzzleDoc = await puzzleCollection.get_doc(PUZZLE_NAME)
-	# ideally when multiplayer works, doc should be deleted if one player completes
-	# which will eventually replace the code below
-	# delete finished puzzle from current user active puzzle
-	var userActivePuzzleField = userDoc.document.get("activePuzzles")
-	var activePuzzleList = []
-	var completedPuzzleData = {}
-	if userActivePuzzleField and "arrayValue" in userActivePuzzleField:
-		for puzzle in userActivePuzzleField["arrayValue"]["values"]:
-			if "mapValue" in puzzle:
-				var puzzleData = puzzle["mapValue"]["fields"]
-				if puzzleData["puzzleId"]["stringValue"] != PUZZLE_NAME:
-					activePuzzleList.append({
-						"puzzleId": puzzleData["puzzleId"]["stringValue"],
-						"timeStarted": puzzleData["timeStarted"]["stringValue"]
-						})
-				else:
-					completedPuzzleData = puzzleData
-	userDoc.add_or_update_field("activePuzzles", activePuzzleList)
-	await userCollection.update(userDoc)
-	
-	# delete current user from current activePuzzle
-	var puzzleUserField = puzzleDoc.document.get("users")
-	var puzzleActiveUserList = []
-	if puzzleUserField and "arrayValue" in puzzleUserField:
-		for value in puzzleUserField["arrayValue"]["values"]:
-			if "stringValue" in value and FireAuth.get_user_id() != value["stringValue"]:
-				puzzleActiveUserList.append(value["stringValue"])
-				
-	puzzleDoc.add_or_update_field("users", puzzleActiveUserList)
-	await puzzleCollection.update(puzzleDoc)
-	
-	# add to user completed puzzles
-	add_user_completed_puzzles(completedPuzzleData)
-
+		var time = current_puzzle.get_value("time_spent")
+		if(!time):
+			current_puzzle.set("time_spent", 1)
+		else:
+			current_puzzle.add_or_update_field("time_spent", int(time) + 1)
+		await active_puzzles.update(current_puzzle)
 
 func add_user_completed_puzzles(completedPuzzle: Dictionary) -> void:
 	var userCollection: FirestoreCollection = Firebase.Firestore.collection("users")
@@ -276,78 +212,25 @@ func add_user_completed_puzzles(completedPuzzle: Dictionary) -> void:
 	userDoc.add_or_update_field("completedPuzzles", completedPuzzlesList)
 	userCollection.update(userDoc)
 	
-# add favorite puzzles to firebase
-func add_favorite_puzzle(puzzleId: String) -> void:
-	var PUZZLE_NAME = puzzleId
-	# grab the use collection and user doc
-	var userCollection: FirestoreCollection = Firebase.Firestore.collection("users")
-	var userDoc = await userCollection.get_doc(FireAuth.get_user_id())
 	
-	# get the user's favorite puzzle field from FireBase
-	var favoritePuzzleField = userDoc.document.get("favoritePuzzles")
-	var favoritePuzzleList = []
+func update_active_puzzle(puzzle_name):
+	''' Senior Project
+	On non-multiplayer puzzle select, adds active_puzzle
+	'''
+	var users: FirestoreCollection = Firebase.Firestore.collection("sp_users")
+	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/active_puzzles")
+	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
 	
-	# check if the favoritePuzzles field is present
-	if favoritePuzzleField and "arrayValue" in favoritePuzzleField:
-		# go through each puzzle ID
-		for puzzle in favoritePuzzleField["arrayValue"]["values"]:
-			
-			# each entry is a value from a hashmap
-			if "mapValue" in puzzle:
-				var puzzleData = puzzle["mapValue"]["fields"]
-				# add the values from the database to our list
-				favoritePuzzleList.append({
-					"puzzleId": puzzleData["puzzleId"]["stringValue"],
-					"timesPlayed": int(puzzleData["timesPlayed"]["integerValue"]),
-					# default rank is 0
-					"rank": int(puzzleData.get("rank", {"integerValue": "0"})["integerValue"])
-					})
-	# flag to check if the puzzle is already in favorite puzzles
-	var puzzleFound = false
-	# check if the current puzzle ID is already in our list
-	for puzzle in favoritePuzzleList:
-		if puzzle["puzzleId"] == PUZZLE_NAME:
-			# increment the current puzzle "timesPLayed" value
-			puzzle["timesPlayed"] += 1
-			# set flag to true
-			puzzleFound = true
-			# get out of the loop
-			break
-			
-	# if this is a new puzzle to the user
-	if not puzzleFound:
-		# add current puzzle to our list
-		favoritePuzzleList.append({
-			"puzzleId": PUZZLE_NAME,
-			"timesPlayed": 1,
-			"rank": 0
-			})
+	if not current_puzzle:
+		await active_puzzles.add(puzzle_name, {
+			"start_time": Time.get_datetime_string_from_system(),
+			"last_opened": Time.get_datetime_string_from_system(),
+			"time_spent": 0,
+		})
+	else:
+		current_puzzle.add_or_update_field("last_opened", Time.get_datetime_string_from_system())
+		await active_puzzles.update(current_puzzle)
 	
-	# sorting by "timesPlayed" with BubbleSort
-	for i in range(favoritePuzzleList.size()):
-		for j in range(0, favoritePuzzleList.size() - i - 1):
-			if favoritePuzzleList[j]["timesPlayed"] < favoritePuzzleList[j + 1]["timesPlayed"]:
-				var temp = favoritePuzzleList[j]
-				favoritePuzzleList[j] = favoritePuzzleList[j + 1]
-				favoritePuzzleList[j + 1] = temp
-	
-	# assign ranks based on sorted order
-	for i in range(favoritePuzzleList.size()):
-		# ranking starts at 1 being the most played
-		favoritePuzzleList[i]["rank"] = i + 1 
-		
-	# update our list to firebase
-	userDoc.add_or_update_field("favoritePuzzles", favoritePuzzleList)
-	await userCollection.update(userDoc)
-
-# function to update whether or not user is playing multiplayer or single player
-func addUserMode(mode: String) -> void:
-	var userCollection: FirestoreCollection = Firebase.Firestore.collection("users")
-	var userDoc = await userCollection.get_doc(FireAuth.get_user_id())
-	if mode == "Multiplayer" or mode == "Single Player":
-		userDoc.add_or_update_field("currentMode", mode)
-		await userCollection.update(userDoc)
-		
 func save_puzzle_loc(ordered_arr: Array, puzzleId: String, size: int) -> void:
 	var progressCollection: FirestoreCollection = Firebase.Firestore.collection("progress")
 	var progressDoc = await progressCollection.get_doc(FireAuth.get_user_id())

@@ -84,8 +84,7 @@ func _process(delta):
 	pass
 
 func _on_start_random_pressed():
-	if(FireAuth.offlineMode == 0):
-		await FireAuth.addUserMode("Single Player")
+	
 	$AudioStreamPlayer.play()
 	PuzzleVar.choice = PuzzleVar.get_random_puzzles()
 	# load the texture and get the size of the puzzle image so that the game
@@ -98,8 +97,6 @@ func _on_select_puzzle_pressed():
 	$AudioStreamPlayer.play() # doesn't work, switches scenes too fast
 	# switches to a new scene that will ask you to
 	# actually select what image you want to solve
-	if(FireAuth.offlineMode == 0):
-		await FireAuth.addUserMode("Single Player")
 	get_tree().change_scene_to_file("res://assets/scenes/select_puzzle.tscn")
 
 func _on_play_online_pressed():

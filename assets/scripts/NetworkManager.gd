@@ -29,7 +29,7 @@ var ready_to_load = false
 
 func _ready():
 	var env = ConfigFile.new()
-	var err = env.load("res://env.cfg")
+	var err = env.load("res://.env")
 	if err != OK:
 		print("could not read env file\n",err)
 	else: 
