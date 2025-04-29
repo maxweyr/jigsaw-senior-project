@@ -13,7 +13,7 @@ var online_status_label: Label
 
 # Network-related variables
 var connected_players = []
-var selected_puzzle_dir = {}
+var selected_puzzle_dir = ""
 var selected_puzzle_name = ""
 
 # Called when the node enters the scene tree for the first time.
@@ -22,6 +22,7 @@ func _ready():
 
 	name = "JigsawPuzzleNode"
 	selected_puzzle_dir = PuzzleVar.choice["base_file_path"] + "_" + str(PuzzleVar.choice["size"])
+	PuzzleVar.selected_puzzle_dir = selected_puzzle_dir
 	selected_puzzle_name = PuzzleVar.choice["base_name"] + str(PuzzleVar.choice["size"])
 	is_muted = false
 	
@@ -49,52 +50,12 @@ func _ready():
 	
 	z_index = 0
 	
-	# Iterate through and create puzzle pieces
-	for x in range(PuzzleVar.global_num_pieces):
-		# Create a new sprite for each cell
-		var piece = sprite_scene.instantiate()
-			
-		# add the piece to the group puzzle_pieces so that connection logic can work
-		piece.add_to_group("puzzle_pieces")
-		PuzzleVar.ordered_pieces_array.append(piece)
-		
-		#sets the texture of the sprite to the image
-		var sprite = piece.get_node("Sprite2D")
-		
-		# Set the texture rect for the sprite
-		var piece_image_path = selected_puzzle_dir + "/pieces/raster/" + str(x) + ".png" 
-		#print(piece_image_path)
-		piece.ID = x # set the piece ID here
-		piece.z_index = 2
-		sprite.texture = load(piece_image_path) # load the image
-		
-		# set the height and width for each piece
-		piece.piece_height = sprite.texture.get_height()
-		piece.piece_width = sprite.texture.get_width()
-		
-		#set the collision box for the sprite
-		var collision_box = piece.get_node("Sprite2D/Area2D/CollisionShape2D")
+	# create puzzle pieces and place in scene
+	PuzzleVar.load_and_or_add_puzzle_random_loc(self, sprite_scene, selected_puzzle_dir, true)
 
-		#set the collision box to the bounding box of the sprite
-		collision_box.shape.extents = Vector2(sprite.texture.get_width() / 2, sprite.texture.get_height() / 2)
-	
-		var spawnarea = get_viewport_rect()
-
-		piece.position = Vector2(randi_range(50,spawnarea.size.x),randi_range(50,spawnarea.size.y))
-		
-		# Add the sprite to the Grid node	
-		#get_parent().call_deferred("add_child", piece)
-		add_child(piece)
-	
-	# Handle saved piece data for offline or online mode
-	if NetworkManager.is_online and NetworkManager.current_puzzle_id:
-		# If in online mode, request the current state from the server
-		update_online_status_label("Syncing puzzle state...")
-		
-	elif !NetworkManager.is_server and FireAuth.is_online:
+	if FireAuth.is_online:
 		# client is connected to firebase
 		var puzzle_name_with_size = PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"])
-		await FireAuth.update_active_puzzle(puzzle_name_with_size)
 		await load_firebase_state(puzzle_name_with_size)
 		
 	#if not is_online_mode and FireAuth.offlineMode == 0:
@@ -108,7 +69,17 @@ func _ready():
 
 # Load state from Firebase (for offline mode)
 func load_firebase_state(p_name):
-	var saved_piece_data: Array = await FireAuth.get_puzzle_state(p_name)
+	print("LOADING STATE")
+	var saved_piece_data: Array
+	if(NetworkManager.is_online):
+		print("SERVER: SYNC P LOC")
+		update_online_status_label("Syncing puzzle state...")
+		saved_piece_data = await FireAuth.get_puzzle_state_server()
+		print("SERVER: SYNC P LOC")
+		
+	else: 
+		await FireAuth.update_active_puzzle(p_name)
+		saved_piece_data = await FireAuth.get_puzzle_state(p_name)
 	var notComplete = 0
 	var groupArray = []
 	for idx in range(len(saved_piece_data)):
@@ -441,16 +412,20 @@ func show_win_screen():
 
 # Handles leaving the puzzle scene, saving state, and disconnecting if online client
 func _on_back_pressed() -> void:
+	loading.show()
 	# 1. Save puzzle state if needed
 	#    Saving might be relevant even if NetworkManager.is_online is true,
 	#    if we use Firebase alongside the server for persistence
-	if FireAuth.is_online: # Check if Firebase is initialized/logged in
+	if FireAuth.is_online and !NetworkManager.is_online: # Check if Firebase is initialized/logged in
 		print("Saving puzzle state to Firebase before leaving...")
 		await FireAuth.write_puzzle_state(
 			PuzzleVar.ordered_pieces_array,
 			PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]),
 			PuzzleVar.global_num_pieces
 		)
+		
+		# Jumpstart
+		#await FireAuth.write_puzzle_state_server(1)
 
 	# 2. Handle multiplayer disconnection if this is an online client
 	if NetworkManager.is_online and not NetworkManager.is_server:
@@ -478,4 +453,5 @@ func _on_back_pressed() -> void:
 
 	# 4. Change back to the puzzle selection scene
 	print("Returning to puzzle selection screen.")
-	get_tree().change_scene_to_file("res://assets/scenes/select_puzzle.tscn")
+	loading.hide()
+	get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn")

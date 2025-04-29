@@ -77,15 +77,14 @@ scale = Vector2(0.4, 0.4)
 size_flags_horizontal = 4
 size_flags_vertical = 4
 theme = ExtResource("6_nllai")
-theme_override_font_sizes/font_size = 70
-text = "Return to Select Puzzle"
+theme_override_font_sizes/font_size = 95
+text = "Return to Menu"
 
 [node name="OnlineMode" type="Label" parent="UI_Button"]
 offset_right = 40.0
 offset_bottom = 23.0
 
 [node name="LoadingScreen" type="CanvasLayer" parent="."]
-visible = false
 
 [node name="Background" type="Control" parent="LoadingScreen"]
 layout_mode = 3
@@ -130,14 +129,14 @@ layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -246.0
-offset_top = 587.0
-offset_right = 255.0
-offset_bottom = 691.0
+offset_left = -143.0
+offset_top = 603.0
+offset_right = 147.0
+offset_bottom = 707.0
 grow_horizontal = 2
 theme = ExtResource("9_l353k")
 theme_override_colors/font_color = Color(0.505882, 0.34902, 0.231373, 1)
-text = "Loading Puzzle"
+text = "Loading..."
 
 [node name="Image" type="Sprite2D" parent="." groups=["dropable"]]
 position = Vector2(-17993, 1014)

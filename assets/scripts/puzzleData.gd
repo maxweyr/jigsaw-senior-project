@@ -31,6 +31,8 @@ var number_correct = 0 # this is the number of pieces that have been placed
 # boolean value to trigger debug mode
 var debug = false
 
+var selected_puzzle_dir
+var sprite_scene
 var global_coordinates_list = {} # a dictionary of global coordinates for each piece
 var adjacent_pieces_list = {} #a dictionary of adjacent pieces for each piece
 var image_file_names = {} #a dictionary containing a mapping of selection numbers to image names
@@ -66,6 +68,32 @@ func get_random_puzzles():
 	selected["size"] = random_size
 	return selected
 	
+	
+func load_and_or_add_puzzle_random_loc(parent_node: Node, sprite_scene: PackedScene, selected_puzzle_dir: String, add: bool) -> void:
+	PuzzleVar.ordered_pieces_array.clear()
+	for x in range(PuzzleVar.global_num_pieces):
+		var piece = sprite_scene.instantiate()
+		piece.add_to_group("puzzle_pieces")
+
+		var sprite = piece.get_node("Sprite2D")
+		var piece_image_path = selected_puzzle_dir + "/pieces/raster/" + str(x) + ".png"
+		piece.ID = x
+		piece.z_index = 2
+		sprite.texture = load(piece_image_path)
+
+		piece.piece_height = sprite.texture.get_height()
+		piece.piece_width = sprite.texture.get_width()
+
+		var collision_box = piece.get_node("Sprite2D/Area2D/CollisionShape2D")
+		collision_box.shape.extents = Vector2(sprite.texture.get_width() / 2, sprite.texture.get_height() / 2)
+
+		var spawnarea = parent_node.get_viewport_rect()
+		piece.position = Vector2(randi_range(50, spawnarea.size.x), randi_range(50, spawnarea.size.y))
+		PuzzleVar.ordered_pieces_array.append(piece)
+		if(add):
+			parent_node.call_deferred("add_child", piece) 
+
+	
 func get_avail_puzzles():
 	# Your existing function is fine
 	var ret_arr = []
@@ -96,5 +124,4 @@ func get_avail_puzzles():
 				}
 			)
 		file_name = dir.get_next()
-	print("SFSAFDJSFKHSFHDKJHFDKSJDHFJHSFSHFDKJHSDF\n", ret_arr)
 	return ret_arr
