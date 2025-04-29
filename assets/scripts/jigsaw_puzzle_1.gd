@@ -8,6 +8,8 @@ var unmute_button: Button
 var offline_button: Button
 var online_status_label: Label
 
+@onready var loading = $LoadingScreen
+
 # Network-related variables
 var connected_players = []
 var selected_puzzle_dir = {}
@@ -15,6 +17,8 @@ var selected_puzzle_name = ""
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	loading.show()
+
 	name = "JigsawPuzzleNode"
 	selected_puzzle_dir = PuzzleVar.choice["base_file_path"] + "_" + str(PuzzleVar.choice["size"])
 	selected_puzzle_name = PuzzleVar.choice["base_name"] + str(PuzzleVar.choice["size"])
@@ -86,12 +90,11 @@ func _ready():
 		# If in online mode, request the current state from the server
 		update_online_status_label("Syncing puzzle state...")
 		
-	elif !NetworkManager.is_online and FireAuth.is_online:
+	elif !NetworkManager.is_server and FireAuth.is_online:
 		# client is connected to firebase
 		var puzzle_name_with_size = PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"])
-		print("updating active puzzle: ", puzzle_name_with_size)
-		FireAuth.update_active_puzzle(puzzle_name_with_size)
-		#load_firebase_state()
+		await FireAuth.update_active_puzzle(puzzle_name_with_size)
+		await load_firebase_state(puzzle_name_with_size)
 		
 	#if not is_online_mode and FireAuth.offlineMode == 0:
 		#FireAuth.add_active_puzzle(selected_puzzle_name, PuzzleVar.global_num_pieces)
@@ -100,10 +103,11 @@ func _ready():
 	# Connect the back button signal
 	var back_button = $UI_Button/Back
 	back_button.connect("pressed", Callable(self, "_on_back_button_pressed"))
+	loading.hide()
 
 # Load state from Firebase (for offline mode)
-func load_firebase_state():
-	var saved_piece_data: Array = await FireAuth.get_puzzle_loc(selected_puzzle_name)
+func load_firebase_state(p_name):
+	var saved_piece_data: Array = await FireAuth.get_puzzle_state(p_name)
 	var notComplete = 0
 	var groupArray = []
 	for idx in range(len(saved_piece_data)):
@@ -440,6 +444,11 @@ func show_win_screen():
 
 
 func _on_back_pressed() -> void:
+	await FireAuth.write_puzzle_state(
+		PuzzleVar.ordered_pieces_array,
+		PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]),
+		PuzzleVar.global_num_pieces)
+		
 	for piece in get_tree().get_nodes_in_group("puzzle_pieces"):
 		piece.queue_free()
 

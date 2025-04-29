@@ -1,27 +1,29 @@
-[gd_scene load_steps=7 format=3 uid="uid://dr6qnsfg5v8bf"]
+[gd_scene load_steps=10 format=3 uid="uid://dr6qnsfg5v8bf"]
 
 [ext_resource type="Script" uid="uid://cn0v4jk621ejf" path="res://assets/scripts/jigsaw_puzzle_1.gd" id="1_p57kp"]
-[ext_resource type="Texture2D" uid="uid://7d68ij6kdk3x" path="res://assets/images/puzzle_background.jpg" id="2_1s5nt"]
-[ext_resource type="Texture2D" uid="uid://fdsqaxc6rx0h" path="res://assets/puzzles/seattle.jpg" id="3_p7ub0"]
+[ext_resource type="Texture2D" uid="uid://q5cshs21bjdb" path="res://assets/images/puzzle_background.jpg" id="2_1s5nt"]
+[ext_resource type="Texture2D" uid="uid://0sfjms6m7vqv" path="res://assets/puzzles/seattle.jpg" id="3_p7ub0"]
 [ext_resource type="Script" uid="uid://dff2jx1ums0vv" path="res://assets/scripts/Camera2D.gd" id="4_823ux"]
-[ext_resource type="FontFile" uid="uid://dbfwm247cqnhw" path="res://assets/scripts/LinLibertine_I.otf" id="5_a27gv"]
+[ext_resource type="FontFile" uid="uid://dw84tdskfen3y" path="res://assets/scripts/LinLibertine_I.otf" id="5_a27gv"]
 [ext_resource type="Theme" uid="uid://0xk2aimn5x6r" path="res://assets/themes/main_menu_buttons.tres" id="6_nllai"]
+[ext_resource type="Texture2D" uid="uid://cl2oqc6l05bh5" path="res://assets/images/throbber1.png" id="7_yauer"]
+[ext_resource type="Script" uid="uid://b7kl13vp3afn1" path="res://assets/scripts/throbber.gd" id="8_l353k"]
+[ext_resource type="Theme" uid="uid://cfxebjeqy3ke7" path="res://assets/themes/bold_text.tres" id="9_l353k"]
 
 [node name="Node2D" type="Node2D"]
 script = ExtResource("1_p57kp")
 
 [node name="TextureRect" type="TextureRect" parent="." groups=["dropable"]]
-offset_left = -11355.0
-offset_top = -6755.0
-offset_right = 12014.0
-offset_bottom = 8128.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -9055.0
+offset_top = -5955.0
+offset_right = 11385.0
+offset_bottom = 8637.0
+grow_horizontal = 2
+grow_vertical = 2
 texture = ExtResource("2_1s5nt")
-expand_mode = 1
-
-[node name="Image" type="Sprite2D" parent="." groups=["dropable"]]
-position = Vector2(-17993, 1014)
-scale = Vector2(1.37158, 1.12207)
-texture = ExtResource("3_p7ub0")
 
 [node name="Camera2D" type="Camera2D" parent="."]
 position = Vector2(958, 542)
@@ -81,5 +83,65 @@ text = "Return to Select Puzzle"
 [node name="OnlineMode" type="Label" parent="UI_Button"]
 offset_right = 40.0
 offset_bottom = 23.0
+
+[node name="LoadingScreen" type="CanvasLayer" parent="."]
+visible = false
+
+[node name="Background" type="Control" parent="LoadingScreen"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+metadata/_edit_use_anchors_ = true
+
+[node name="TextureRect" type="TextureRect" parent="LoadingScreen/Background" groups=["dropable"]]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("2_1s5nt")
+expand_mode = 1
+metadata/_edit_use_anchors_ = true
+
+[node name="TextureRect" type="TextureRect" parent="LoadingScreen/Background/TextureRect"]
+custom_minimum_size = Vector2(100, 100)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -50.0
+offset_top = -50.0
+offset_right = 50.0
+offset_bottom = 50.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("7_yauer")
+expand_mode = 1
+script = ExtResource("8_l353k")
+
+[node name="Label" type="Label" parent="LoadingScreen/Background"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -246.0
+offset_top = 587.0
+offset_right = 255.0
+offset_bottom = 691.0
+grow_horizontal = 2
+theme = ExtResource("9_l353k")
+theme_override_colors/font_color = Color(0.505882, 0.34902, 0.231373, 1)
+text = "Loading Puzzle"
+
+[node name="Image" type="Sprite2D" parent="." groups=["dropable"]]
+position = Vector2(-17993, 1014)
+scale = Vector2(1.37158, 1.12207)
+texture = ExtResource("3_p7ub0")
 
 [connection signal="pressed" from="UI_Button/Back" to="." method="_on_back_pressed"]
