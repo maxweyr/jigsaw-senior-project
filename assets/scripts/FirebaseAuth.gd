@@ -200,7 +200,7 @@ func _on_login_failed(code: String, message: String) -> void:
 
 # increments a users total_playing_time field by 1 (int)
 func write_total_playing_time() -> void:
-''' Senior Project
+	''' Senior Project
 	Updates the amount of time the player has been playing
 	Note: this only counts up if the player is in a puzzle
 	'''
