@@ -1,6 +1,20 @@
 # Godot 4+ specific ignores
-.godot/
 .env
 *.pem
+
+# Build files
 dist/
 build/
+
+# OS / Editor junk
+.DS_Store
+Thumbs.db
+
+# Godot-specific
+.import/
+.export/
+tmp/
+*.import
+*.tmp
+*.log
+.godot/

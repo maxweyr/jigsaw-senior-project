@@ -1,12 +1,22 @@
 extends Node
 
+# Firebase Data Model Below
+# https://lucid.app/lucidchart/af25e9e6-c77e-4969-81fa-34510e32dcd6/edit?viewport_loc=-1197%2C-1440%2C3604%2C2292%2C0_0&invitationId=inv_20e62aec-9604-4bed-b2af-4882babbe404
+
 signal logged_in
 signal signup_succeeded
 signal login_failed
 
 var user_id = ""
 var currentPuzzle = ""
-var offlineMode = 0
+var is_online: bool = true
+
+var _is_writing: bool = false
+
+const USER_COLLECTION: String = "sp_users"
+const USER_SUBCOLLECTIONS = ["active_puzzles", "completed_puzzles", "favorite_puzzles"]
+
+const SERVER_COLLECTION: String = "sp_servers"
 
 var puzzleNames = {
 	0: ["china10", 12],
@@ -47,10 +57,6 @@ var puzzleNames = {
 	35: ["tree1000", 1000],
 };
 
-
-# Firebase Data Model Below
-# https://lucid.app/lucidchart/af25e9e6-c77e-4969-81fa-34510e32dcd6/edit?viewport_loc=-1197%2C-1440%2C3604%2C2292%2C0_0&invitationId=inv_20e62aec-9604-4bed-b2af-4882babbe404
-
 # called when the node enters the scene tree for the first time
 func _ready() -> void:
 	Firebase.Auth.signup_succeeded.connect(_on_signup_succeeded)
@@ -84,15 +90,14 @@ func get_box_id() -> String:
 		print("env user not found")
 		get_tree().quit(-1)
 	return res
-	
-	
+
 func get_current_puzzle() -> String:
 	return str(currentPuzzle)
 	
 # get current user puzzle list
-func get_user_puzzle_list(user_id: String) -> FirestoreDocument:
+func get_user_puzzle_list(id: String) -> FirestoreDocument:
 	var collection: FirestoreCollection = Firebase.Firestore.collection("users")
-	return (await collection.get_doc(user_id))
+	return (await collection.get_doc(id))
 # handle successful anonymous login
 
 func _on_signup_succeeded(auth_info: Dictionary) -> void:
@@ -103,7 +108,6 @@ func _on_signup_succeeded(auth_info: Dictionary) -> void:
 	var favorite_puzzles = [{"puzzleId": "temp", "rank": 1, "timesPlayed": 0}]
 	var collection: FirestoreCollection = Firebase.Firestore.collection("users")
 	var progressCollection: FirestoreCollection = Firebase.Firestore.collection("progress")
-	
 	
 	# add user to firebase
 	var document = await collection.add(user_id, {'activePuzzles': [{"puzzleId": "0", "timeStarted": "0"}], 'lastLogin': Time.get_datetime_string_from_system(), "totalPlayingTime": 0, 'favoritePuzzles': favorite_puzzles, 'completedPuzzles': ["temp"], 'currentMode': 'temp'})
@@ -135,7 +139,48 @@ func _on_signup_succeeded(auth_info: Dictionary) -> void:
 });
 	print("Anon Login Success: ", user_id)
 
+##==============================
+## Quick Get/Set Helper Methods
+##==============================
 
+# returns the collection "sp_users"
+func get_user_collection() -> FirestoreCollection:
+	return Firebase.Firestore.collection(USER_COLLECTION)
+
+# updates a specific user within "sp_users"
+func update_user(doc: FirestoreDocument) -> void:
+	await Firebase.Firestore.collection(USER_COLLECTION).update(doc)
+
+# creates an intial user document with appropriate fiels and subcollections for play
+func create_initial_user(id: String) -> FirestoreDocument:
+	print("WARNING: FireAuth could not find a document in firebase for: ", id, "\nCreating initial document...")
+	var init_doc = {
+		"last_login": String(Time.get_datetime_string_from_system(true, true)),
+		"total_playing_time": int(0)
+	}
+	var temp_doc = {"initialized": true}
+	
+	var users = get_user_collection()
+	var user = await users.add(id, init_doc)
+	
+	for collection_name in USER_SUBCOLLECTIONS:
+		var collection = Firebase.Firestore.collection("sp_users/" + id + "/" + collection_name)
+		await collection.add("temp", temp_doc)
+	return user
+
+# returns the user document, and creates the initial document and fiels if not found
+func get_user_doc(id: String) -> FirestoreDocument:
+	var users = get_user_collection()
+	var user = await users.get_doc(id)
+	if !user: # if first encounter w/ this user => add them to collection w/ basic field info
+		user = await create_initial_user(id)
+	return user
+
+##==============================
+## Firebase Interaction Methods
+##==============================
+
+# writes the last login time to the firebase last_login field for a user
 func write_last_login_time():
 	if(NetworkManager.is_server):
 		return
@@ -148,14 +193,14 @@ func write_last_login_time():
 	else:
 		user.add_or_update_field("last_login", Time.get_datetime_string_from_system())
 		users.update(user)
-	
+
 func _on_login_failed(code: String, message: String) -> void:
 	login_failed.emit()
 	print("Login failed with code: ", code, " message: ", message)
 
-
+# increments a users total_playing_time field by 1 (int)
 func write_total_playing_time() -> void:
-	''' Senior Project
+''' Senior Project
 	Updates the amount of time the player has been playing
 	Note: this only counts up if the player is in a puzzle
 	'''

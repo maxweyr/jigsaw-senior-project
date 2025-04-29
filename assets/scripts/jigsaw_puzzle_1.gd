@@ -9,12 +9,10 @@ var offline_button: Button
 var online_status_label: Label
 
 # Network-related variables
-var network_manager = null
-var is_online_mode = false
 var connected_players = []
-
 var selected_puzzle_dir = {}
 var selected_puzzle_name = ""
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	name = "JigsawPuzzleNode"
@@ -22,14 +20,10 @@ func _ready():
 	selected_puzzle_name = PuzzleVar.choice["base_name"] + str(PuzzleVar.choice["size"])
 	is_muted = false
 	
-	# Check if NetworkManager exists and if we're in online mode
-	network_manager = get_node_or_null("/root/NetworkManager")
-	is_online_mode = network_manager != null and network_manager.is_online
-	
-	if is_online_mode:
+	if NetworkManager.is_online:
 		# Connect to network signals
-		network_manager.player_joined.connect(_on_player_joined)
-		network_manager.player_left.connect(_on_player_left)
+		NetworkManager.player_joined.connect(_on_player_joined)
+		NetworkManager.player_left.connect(_on_player_left)
 		
 		# Create online status label
 		create_online_status_label()
@@ -88,11 +82,11 @@ func _ready():
 		add_child(piece)
 	
 	# Handle saved piece data for offline or online mode
-	if is_online_mode and network_manager.current_puzzle_id:
+	if NetworkManager.is_online and NetworkManager.current_puzzle_id:
 		# If in online mode, request the current state from the server
 		update_online_status_label("Syncing puzzle state...")
 		
-	elif not is_online_mode and FireAuth.offlineMode == 0:
+	elif !NetworkManager.is_online and FireAuth.is_online:
 		# client is connected to firebase
 		var puzzle_name_with_size = PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"])
 		print("updating active puzzle: ", puzzle_name_with_size)
@@ -157,11 +151,11 @@ func load_firebase_state():
 		FireAuth.write_temp_to_location(selected_puzzle_name)
 
 # Network event handlers
-func _on_player_joined(client_id, client_name):
+func _on_player_joined(_client_id, client_name):
 	connected_players.append(client_name)
 	update_online_status_label()
 
-func _on_player_left(client_id, client_name):
+func _on_player_left(_client_id, client_name):
 	connected_players.erase(client_name)
 	update_online_status_label()
 
@@ -193,7 +187,7 @@ func update_online_status_label(custom_text = ""):
 		online_status_label.text += ": " + ", ".join(connected_players)
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
+func _process(_delta):
 	pass
 
 # Handle esc
@@ -439,9 +433,9 @@ func show_win_screen():
 	button.connect("pressed", Callable(self, "on_main_menu_button_pressed")) 
 	
 	# If in online mode, leave the puzzle on the server
-	if is_online_mode and network_manager:
-		network_manager.leave_puzzle()
-	elif not is_online_mode and FireAuth.offlineMode == 0:
+	if NetworkManager.is_online:
+		NetworkManager.leave_puzzle()
+	elif !NetworkManager.is_online and FireAuth.is_online:
 		FireAuth.remove_current_user_from_activePuzzle(selected_puzzle_name)
 
 

@@ -68,7 +68,7 @@ func move(distance: Vector2):
 #this is called whenever an event occurs within the area of the piece
 #	Example events include a key press within the area of the piece or
 #	a piece being clicked or even mouse movement
-func _on_area_2d_input_event(viewport, event, shape_idx):
+func _on_area_2d_input_event(_viewport, event, _shape_idx):
 	# check if the event is a mouse button and see if it is pressed
 	if event is InputEventMouseButton and event.pressed:
 		# check if it was the left button pressed
@@ -348,7 +348,7 @@ func bring_to_front():
 func calc_distance(a: Vector2, b: Vector2) -> float:
 	return ((b.y-a.y)**2 + (b.x-a.x)**2)**0.5
 	
-func show_image_on_snap(position: Vector2):
+func show_image_on_snap(pos: Vector2):
 	var popup = Sprite2D.new()
 	# Load texture
 	popup.texture = preload("res://assets/images/checkmark2.0.png")
@@ -356,7 +356,7 @@ func show_image_on_snap(position: Vector2):
 	# Center the sprite in the viewport
 	popup.position = get_viewport().get_visible_rect().size / 2
 	# Using midpoint between connecting nodes
-	popup.position = position
+	popup.position = pos
 	
 	# Make the sprite larger
 	popup.scale = Vector2(1.5, 1.5) 
@@ -390,7 +390,7 @@ func move_to_position(target_position: Vector2):
 	position = target_position
 
 # This function handles network updates for connected pieces
-func _on_network_pieces_connected(source_piece_id, connected_piece_id, new_group_number, piece_positions):
+func _on_network_pieces_connected(_source_piece_id, _connected_piece_id, new_group_number, piece_positions):
 	# Prevent feedback loop
 	is_network_operation = true
 	

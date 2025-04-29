@@ -71,7 +71,7 @@ func _ready():
 		
 	
 # Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
+func _process(_delta):
 	# this code updates the display so that you know which page you are on
 	pageind.text = page_string %[page_num,total_pages]
 
@@ -135,8 +135,8 @@ func button_pressed(button):
 	#	of the image is 10 and that will be put into PuzzleVar.choice so that
 	#	the appropriate image can be loaded in
 	
-	var name = String(button.name)
-	var chosen = index + int(name[-1])
+	var button_name = String(button.name)
+	var chosen = index + int(button_name[-1])
 	var row_selected = ceil((chosen % 9)/ 3)
 	var sizes = [10, 100, 1000]
 	var size_selected = sizes[chosen % 3]
@@ -232,24 +232,24 @@ func populate_grid():
 			
 func add_custom_label(button, percentage):
 	# Create a Panel (Colored Background)
-	var panel = Panel.new()
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var new_panel = Panel.new()
+	new_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	new_panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	# Flat style
-	panel.add_theme_stylebox_override("panel", StyleBoxFlat.new())
+	new_panel.add_theme_stylebox_override("panel", StyleBoxFlat.new())
 	# Customize the Panel's appearance
 	
 	
-	var stylebox = panel.get_theme_stylebox("panel").duplicate()
+	var stylebox = new_panel.get_theme_stylebox("panel").duplicate()
 	stylebox.bg_color = Color(0, 0, 0, 0.7)# Black with 70% opacity
-	panel.add_theme_stylebox_override("panel", stylebox)
+	new_panel.add_theme_stylebox_override("panel", stylebox)
 
 	# Set panel size and anchors (positioning)
-	panel.anchor_left = 0.0
-	panel.anchor_right = 1.0
+	new_panel.anchor_left = 0.0
+	new_panel.anchor_right = 1.0
 	# Keeps it at the bottom of the button
-	panel.anchor_top = 0.8
-	panel.anchor_bottom = 1.0
+	new_panel.anchor_top = 0.8
+	new_panel.anchor_bottom = 1.0
 
 	# Create Label (Text)
 	var label = Label.new()
