@@ -256,7 +256,6 @@ func parse_pieces_json():
 	var data = json_parser.parse(json)
 	
 	if data == OK: # if the data is valid, go ahead and parse
-		var temp_id = 0
 		var num_pieces = json_parser.data.size()
 		print("Number of pieces" + str(num_pieces))
 		
@@ -283,7 +282,6 @@ func parse_adjacent_json():
 		var data = json_parser.parse(json)
 		print("starting reading adjacent.json")
 		if data == OK:
-			var temp_id = 0
 			var num_pieces = json_parser.data.size()
 			PuzzleVar.global_num_pieces = num_pieces
 			print("Number of pieces" + str(num_pieces))

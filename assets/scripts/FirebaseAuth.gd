@@ -9,9 +9,7 @@ signal login_failed
 
 var user_id = ""
 var currentPuzzle = ""
-var is_online: bool = true
-
-var _is_writing: bool = false
+var is_online: bool = false
 
 const USER_COLLECTION: String = "sp_users"
 const USER_SUBCOLLECTIONS = ["active_puzzles", "completed_puzzles", "favorite_puzzles"]
@@ -74,6 +72,44 @@ func check_auth_file() -> void:
 # check if login is needed
 func needs_login() -> bool:
 	return Firebase.Auth.needs_login()
+
+# Handles the login process: checks existing session, loads file, or attempts anonymous login.
+# Returns true if a valid session exists after the process, false otherwise.
+func handle_login() -> bool:
+	print("FirebaseAuth: Handling login...")
+	# 1. Check if already logged in (SDK might have a valid session)
+	if not Firebase.Auth.needs_login():
+		print("FirebaseAuth: Already logged in (session valid).")
+		is_online = true
+		write_last_login_time()
+		return true
+	# 2. Try loading from the auth file
+	print("FirebaseAuth: No active session, checking auth file...")
+	await check_auth_file() # Wait for the check to complete
+	# Check again: Did loading the file log us in?
+	if not Firebase.Auth.needs_login():
+		print("FirebaseAuth: Login successful via auth file.")
+		is_online = true
+		write_last_login_time() # Record login time on success
+		return true
+	# 3. If still needing login, attempt anonymous login
+	print("FirebaseAuth: No valid auth file found or needed login. Attempting anonymous login...")
+	await attempt_anonymous_login()
+	# 4. Check final login status
+	# After attempt_anonymous_login, the SDK's state (checked by needs_login())
+	# should be updated based on the success/failure signals it received internally.
+	# We might need a brief yield or rely on the check after await.
+	# await get_tree().create_timer(0.1).timeout # Optional small delay if needed for signals
+	if not needs_login():
+		print("FirebaseAuth: Anonymous login successful.")
+		is_online = true
+		write_last_login_time() # Record login time on success
+		return true
+	else:
+		# This means anonymous login likely failed. The _on_login_failed signal handler below logs details.
+		print("FirebaseAuth: Anonymous login failed or still requires login.")
+		is_online = false
+		return false
 
 # get current user id
 func get_user_id() -> String:
