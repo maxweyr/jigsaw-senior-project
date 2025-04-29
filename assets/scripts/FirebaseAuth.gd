@@ -179,9 +179,41 @@ func _on_signup_succeeded(auth_info: Dictionary) -> void:
 ## Quick Get/Set Helper Methods
 ##==============================
 
+func parse_firestore_puzzle_data(raw_array: Dictionary) -> Array:
+	var result = []
+	
+	if not raw_array.has("values"):
+		return result  # Empty array
+	
+	for entry in raw_array["values"]:
+		if not entry.has("mapValue"):
+			continue
+		
+		var fields = entry["mapValue"]["fields"]
+		
+		var id = int(fields["ID"]["integerValue"])
+		var group_id = int(fields["GroupID"]["integerValue"])
+		
+		var center_location_fields = fields["CenterLocation"]["mapValue"]["fields"]
+		var center_x = float(center_location_fields["x"]["doubleValue"])
+		var center_y = float(center_location_fields["y"]["doubleValue"])
+		
+		result.append({
+			"ID": id,
+			"GroupID": group_id,
+			"CenterLocation": {
+				"x": center_x,
+				"y": center_y
+			}
+		})
+	
+	return result
+
+
 # returns the collection "sp_users"
 func get_user_collection() -> FirestoreCollection:
 	return Firebase.Firestore.collection(USER_COLLECTION)
+
 
 # updates a specific user within "sp_users"
 func update_user(doc: FirestoreDocument) -> void:
@@ -270,6 +302,7 @@ func write_puzzle_time_spent(puzzle_name):
 			current_puzzle.add_or_update_field("time_spent", int(time) + 1)
 		await active_puzzles.update(current_puzzle)
 
+
 func add_user_completed_puzzles(completedPuzzle: Dictionary) -> void:
 	var userCollection: FirestoreCollection = Firebase.Firestore.collection("users")
 	var userDoc = await userCollection.get_doc(FireAuth.get_user_id())
@@ -311,7 +344,37 @@ func update_active_puzzle(puzzle_name):
 	else:
 		current_puzzle.add_or_update_field("last_opened", Time.get_datetime_string_from_system())
 		await active_puzzles.update(current_puzzle)
+		
+
+func write_puzzle_state(state_arr, puzzle_name, size):
+	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/active_puzzles")
+	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
+	if not current_puzzle:
+		print("ERROR: ACCESSING WRONG PUZZLE")
+		get_tree().quit(-1)
+		return
+	var puzzle_data = []
+	var group_ids = {}
+	for p in state_arr:
+		puzzle_data.append({
+			"ID": p.ID,
+			"GroupID": p.group_number,
+			"CenterLocation": {
+				"x": p.global_position.x,
+				"y": p.global_position.y
+			}
+		})
+		group_ids[p.group_number] = true
+	var percentage_done = float(size - group_ids.size()) / float(size - 1) * 100.0
+	#print("groups ", group_ids, " ", group_ids.size(), " ", percentage_done)
+	# update current_puzzle
+	current_puzzle.add_or_update_field("piece_locations", puzzle_data)
+	current_puzzle.add_or_update_field("progress", int(percentage_done))
+	active_puzzles.update(current_puzzle)
 	
+
+
+
 func save_puzzle_loc(ordered_arr: Array, puzzleId: String, size: int) -> void:
 	var progressCollection: FirestoreCollection = Firebase.Firestore.collection("progress")
 	var progressDoc = await progressCollection.get_doc(FireAuth.get_user_id())
@@ -343,6 +406,13 @@ func save_puzzle_loc(ordered_arr: Array, puzzleId: String, size: int) -> void:
 	await progressCollection.update(progressDoc)
 
 
+func get_puzzle_state(puzzle_name):
+	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/active_puzzles")
+	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
+	var res = current_puzzle.get_value("piece_locations")
+	if(!res):
+		return []
+	return parse_firestore_puzzle_data(res)
 	
 func get_puzzle_loc(puzzleId: String) -> Array:
 	var progressCollection: FirestoreCollection = Firebase.Firestore.collection("progress")
