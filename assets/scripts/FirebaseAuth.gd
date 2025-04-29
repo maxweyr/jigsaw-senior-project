@@ -349,16 +349,29 @@ func write_puzzle_state(state_arr, puzzle_name, size):
 	current_puzzle.add_or_update_field("progress", int(percentage_done))
 	await active_puzzles.update(current_puzzle)
 
-func write_puzzle_state_server():
+func check_lobby_puzzle_state_server(lobby_num):
 	''' Senior Project
-	Writes State and Choice to DB for user's selected lobbby
+	Checks the lobby number for a valid position array
 	'''
-	if(!NetworkManager.is_server):
-		return
-	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobby" + str(PuzzleVar.lobby_number))
+	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(lobby_num))
 	var state = await lobby_puzzle.get_doc("state")
 	if not state:
 		print("ERROR: Server State Not Found in Lobby", PuzzleVar.lobby_number)
+		get_tree().quit(-1)
+	var pos = state.get_value("piece_locations")
+	if(!pos):
+		return false
+	return true
+
+func write_puzzle_state_server(lobby_num):
+	''' Senior Project
+	Writes State and Choice to DB for user's selected lobbby
+	'''
+	
+	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby1")
+	var state = await lobby_puzzle.get_doc("state")
+	if not state:
+		print("ERROR: Server State Not Found in Lobby", lobby_num)
 		get_tree().quit(-1)
 		return
 	var puzzle_data = []
@@ -373,6 +386,7 @@ func write_puzzle_state_server():
 			}
 		})
 		group_ids[p.group_number] = true
+	print("SERVER: ", puzzle_data)
 	var size = PuzzleVar.global_num_pieces
 	var percentage_done = float(size - group_ids.size()) / float(size - 1) * 100.0
 	#print("groups ", group_ids, " ", group_ids.size(), " ", percentage_done)
@@ -397,10 +411,13 @@ func get_puzzle_state_server():
 	''' Senior Project
 	Returns the puzzle state for the user's selected lobby
 	'''
-	if(!NetworkManager.is_server):
+	if(!NetworkManager.is_online):
 		return
-	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_server/lobby" + PuzzleVar.lobby_number)
+	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(PuzzleVar.lobby_number))
+	print(lobby_puzzle)
 	var state = await lobby_puzzle.get_doc("state")
+	if(!state):
+		get_tree().quit()
 	# set puzzle choice
 	var choice = state.get_value("puzzle_choice")
 	if !choice:
@@ -409,7 +426,9 @@ func get_puzzle_state_server():
 	# get location
 	var loc = state.get_value("piece_locations")
 	if(!loc):
+		print("SERVER: LOC NOT FOUND")
 		return []
+	print(loc)
 	return parse_firestore_puzzle_data(loc)
 
 #func get_progress() -> void:

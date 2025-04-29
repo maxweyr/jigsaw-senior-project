@@ -42,6 +42,26 @@ func _ready():
 		DEFAULT_PORT = env.get_value("server", "PORT", 8080)
 		SERVER_IP = str(env.get_value("server", "SERVER_IP", "127.0.0.1"))
 	
+	# TODO CHANGE THIS TO NUMBER OF LOBBIES 
+	# TODO OR MAYBE ONE FIREBASE CALL TO CHECK ALL 3 LOBBIES?
+	PuzzleVar.choice = { 
+				"file_name": "china.jpg",
+				 "file_path": "res://assets/puzzles/jigsawpuzzleimages/china.jpg",
+				 "base_name": "china", "base_file_path": "res://assets/puzzles/jigsawpuzzleimages/china",
+				 "size": 1000 }
+				# Check if lobby has a valid state
+	var spirit_scene = preload("res://assets/scenes/Piece_2d.tscn")
+	var selected_puzzle_dir = PuzzleVar.choice["base_file_path"] + "_" + str(PuzzleVar.choice["size"])
+	var res = await FireAuth.check_lobby_puzzle_state_server(1)
+	#print("SERVER CHECK STATE: ", res)
+	if(res == false):
+		# ensure that the puzzle piece get random locations in PuzzleVar
+		PuzzleVar.load_and_or_add_puzzle_random_loc(null, spirit_scene, selected_puzzle_dir, false)
+		# load these into state
+		print("writing")
+		await FireAuth.write_puzzle_state_server(1)
+		print("done")
+		
 	# Connect to multiplayer signals
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
@@ -70,11 +90,7 @@ func _process(_delta):
 			should_load_game = false
 			ready_to_load = false
 			# Change the scene
-			PuzzleVar.choice = { 
-				"file_name": "china.jpg",
-				 "file_path": "res://assets/puzzles/jigsawpuzzleimages/china.jpg",
-				 "base_name": "china", "base_file_path": "res://assets/puzzles/jigsawpuzzleimages/china",
-				 "size": 1000 }
+			
 			tree.change_scene_to_file(scene_path)
 		else:
 			print("ERROR: NetworkManager unable to get scene tree")
