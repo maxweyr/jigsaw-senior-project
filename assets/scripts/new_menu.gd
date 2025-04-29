@@ -1,14 +1,11 @@
 extends Control
 
-# this menu is the start screen
-# Called when the node enters the scene tree for the first time.
 var progress_arr = []
-var network_manager = null
-var connection_dialog = null
+var overlay
 
-func _ready():	
+func _ready():
 	#await Firebase.Auth.remove_auth()
-	
+	create_overlay()
 	# Prevents pieces from being loaded multiple times
 	if(PuzzleVar.open_first_time):
 		print("Adding Puzzles")
@@ -25,66 +22,35 @@ func _ready():
 					PuzzleVar.images.append(file_name.replace(".import",""))
 				file_name = dir.get_next()
 			PuzzleVar.images.sort()
-			
 		else:
 			print("An error occured trying to access the path")
-			
 		PuzzleVar.open_first_time = false
 	
-	# below is where the user anonymous login happens
-	# if the user doesn't need to log in, check their stored auth data
-	check_internet_connection()
-	if(FireAuth.is_online):
-		if not FireAuth.needs_login():
-			await FireAuth.check_auth_file()
-			print("\nAccount Found: ", FireAuth.get_user_id())
-			#await FireAuth.get_progress()
-		else:
-			## attempt anonymous login if login is required
-			print("Making new account")
-			await FireAuth.attempt_anonymous_login()
-	
-	# Setup network manager
-	network_manager = get_node_or_null("/root/NetworkManager")
-	if not network_manager:
-		var network_script = load("res://assets/scripts/NetworkManager.gd")
-		network_manager = network_script.new()
-		network_manager.name = "NetworkManager"
-		get_tree().root.add_child(network_manager)
-	
 	# Connect to network signals
-	network_manager.client_connected.connect(_on_client_connected)
-	network_manager.connection_failed.connect(_on_connection_failed)
+	if NetworkManager:
+		NetworkManager.client_connected.connect(_on_client_connected)
+		NetworkManager.connection_failed.connect(_on_connection_failed)
+	if FireAuth:
+		FireAuth.logged_in.connect(_on_login)
+		FireAuth.login_failed.connect(_on_login)
 
-# Check for an internet connection
-func check_internet_connection():
-	# Create an HTTP request node and connect its completion signal
-	var http_request = HTTPRequest.new()
-	add_child(http_request)
-	
-	# Connect the request_completed signal properly
-	http_request.request_completed.connect(_on_request_completed)
-	
-	# Perform a GET request to a reliable URL
-	var error = http_request.request("https://www.google.com/")
-	
-	if error != OK:
-		print("Error sending HTTP request:", error)
-		FireAuth.offlineMode = 1
-
-func _on_request_completed(_result, response_code, _headers, _body):
-	if response_code == 200:
-		print("Internet connection available")
-	else:
-		print("No internet connection or bad response, code:", response_code)
-		FireAuth.offlineMode = 1
-
-# Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(_delta):
 	pass
 
-func _on_start_random_pressed():
+func create_overlay():
+	overlay = ColorRect.new()
+	overlay.name = "LoginOverlay"
+	overlay.color = Color(0, 0, 0, 0.5)  # semi-transparent black
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP  # blocks clicks
+	overlay.size = get_viewport_rect().size
+	overlay.anchor_right = 1
+	overlay.anchor_bottom = 1
+	overlay.visible = false
+	if PuzzleVar.open_first_time:
+		overlay.visible = true
+	add_child(overlay)
 
+func _on_start_random_pressed():
 	$AudioStreamPlayer.play()
 	PuzzleVar.choice = PuzzleVar.get_random_puzzles()
 	# load the texture and get the size of the puzzle image so that the game
@@ -119,7 +85,7 @@ func _on_play_online_pressed():
 	
 	# Attempt to connect to the hard-coded server
 	print("Attempting to connect to server...")
-	if network_manager.join_server():
+	if NetworkManager.join_server():
 		# Show simple connecting message
 		var connecting_label = Label.new()
 		connecting_label.name = "ConnectingLabel"
@@ -146,11 +112,11 @@ func _on_client_connected():
 		connecting_label.queue_free()
 	
 	# Update the puzzle choice to match server's choice
-	if network_manager:
+	if NetworkManager:
 		PuzzleVar.choice = PuzzleVar.get_random_puzzles()
 
 		print("Setting flags for scene change")
-		network_manager.should_load_game = true
+		NetworkManager.should_load_game = true
 		
 		# Use a timer to set the ready flag
 		var timer = Timer.new()
@@ -158,7 +124,7 @@ func _on_client_connected():
 		timer.wait_time = 0.5
 		timer.one_shot = true
 		timer.timeout.connect(func(): 
-			network_manager.ready_to_load = true
+			NetworkManager.ready_to_load = true
 			print("Ready to load flag set to true")
 		)
 		timer.start()
@@ -196,3 +162,6 @@ func _input(event):
 				else:
 					$Label.hide()
 				print("debug mode is: "+str(PuzzleVar.debug))
+
+func _on_login() -> void:
+	overlay.visible = false # Hide the overlay after login completes
