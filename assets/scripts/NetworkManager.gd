@@ -156,7 +156,9 @@ func start_server():
 		print("ERROR: NetworkManager could not create server: ", error)
 		multiplayer.multiplayer_peer = null # Ensure no peer
 		peer = null
-		set_offline_mode() # Fallback to offline state
+		is_online = false
+		is_offline_authority = false
+		get_tree().quit(-1)
 		return false # Indicate failure
 	
 	multiplayer.multiplayer_peer = enet_peer

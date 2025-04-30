@@ -1,71 +1,251 @@
 extends Node2D
 
-# this is the main scene where the game actually occurs for the players to play
+##=========================
+## Puzzle Scene Controller
+##=========================
 
 var is_muted
 var mute_button: Button
 var unmute_button: Button
 var offline_button: Button
 var online_status_label: Label
-
-@onready var back_button = $UI_Button/Back
-@onready var loading = $LoadingScreen
-
-# Network-related variables
 var connected_players = []
 var selected_puzzle_dir = ""
 var selected_puzzle_name = ""
+var piece_scene = preload("res://assets/scenes/Piece_2d.tscn")
+
+@onready var back_button = $UI_Button/Back
+@onready var loading = $LoadingScreen
+@onready var piece_spawner = $PieceSpawner
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	loading.show()
-
 	name = "JigsawPuzzleNode"
+	
+	# error check puzzle var choice
+	if PuzzleVar.choice == null or PuzzleVar.choice.is_empty():
+		printerr("JigsawPuzzleNode: PuzzleVar.choice is not set! Returning to menu.")
+		get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn")
+		return # Stop if no puzzle selected
+	
+	# set puzzle specific info
 	selected_puzzle_dir = PuzzleVar.choice["base_file_path"] + "_" + str(PuzzleVar.choice["size"])
 	PuzzleVar.selected_puzzle_dir = selected_puzzle_dir
 	selected_puzzle_name = PuzzleVar.choice["base_name"] + str(PuzzleVar.choice["size"])
 	is_muted = false
 	
-	if NetworkManager.is_online:
-		# Connect to network signals
-		NetworkManager.player_joined.connect(_on_player_joined)
-		NetworkManager.player_left.connect(_on_player_left)
-		#back_button.pressed.connect(_on_back_pressed)
-		# Create online status label
+	# connecting signals
+	if NetworkManager.is_online: # show online UI elements if actually online
 		create_online_status_label()
+		if NetworkManager.player_joined.is_connected(_on_player_joined) == false:
+			NetworkManager.player_joined.connect(_on_player_joined)
+		if NetworkManager.player_left.is_connected(_on_player_left) == false:
+			NetworkManager.player_left.connect(_on_player_left)
+	
+	# back button is connected only once
+	if back_button and not back_button.pressed.is_connected(_on_back_pressed):
+		back_button.pressed.connect(_on_back_pressed)
 	
 	# load up reference image
 	var ref_image = PuzzleVar.choice["file_path"]
-	# Load the image
-	$Image.texture = load(ref_image)
+	if FileAccess.file_exists(ref_image):
+		$Image.texture = load(ref_image) # Load the image
+	else:
+		printerr("WARNING::JigsawPuzzle1: Could not find reference image for: ", ref_image)
 	
+	# reset puzzle var state
 	PuzzleVar.background_clicked = false
 	PuzzleVar.piece_clicked = false
-
-	# preload the scenes
-	var sprite_scene = preload("res://assets/scenes/Piece_2d.tscn")
+	PuzzleVar.ordered_pieces_array.clear() # clear before spawning/parsing
 	
-	parse_pieces_json()
-	parse_adjacent_json()
+	# parse puzzle pieces
+	if not parse_pieces_json():
+		printerr("ERROR::JigsawPuzzle1: Failed to parse pieces.json for %s" % selected_puzzle_dir)
+		loading.hide(); get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn");
+		return
+	if not parse_adjacent_json():
+		printerr("ERROR::JigsawPuzzle1: Failed to parse adjacent.json for %s" % selected_puzzle_dir)
+		loading.hide(); get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn");
+		return
 	
-	z_index = 0
+	# resize array
+	PuzzleVar.ordered_pieces_array.resize(PuzzleVar.global_num_pieces)
 	
-	# create puzzle pieces and place in scene
-	PuzzleVar.load_and_or_add_puzzle_random_loc(self, sprite_scene, selected_puzzle_dir, true)
-
-	if FireAuth.is_online:
-		# client is connected to firebase
-		var puzzle_name_with_size = PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"])
-		await load_firebase_state(puzzle_name_with_size)
-		
-	#if not is_online_mode and FireAuth.offlineMode == 0:
-		#FireAuth.add_active_puzzle(selected_puzzle_name, PuzzleVar.global_num_pieces)
-		#FireAuth.add_favorite_puzzle(selected_puzzle_name)
+	# conditional spawning
+	if NetworkManager.is_server:
+		print("JigsawPuzzle1 (Server %d): Spawning pieces via MultiplayerSpawner..." % multiplayer.get_unique_id())
+		spawn_pieces_online_server()
+		# server loads initial state after spawning if applicable
+		if FireAuth.is_online:
+			print("JigsawPuzzleNode (Server %d): Loading initial state from Firebase..." % multiplayer.get_unique_id())
+			await load_and_apply_saved_state_server()
 	
-	# Connect the back button signal
-	#var back_button = $UI_Button/Back
-	#back_button.connect("pressed", Callable(self, "_on_back_button_pressed"))
+	elif NetworkManager.is_offline_authority:
+		print("JigsawPuzzleNode (Offline %d): Spawning pieces locally..." % multiplayer.get_unique_id())
+		spawn_pieces_offline_local()
+		# offline client attempts to load state after spawning if applicable
+		if FireAuth.is_online:
+			print("JigsawPuzzleNode (Offline %d): Loading saved state from Firebase..." % multiplayer.get_unique_id())
+			await load_and_apply_saved_state_offline()
+	
+	# else: online client, no need to handle anything here
+	
 	loading.hide()
+	
+	#z_index = 0
+	#
+	## create puzzle pieces and place in scene
+	#PuzzleVar.load_and_or_add_puzzle_random_loc(self, sprite_scene, selected_puzzle_dir, true)
+#
+	#if FireAuth.is_online:
+		## client is connected to firebase
+		#var puzzle_name_with_size = PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"])
+		#await load_firebase_state(puzzle_name_with_size)
+		#
+	##if not is_online_mode and FireAuth.offlineMode == 0:
+		##FireAuth.add_active_puzzle(selected_puzzle_name, PuzzleVar.global_num_pieces)
+		##FireAuth.add_favorite_puzzle(selected_puzzle_name)
+
+##===========================
+## Spawning Helper Functions
+##===========================
+
+func spawn_pieces_online_server() -> void:
+	if not NetworkManager.is_server: return
+	var spawn_area = get_viewport_rect()
+	for i in range(PuzzleVar.global_num_pieces):
+		var initial_data = {
+			"id": i,
+			"piece_image_path": selected_puzzle_dir + "/pieces/raster/" + str(i) + ".png",
+			"initial_group": i, # pieces start in their own group
+			# server determines initial random position for all clients
+			"initial_position": Vector2(randi_range(50, int(spawn_area.size.x - 50)), randi_range(50, int(spawn_area.size.y - 50)))
+		}
+		piece_spawner.spawn(initial_data) # use the spawner
+
+func spawn_pieces_offline_local():
+	if not NetworkManager.is_offline_authority: return
+	var spawn_area = get_viewport_rect()
+	for i in range(PuzzleVar.global_num_pieces):
+		var piece = piece_scene.instantiate()
+		add_child(piece)
+		
+		var initial_data = {
+			"id": i,
+			"piece_image_path": selected_puzzle_dir + "/pieces/raster/" + str(i) + ".png",
+			"initial_group": i, # pieces start in their own group
+			# server determines initial random position for all clients
+			"initial_position": Vector2(randi_range(50, int(spawn_area.size.x - 50)), randi_range(50, int(spawn_area.size.y - 50)))
+		}
+	
+		if piece.has_method("_initialize"):
+			piece._initialize(initial_data)
+		else:
+			printerr("Piece scene is missing _initialize function!")
+		
+		# add to group and array for local tracking
+		if i >= 0 and i < PuzzleVar.ordered_pieces_array.size():
+			PuzzleVar.ordered_pieces_array[i] = piece
+		else:
+			printerr("Offline spawn ID %d out of bounds for ordered_pieces_array (size %d)" % [i, PuzzleVar.ordered_pieces_array.size()])
+
+##=========================
+## State Loading Functions
+##=========================
+
+# server loads authoritative state from Firebase
+func load_and_apply_saved_state_server():
+	if NetworkManager.is_server: return
+	
+	print("SERVER: Loading Initial Puzzle State From Firebase...")
+	var saved_piece_data: Array = await FireAuth.get_puzzle_state_server()
+	if saved_piece_data == null or saved_piece_data.is_empty():
+		print("SERVER: No saved state found or error loading for puzzle '%s'." % selected_puzzle_name)
+		return
+	
+	print("SERVER: Applying loaded state to authoritative pieces...")
+	var applied_count = 0
+	await get_tree().process_frame
+	
+	for data in saved_piece_data:
+		if not typeof(data) == TYPE_DICTIONARY or not data.has_all(["ID", "CenterLocation", "GroupID"]):
+			printerr("SERVER: Invalid data format in saved state: ", data)
+			continue
+		
+		var idx = data["ID"]
+		if not typeof(idx) == TYPE_INT or idx < 0 or idx >= PuzzleVar.ordered_pieces_array.size():
+			printerr("SERVER: Saved state ID '%s' invalid or out of bounds." % str(idx))
+			continue
+		
+		# get pieces from the array populated by _piece_spawned
+		var piece = PuzzleVar.ordered_pieces_array[idx]
+		if not is_instance_valid(piece):
+			printerr("SERVER: Piece node for ID %d not valid when applying state." % idx)
+			continue
+		
+		# apply state directly => replicated by synchronizer
+		var center_location = data["CenterLocation"]
+		if typeof(center_location) == TYPE_DICTIONARY and center_location.has_all(["x", "y"]):
+			piece.position = Vector2(center_location["x"], center_location["y"])
+		else:
+			printerr("SERVER: Invalid CenterLocation format for piece %d: %s" % [idx, str(center_location)])
+		
+		if typeof(data["GroupID"]) == TYPE_INT:
+			piece.group_number = data["GroupID"]
+		else:
+			printerr("SERVER: Invalid GroupID format for piece %d: %s" % [idx, str(data["GroupID"])])
+		
+		applied_count += 1
+	
+	print("SERVER: Applied state to %d pieces." % applied_count)
+
+# Offline client loads its personal saved state from Firebase
+func load_and_apply_saved_state_offline():
+	if not NetworkManager.is_offline_authority: return
+	var puzzle_name_with_size = PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"])
+	
+	print("OFFLINE: Loading saved puzzle state '%s' from Firebase..." % puzzle_name_with_size)
+	await FireAuth.update_active_puzzle(puzzle_name_with_size)
+	var saved_piece_data: Array = await FireAuth.get_puzzle_state(puzzle_name_with_size)
+	
+	if saved_piece_data == null or saved_piece_data.is_empty():
+		print("OFFLINE: No saved state found or error loading for puzzle '%s'." % selected_puzzle_name)
+		return
+	
+	print("OFFLINE: Applying loaded state to local pieces...")
+	var applied_count = 0
+	for data in saved_piece_data:
+		if not typeof(data) == TYPE_DICTIONARY or not data.has_all(["ID", "CenterLocation", "GroupID"]):
+			printerr("OFFLINE: Invalid data format in saved state: ", data)
+			continue
+		
+		var idx = data["ID"]
+		if not typeof(idx) == TYPE_INT or idx < 0 or idx >= PuzzleVar.ordered_pieces_array.size():
+			printerr("OFFLINE: Saved state ID '%s' invalid or out of bounds." % str(idx))
+			continue
+		
+		# get pieces from the array populated by _piece_spawned
+		var piece = PuzzleVar.ordered_pieces_array[idx]
+		if not is_instance_valid(piece):
+			printerr("OFFLINE: Piece node for ID %d not valid when applying state." % idx)
+			continue
+		
+		# apply state directly to local pieces
+		var center_location = data["CenterLocation"]
+		if typeof(center_location) == TYPE_DICTIONARY and center_location.has_all(["x", "y"]):
+			piece.position = Vector2(center_location["x"], center_location["y"])
+		else:
+			printerr("OFFLINE: Invalid CenterLocation format for piece %d: %s" % [idx, str(center_location)])
+		
+		if typeof(data["GroupID"]) == TYPE_INT:
+			piece.group_number = data["GroupID"]
+		else:
+			printerr("OFFLINE: Invalid GroupID format for piece %d: %s" % [idx, str(data["GroupID"])])
+		
+		applied_count += 1
+	
+	print("OFFLINE: Applied state to %d pieces." % applied_count)
 
 # Load state from Firebase (for offline mode)
 func load_firebase_state(p_name):
@@ -217,7 +397,7 @@ func parse_pieces_json():
 
 	if !file:
 		print("ERROR LOADING FILE")
-		get_tree().quit(-1)
+		return false
 	var json = file.get_as_text()
 	file.close()
 
@@ -231,8 +411,10 @@ func parse_pieces_json():
 		
 		for n in num_pieces: # for each piece, add it to the global coordinates list
 			PuzzleVar.global_coordinates_list[str(n)] =  json_parser.data[str(n)]
+		return true
 	else:
 		print("INVALID DATA")
+		return false
 	#print("GCL: ", PuzzleVar.global_coordinates_list)
 # This function parses adjacent.json which contains information about which pieces are 
 # adjacent to a given piece
@@ -257,8 +439,11 @@ func parse_adjacent_json():
 			print("Number of pieces " + str(num_pieces))
 			for n in num_pieces: # for each piece, add the adjacent pieces to the list
 				PuzzleVar.adjacent_pieces_list[str(n)] =  json_parser.data[str(n)]
-				
-				
+		return true
+	else:
+		return false
+
+
 # The purpose of this function is to build a grid of the puzzle piece numbers
 func build_grid(): 
 	var grid = {}
@@ -455,3 +640,31 @@ func _on_back_pressed() -> void:
 	print("Returning to puzzle selection screen.")
 	loading.hide()
 	get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn")
+
+
+func _piece_spawned(piece_node: Node, data: Variant) -> void:
+	if not is_instance_valid(piece_node):
+		printerr("Received spawn callback for invalid node instance.")
+		return
+	if not piece_node is Piece_2d:
+		printerr("Spawned node is not a Piece_2d type.")
+		return
+
+	# check data is a dictionary
+	if not typeof(data) == TYPE_DICTIONARY:
+		printerr("Spawn data is not a dictionary.")
+		return
+
+	print("Peer %d: Initializing spawned piece ID %d" % [multiplayer.get_unique_id(), data.get("id", -1)])
+	if piece_node.has_method("_initialize"):
+		piece_node._initialize(data) # Call initialization function on the piece
+	else:
+		printerr("Piece scene is missing _initialize function!")
+	
+	# add to group and tracking array (needed on clients too for local access)
+	piece_node.add_to_group("puzzle_pieces")
+	var piece_id = data.get("id", -1)
+	if piece_id >= 0 and piece_id < PuzzleVar.ordered_pieces_array.size():
+		PuzzleVar.ordered_pieces_array[piece_id] = piece_node
+	else:
+		printerr("Spawned piece ID %d out of bounds for ordered_pieces_array (size %d)" % [piece_id, PuzzleVar.ordered_pieces_array.size()])
