@@ -11,7 +11,8 @@ signal client_disconnected
 signal connection_failed
 signal player_joined(client_id, client_name)
 signal player_left(client_id, client_name)
-signal pieces_connected(piece_id, connected_piece_id, new_group_number, piece_positions)
+signal pieces_connected(piece_positions)
+signal pieces_moved(piece_id, piece_group_id, piece_positions)
 signal puzzle_info_received(puzzle_id: String)
 
 # Variables
@@ -221,7 +222,15 @@ func register_player(player_name: String):
 
 @rpc("any_peer", "call_remote", "reliable")
 func _receive_piece_connection(piece_id: int, connected_piece_id: int, new_group_number: int, piece_positions: Array):
+	if not is_online: return # don't sync if not MP game
+	print("RPC::_receive_piece_connection")
 	pieces_connected.emit(piece_id, connected_piece_id, new_group_number, piece_positions)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _receive_piece_move(piece_positions: Array):
+	if not is_online: return
+	print("RPC::_receive_piece_move")
+	pieces_moved.emit(piece_positions)
 
 @rpc("authority", "call_remote", "reliable")
 func _update_player_list(players: Dictionary):
@@ -230,8 +239,7 @@ func _update_player_list(players: Dictionary):
 		if id != multiplayer.get_unique_id():  # Not self
 			player_joined.emit(id, players[id])
 
-# MODIFIED _send_puzzle_info RPC (Emits signal)
-@rpc("authority", "call_remote", "reliable")
+@rpc("authority", "call_remote", "unreliable_ordered")
 func _send_puzzle_info(puzzle_id: String):
 	current_puzzle_id = puzzle_id
 	print("NetworkManager (Client): Received puzzle ID '", puzzle_id, "'")
