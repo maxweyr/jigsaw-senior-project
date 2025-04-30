@@ -8,7 +8,10 @@
 [sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_w36fb"]
 properties/0/path = NodePath(".:position")
 properties/0/spawn = true
-properties/0/replication_mode = 1
+properties/0/replication_mode = 2
+properties/1/path = NodePath(".:group_number")
+properties/1/spawn = true
+properties/1/replication_mode = 2
 
 [node name="Node2D" type="Node2D"]
 script = ExtResource("1_g0ylo")
@@ -23,7 +26,7 @@ shape = SubResource("RectangleShape2D_l3ee6")
 [node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("2_8cxfp")
 
-[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+[node name="PieceSynchronizer" type="MultiplayerSynchronizer" parent="."]
 replication_config = SubResource("SceneReplicationConfig_w36fb")
 
 [connection signal="input_event" from="Sprite2D/Area2D" to="." method="_on_area_2d_input_event"]

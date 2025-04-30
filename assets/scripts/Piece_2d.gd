@@ -1,60 +1,37 @@
 extends Node2D
 
-# this scene is for each individual puzzle piece
+##===============================================
+## Piece_2d handles each individual puzzle piece
+##===============================================
 
-# neighbor list
 var neighbor_list = {} # This is the list of neighboring IDs for a piece.
+var snap_threshold # distance that pieces will snap together within
+var ID: int # the actual ID of the current puzzle piece
+var selected = false # true if piece is selected and used for movement, false if piece set down
+var group_number # sorts pieces into groups so they move in tandem,  Initially, each piece has its own group number
+var piece_height # height of the puzzle piece
+var piece_width # width of the puzzle piece
+var prev_position = Vector2() # helper for calculating velocity
+var velocity = Vector2() # actual velocity
+@onready var sync = false
 
-# distance that pieces will snap together within
-var snap_threshold
-
-# the actual ID of the current puzzle piece
-var ID: int
-
-# true when the piece is selected and being used for movement
-# false when the piece is set down by the player
-var selected = false
-
-# This is the number that will be used to organize all the 
-# pieces into groups so that they all move in tandem.  Initially, each piece
-# has its own group number.
-var group_number
-
-# height and width of this puzzle piece
-var piece_height
-var piece_width
-
-# to calculate velocity:
-var prev_position = Vector2()
-var velocity = Vector2()
-
-# Networking variables
-var network_manager = null
-var is_network_operation = false
-
-# Called when the node enters the scene tree for the first time.
 func _ready():
 	PuzzleVar.active_piece = 0 # 0 is false, any other number is true
-	
-	group_number = ID # group number is initially set to the piece ID
+	group_number = ID # group number initially set to piece ID
 	prev_position = position # this is to calculate velocity
-		
 	neighbor_list = PuzzleVar.adjacent_pieces_list[str(ID)] # set the list of adjacent pieces
-	
 	snap_threshold = ((piece_height + piece_width) / 2) * .4 # set the snap threshold to a fraction of the piece size
+	_init_networking()
 
-	# Check if the network manager exists
-	network_manager = get_node_or_null("/root/NetworkManager")
-	
-	# Connect to network signals if online
-	if network_manager != null and network_manager.is_online:
-		network_manager.pieces_connected.connect(_on_network_pieces_connected)
-
-# Called every frame. 'delta' is the elapsed time since the previous frame.
+# Called every frame where 'delta' is the elapsed time since the previous frame
 func _process(delta):
 	velocity = (position - prev_position) / delta # velocity is calculated here
 	prev_position = position
 
+# determines multiplayer status and if syncing is applicable
+func _init_networking() -> void:
+	if NetworkManager.is_online:
+		sync = true
 
 # this is the actual logic to move a piece when you select it
 func move(distance: Vector2):
@@ -220,7 +197,7 @@ func snap_and_connect(adjacent_piece_id: int, loadFlag = 0, is_network = false):
 	
 	# If we successfully connected the pieces and we're not in a network operation,
 	# notify other clients if we're in online mode
-	if not is_network and network_manager != null and network_manager.is_online:
+	if not is_network and NetworkManager.is_online:
 		# Collect positions of all pieces with the new group number
 		var piece_positions = []
 		for node in all_pieces:
@@ -231,15 +208,15 @@ func snap_and_connect(adjacent_piece_id: int, loadFlag = 0, is_network = false):
 				})
 		
 		# Send the connection info to the server to be broadcast to other clients
-		network_manager.sync_connected_pieces(ID, adjacent_piece_id, new_group_number, piece_positions)
+		NetworkManager.sync_connected_pieces(ID, adjacent_piece_id, new_group_number, piece_positions)
 	
 	if (finished):
 		var main_scene = get_node("/root/JigsawPuzzleNode")
 		main_scene.show_win_screen()
 		
 		# If we're in online mode, notify the server we completed the puzzle
-		if network_manager != null and network_manager.is_online:
-			network_manager.leave_puzzle()
+		if NetworkManager.is_online:
+			NetworkManager.leave_puzzle()
 
 
 # This is the function that actually moves the piece (in the current group)
@@ -390,9 +367,6 @@ func move_to_position(target_position: Vector2):
 
 # This function handles network updates for connected pieces
 func _on_network_pieces_connected(_source_piece_id, _connected_piece_id, new_group_number, piece_positions):
-	# Prevent feedback loop
-	is_network_operation = true
-	
 	# Update all pieces according to the received positions
 	for piece_info in piece_positions:
 		var updated_piece_id = piece_info.id
@@ -404,5 +378,3 @@ func _on_network_pieces_connected(_source_piece_id, _connected_piece_id, new_gro
 			# Update group number and position
 			piece.group_number = new_group_number
 			piece.position = piece_position
-	
-	is_network_operation = false
