@@ -13,7 +13,6 @@ var piece_height # height of the puzzle piece
 var piece_width # width of the puzzle piece
 var prev_position = Vector2() # helper for calculating velocity
 var velocity = Vector2() # actual velocity
-@onready var sync = false
 
 func _ready():
 	PuzzleVar.active_piece = 0 # 0 is false, any other number is true
@@ -21,17 +20,17 @@ func _ready():
 	prev_position = position # this is to calculate velocity
 	neighbor_list = PuzzleVar.adjacent_pieces_list[str(ID)] # set the list of adjacent pieces
 	snap_threshold = ((piece_height + piece_width) / 2) * .4 # set the snap threshold to a fraction of the piece size
-	_init_networking()
+	
+	# connect piece connection signal
+	if not NetworkManager.pieces_connected.is_connected(_on_network_pieces_connected):
+		NetworkManager.pieces_connected.connect(_on_network_pieces_connected)
+	if not NetworkManager.pieces_moved.is_connected(_on_network_pieces_moved):
+		NetworkManager.pieces_moved.connect(_on_network_pieces_moved)
 
 # Called every frame where 'delta' is the elapsed time since the previous frame
 func _process(delta):
 	velocity = (position - prev_position) / delta # velocity is calculated here
 	prev_position = position
-
-# determines multiplayer status and if syncing is applicable
-func _init_networking() -> void:
-	if NetworkManager.is_online:
-		sync = true
 
 # this is the actual logic to move a piece when you select it
 func move(distance: Vector2):
@@ -82,7 +81,8 @@ func _on_area_2d_input_event(_viewport, event, _shape_idx):
 				var all_pieces = get_tree().get_nodes_in_group("puzzle_pieces")
 				var num = group_number
 				var connection_found = false
-			
+				var piece_positions = []
+				
 				for node in all_pieces: 
 					if node.group_number == group_number:
 						var n_list = node.neighbor_list
@@ -90,10 +90,17 @@ func _on_area_2d_input_event(_viewport, event, _shape_idx):
 						for adjacent_piece in n_list:
 							var adjacent_node = PuzzleVar.ordered_pieces_array[int(adjacent_piece)]
 							await check_connections(adjacent_node.ID)
-							
+							piece_positions.append({
+								"id": node.ID,
+								"position": node.global_position
+							})
+				
 				if PuzzleVar.draw_green_check == true: # a puzzle snap occurred
 					# Local snap sound and visual already handled in snap_and_connect
 					PuzzleVar.draw_green_check = false
+				else:
+					if NetworkManager.is_online:
+						NetworkManager.rpc("_receive_piece_move", piece_positions)
 				
 				# count the number of pieces not yet placed		
 				var placed = 0
@@ -208,7 +215,7 @@ func snap_and_connect(adjacent_piece_id: int, loadFlag = 0, is_network = false):
 				})
 		
 		# Send the connection info to the server to be broadcast to other clients
-		NetworkManager.sync_connected_pieces(ID, adjacent_piece_id, new_group_number, piece_positions)
+		NetworkManager.rpc("_receive_piece_connection", ID, adjacent_piece_id, new_group_number, piece_positions)
 	
 	if (finished):
 		var main_scene = get_node("/root/JigsawPuzzleNode")
@@ -365,8 +372,22 @@ func remove_transparency():
 func move_to_position(target_position: Vector2):
 	position = target_position
 
+# Handles network connction for moed pieces
+func _on_network_pieces_moved(_piece_positions):
+	print("SIGNAL::_on_network_pieces_moved")
+	# update all piece according to the received positions
+	for piece_info in _piece_positions:
+		var piece_id = piece_info.id
+		var updated_position = piece_info.position
+		
+		if piece_id < PuzzleVar.ordered_pieces_array.size():
+			var piece = PuzzleVar.ordered_pieces_array[piece_id]
+			print("New position: ", updated_position)
+			piece.position = updated_position
+
 # This function handles network updates for connected pieces
 func _on_network_pieces_connected(_source_piece_id, _connected_piece_id, new_group_number, piece_positions):
+	print("SIGNAL::_on_network_pieces_connected")
 	# Update all pieces according to the received positions
 	for piece_info in piece_positions:
 		var updated_piece_id = piece_info.id
@@ -374,7 +395,7 @@ func _on_network_pieces_connected(_source_piece_id, _connected_piece_id, new_gro
 		
 		if updated_piece_id < PuzzleVar.ordered_pieces_array.size():
 			var piece = PuzzleVar.ordered_pieces_array[updated_piece_id]
-			
-			# Update group number and position
+			print("New group number: ", new_group_number)
+			print("New position: ", piece_position)
 			piece.group_number = new_group_number
 			piece.position = piece_position
