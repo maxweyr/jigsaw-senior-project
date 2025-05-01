@@ -274,10 +274,12 @@ func _on_peer_connected(id):
 			rpc_id(id, "_send_puzzle_info", current_puzzle_id)
 		else:
 			printerr("ERROR::NetworkManager (Server): Cannot send puzzle info, current_puzzle_id is null!")
-
+			
 func _on_peer_disconnected(id):
 	if not is_online: return # Ignore if not in an online session
 	print("NetworkManager: Peer disconnected: ", id)
+	# saving state
+	FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
 	if connected_players.has(id):
 		var player_name = connected_players[id]
 		connected_players.erase(id)

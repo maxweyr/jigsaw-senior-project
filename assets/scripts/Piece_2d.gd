@@ -102,6 +102,9 @@ func _on_area_2d_input_event(_viewport, event, _shape_idx):
 					if NetworkManager.is_online:
 						NetworkManager.rpc("_receive_piece_move", piece_positions)
 				
+				if FireAuth.is_online and not NetworkManager.is_server:
+					FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
+				
 				# count the number of pieces not yet placed		
 				var placed = 0
 				for x in range(PuzzleVar.global_num_pieces):
@@ -215,7 +218,10 @@ func snap_and_connect(adjacent_piece_id: int, loadFlag = 0, is_network = false):
 				})
 		
 		# Send the connection info to the server to be broadcast to other clients
-		NetworkManager.rpc("_receive_piece_connection", ID, adjacent_piece_id, new_group_number, piece_positions)
+		if NetworkManager.is_online:
+			NetworkManager.rpc("_receive_piece_connection", ID, adjacent_piece_id, new_group_number, piece_positions)
+		if FireAuth.is_online and not NetworkManager.is_server:
+					FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
 	
 	if (finished):
 		var main_scene = get_node("/root/JigsawPuzzleNode")
@@ -379,11 +385,13 @@ func _on_network_pieces_moved(_piece_positions):
 	for piece_info in _piece_positions:
 		var piece_id = piece_info.id
 		var updated_position = piece_info.position
-		
 		if piece_id < PuzzleVar.ordered_pieces_array.size():
 			var piece = PuzzleVar.ordered_pieces_array[piece_id]
-			print("New position: ", updated_position)
+			#print("New position: ", updated_position)
 			piece.position = updated_position
+			PuzzleVar.ordered_pieces_array[piece_id] = piece
+	#
+
 
 # This function handles network updates for connected pieces
 func _on_network_pieces_connected(_source_piece_id, _connected_piece_id, new_group_number, piece_positions):
@@ -395,7 +403,9 @@ func _on_network_pieces_connected(_source_piece_id, _connected_piece_id, new_gro
 		
 		if updated_piece_id < PuzzleVar.ordered_pieces_array.size():
 			var piece = PuzzleVar.ordered_pieces_array[updated_piece_id]
-			print("New group number: ", new_group_number)
-			print("New position: ", piece_position)
+			#print("New group number: ", new_group_number)
+			#print("New position: ", piece_position)
 			piece.group_number = new_group_number
 			piece.position = piece_position
+			PuzzleVar.ordered_pieces_array[updated_piece_id] = piece
+	#FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
