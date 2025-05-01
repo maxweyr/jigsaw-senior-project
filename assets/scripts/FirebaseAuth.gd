@@ -12,7 +12,7 @@ var currentPuzzle = ""
 var is_online: bool = false
 
 const USER_COLLECTION: String = "sp_users"
-const USER_SUBCOLLECTIONS = ["active_puzzles", "completed_puzzles", "favorite_puzzles"]
+const USER_SUBCOLLECTIONS = ["active_puzzles", "completed_puzzles"]
 
 const SERVER_COLLECTION: String = "sp_servers"
 
@@ -264,7 +264,7 @@ func write_puzzle_time_spent(puzzle_name):
 	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/active_puzzles")
 	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
 	if not current_puzzle:
-		print("ERROR: ACCESSING WRONG PUZZLE")
+		print("ERROR: ACCESSING PUZZLE FB")
 		get_tree().quit(-1)
 	else:
 		var time = current_puzzle.get_value("time_spent")
@@ -386,7 +386,6 @@ func write_puzzle_state_server(lobby_num):
 			}
 		})
 		group_ids[p.group_number] = true
-	print("SERVER: ", puzzle_data)
 	var size = PuzzleVar.global_num_pieces
 	var percentage_done = float(size - group_ids.size()) / float(size - 1) * 100.0
 	#print("groups ", group_ids, " ", group_ids.size(), " ", percentage_done)
@@ -430,6 +429,30 @@ func get_puzzle_state_server():
 		return []
 	print(loc)
 	return parse_firestore_puzzle_data(loc)
+
+func write_complete(puzzle_name):
+	''' Senior Project
+	Writes the current puzzle to completion with stats about players progress
+	ie how long it took them. 
+	'''
+	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/active_puzzles")
+	var completed_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/completed_puzzles")
+	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
+	if(!current_puzzle):
+		print("ERROR: could not send puzzle to complete bc it does not exist in active puzzles")
+		return 
+	var st = current_puzzle.get_value("start_time")
+	var ts = current_puzzle.get_value("time_spent")
+	# save stats
+	await completed_puzzles.add(Time.get_datetime_string_from_system(), {
+		"puzzle_name" : puzzle_name,
+		"start_time" : st,
+		"time_spent" : ts, 
+	})
+	# now delete from active 
+	await active_puzzles.delete(current_puzzle)
+	
+	
 
 #func get_progress() -> void:
 	#var progressCollection: FirestoreCollection = await Firebase.Firestore.collection("progress")
