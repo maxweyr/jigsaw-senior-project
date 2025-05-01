@@ -20,7 +20,6 @@ var DEFAULT_PORT = 8080
 var SERVER_IP = "127.0.0.1"
 var is_online: bool = false # True ONLY for active ENet connection to AWS server
 var is_server: bool = false # True ONLY for the dedicated AWS instance
-var is_offline_authority: bool = false # True ONLY when playing offline (using OfflineMultiplayerPeer)
 var peer: MultiplayerPeer = null # Can hold ENetMultiplayerPeer or OfflineMultiplayerPeer
 var current_puzzle_id = null
 var connected_players = {}
@@ -35,7 +34,7 @@ func _ready():
 	var err = env.load("res://.env")
 	if err != OK:
 		print("could not read env file: ",err)
-	else: 
+	else:
 		DEFAULT_PORT = env.get_value("server", "PORT", 8080)
 		SERVER_IP = str(env.get_value("server", "SERVER_IP", "127.0.0.1"))
 	# Prioritize Dedicated Server Check
@@ -45,9 +44,6 @@ func _ready():
 		is_server = true # This is an actual server
 		# is_online will be set true inside start_server()
 		start_server() # Start the ENet server immediately
-	else:
-		# If not a dedicated server, start in offline mode by default
-		set_offline_mode() # Setup OfflineMultiplayerPeer
 	
 	# TODO CHANGE THIS TO NUMBER OF LOBBIES 
 	# TODO OR MAYBE ONE FIREBASE CALL TO CHECK ALL 3 LOBBIES?
@@ -123,18 +119,6 @@ func _on_request_completed(_result, response_code, _headers, _body):
 		is_online = false
 		FireAuth.is_online = false
 
-# Method to explicitly set offline mode
-func set_offline_mode():
-	print("NetworkManager: Setting up for Offline Play.")
-	if not multiplayer.multiplayer_peer is OfflineMultiplayerPeer:
-		multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
-	peer = multiplayer.multiplayer_peer # Store reference
-	is_online = false
-	is_server = false # Client instance is never the "server"
-	is_offline_authority = true # It IS the authority locally for offline play
-	current_puzzle_id = null
-	connected_players.clear()
-
 # Start a server with a default puzzle
 func start_server():
 	print("NetworkManager starting headless server at ", str(SERVER_IP), " and port ", DEFAULT_PORT)
@@ -157,15 +141,13 @@ func start_server():
 		print("ERROR: NetworkManager could not create server: ", error)
 		multiplayer.multiplayer_peer = null # Ensure no peer
 		peer = null
-		set_offline_mode() # Fallback to offline state
 		return false # Indicate failure
 	
 	multiplayer.multiplayer_peer = enet_peer
 	peer = enet_peer
 	current_puzzle_id = puzzle_id # Set the initial puzzle
-	is_online = true
+	is_online = false
 	is_server = true # Already true
-	is_offline_authority = false
 	print("NetworkManager Dedicated Server Started...")
 	return true
 
@@ -182,7 +164,6 @@ func join_server() -> bool:
 		print("WARNING: NetworkManager failed to connect to server: ", error)
 		multiplayer.multiplayer_peer = null
 		peer = null
-		set_offline_mode() # Fallback to offline state
 		connection_failed.emit() # Emit failure signal
 		return false # Indicate failure
 	
@@ -191,14 +172,12 @@ func join_server() -> bool:
 	# current_puzzle_id will be set via RPC (_send_puzzle_info)
 	is_online = true
 	is_server = false
-	is_offline_authority = false
 	print("NetworkManager (Client): Connection initiated...")
 	return true
 
 # Disconnect from the current session
 func disconnect_from_server():
 	if is_server: return # Dedicated server doesn't disconnect this way
-	if not is_online: return # Already offline
 
 	print("NetworkManager (Client): Disconnecting...")
 	if peer != null and peer is ENetMultiplayerPeer:
@@ -206,26 +185,17 @@ func disconnect_from_server():
 			peer.close()
 
 	# Reset state and explicitly go back to offline mode
-	set_offline_mode()
 	print("NetworkManager (Client): Disconnected. Switched to Offline Mode.")
+	is_online = false
 
 # Leave the current puzzle
 func leave_puzzle():
-	if is_server: # no need to for the server to leave its only puzzle
-		return
-	if is_online:
-		disconnect_from_server()
+	if is_server: return
+	if is_online: disconnect_from_server()
 
 ##=============
 ## RPC Methods
 ##=============
-
-# Send piece connection info to all clients
-@rpc("any_peer", "call_remote", "reliable")
-func sync_connected_pieces(piece_id: int, connected_piece_id: int, new_group_number: int, piece_positions: Array):
-	if not is_online: # dont need to sync when not in a multiplayer game
-		return
-	rpc("_receive_piece_connection", piece_id, connected_piece_id, new_group_number, piece_positions)
 
 @rpc("any_peer", "call_remote", "reliable")
 func register_player(player_name: String):
@@ -266,7 +236,6 @@ func _send_puzzle_info(puzzle_id: String):
 ##==============================
 
 func _on_peer_connected(id):
-	if not is_online: return # Ignore if not in an online session
 	print("NetworkManager: Peer connected: ", id)
 	if is_server: # If we're the ONLINE server
 		if current_puzzle_id:
@@ -274,9 +243,8 @@ func _on_peer_connected(id):
 			rpc_id(id, "_send_puzzle_info", current_puzzle_id)
 		else:
 			printerr("ERROR::NetworkManager (Server): Cannot send puzzle info, current_puzzle_id is null!")
-			
+
 func _on_peer_disconnected(id):
-	if not is_online: return # Ignore if not in an online session
 	print("NetworkManager: Peer disconnected: ", id)
 	# saving state
 	FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
@@ -286,9 +254,10 @@ func _on_peer_disconnected(id):
 		player_left.emit(id, player_name) # Emit signal
 		if is_server: # If we are the online server
 			rpc("_update_player_list", connected_players)
+	if not is_server: is_online = false
 
 func _on_connected_to_server():
-	if not is_online: return # Should only happen when joining online
+	if not is_server: return # Should only happen when joining online
 	print("NetworkManager: Successfully connected to server (callback)")
 	# is_online should already be true from join_server initiation
 	client_connected.emit() # Signal UI etc

@@ -99,10 +99,9 @@ func _on_area_2d_input_event(_viewport, event, _shape_idx):
 					# Local snap sound and visual already handled in snap_and_connect
 					PuzzleVar.draw_green_check = false
 				else:
-					if NetworkManager.is_online:
+					if NetworkManager.is_online and not NetworkManager.is_server:
 						NetworkManager.rpc("_receive_piece_move", piece_positions)
-				
-				if FireAuth.is_online and not NetworkManager.is_server:
+				if FireAuth.is_online and NetworkManager.is_online and not NetworkManager.is_server:
 					FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
 				
 				# count the number of pieces not yet placed		
@@ -218,10 +217,10 @@ func snap_and_connect(adjacent_piece_id: int, loadFlag = 0, is_network = false):
 				})
 		
 		# Send the connection info to the server to be broadcast to other clients
-		if NetworkManager.is_online:
+		if NetworkManager.is_online and not NetworkManager.is_server:
 			NetworkManager.rpc("_receive_piece_connection", ID, adjacent_piece_id, new_group_number, piece_positions)
-		if FireAuth.is_online and not NetworkManager.is_server:
-					FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
+		if FireAuth.is_online and NetworkManager.is_online and not NetworkManager.is_server:
+			FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
 	
 	if (finished):
 		var main_scene = get_node("/root/JigsawPuzzleNode")
