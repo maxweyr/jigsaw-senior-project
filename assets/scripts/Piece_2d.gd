@@ -102,7 +102,7 @@ func _on_area_2d_input_event(_viewport, event, _shape_idx):
 					if NetworkManager.is_online:
 						NetworkManager.rpc("_receive_piece_move", piece_positions)
 				
-				if FireAuth.is_online and not NetworkManager.is_server:
+				if FireAuth.is_online and not NetworkManager.is_server and NetworkManager.is_online:
 					FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
 				
 				# count the number of pieces not yet placed		
@@ -220,7 +220,7 @@ func snap_and_connect(adjacent_piece_id: int, loadFlag = 0, is_network = false):
 		# Send the connection info to the server to be broadcast to other clients
 		if NetworkManager.is_online:
 			NetworkManager.rpc("_receive_piece_connection", ID, adjacent_piece_id, new_group_number, piece_positions)
-		if FireAuth.is_online and not NetworkManager.is_server:
+		if FireAuth.is_online and not NetworkManager.is_server and NetworkManager.is_online:
 					FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
 	
 	if (finished):

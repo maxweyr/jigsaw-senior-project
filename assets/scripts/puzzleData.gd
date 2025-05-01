@@ -48,13 +48,13 @@ var background_clicked = false
 var is_online_mode = false
 var lobby_number = 1
 
-func get_random_puzzles_1000():
+func get_random_puzzles_w_size(size):
 	randomize() # initialize a random seed for the random number generator
 	# choose a random image from the list PuzzleVar.images
 	var local_puzzle_list = PuzzleVar.get_avail_puzzles()
 	var selected = local_puzzle_list[randi_range(0,local_puzzle_list.size()-1)]
 	# choose a random size for the puzzle ranging from 2x2 to 10x10
-	selected["size"] = 1000
+	selected["size"] = size
 	return selected
 
 func get_random_puzzles():
@@ -68,7 +68,20 @@ func get_random_puzzles():
 	selected["size"] = random_size
 	return selected
 	
-	
+func get_online_choice():
+	'''
+		Checks database for if the lobby has a choice already,
+		if it doesnt, it will create a new random choice
+		
+		returns {} to be used for choice
+	'''
+	# First, check if database has choice saved
+	var choice = await FireAuth.check_lobby_choice(PuzzleVar.lobby_number)
+	if(choice):
+		return choice
+	else:
+		return get_random_puzzles_w_size(1000)
+		
 func load_and_or_add_puzzle_random_loc(parent_node: Node, sprite_scene: PackedScene, selected_puzzle_dir: String, add: bool) -> void:
 	PuzzleVar.ordered_pieces_array.clear()
 	for x in range(PuzzleVar.global_num_pieces):

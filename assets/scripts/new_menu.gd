@@ -68,7 +68,8 @@ func _on_select_puzzle_pressed():
 
 func _on_play_online_pressed():
 	$AudioStreamPlayer.play()
-	
+	PuzzleVar.choice = await PuzzleVar.get_online_choice()
+	print("ONLINE CHOICE = ", PuzzleVar.choice)
 	# Check if we have network connectivity
 	if !FireAuth.is_online:
 		# Show a message about being offline

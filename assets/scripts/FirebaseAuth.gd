@@ -349,6 +349,23 @@ func write_puzzle_state(state_arr, puzzle_name, size):
 	current_puzzle.add_or_update_field("progress", int(percentage_done))
 	await active_puzzles.update(current_puzzle)
 
+func check_lobby_choice(lobby_num):
+	''' Senior Project
+	Checks the lobby number for a valid choice
+	
+	returns {} if no choice or state
+	'''
+	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(lobby_num))
+	var state = await lobby_puzzle.get_doc("state")
+	if not state:
+		print("FB: Checked lobby", lobby_num, " for state but did not find one (looking for choice)")
+		return {}
+	var choice = state.get_value("puzzle_choice")
+	if(!choice):
+		return {}
+	return choice
+	
+	
 func check_lobby_puzzle_state_server(lobby_num):
 	''' Senior Project
 	Checks the lobby number for a valid position array
@@ -356,8 +373,8 @@ func check_lobby_puzzle_state_server(lobby_num):
 	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(lobby_num))
 	var state = await lobby_puzzle.get_doc("state")
 	if not state:
-		print("ERROR: Server State Not Found in Lobby", PuzzleVar.lobby_number)
-		get_tree().quit(-1)
+		print("FB: Server State Not Found in Lobby", PuzzleVar.lobby_number)
+		return []
 	var pos = state.get_value("piece_locations")
 	if(!pos):
 		return false
@@ -367,12 +384,16 @@ func write_puzzle_state_server(lobby_num):
 	''' Senior Project
 	Writes State and Choice to DB for user's selected lobbby
 	'''
-	
+	if(NetworkManager.is_server):
+		return
 	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby1")
 	var state = await lobby_puzzle.get_doc("state")
 	if not state:
 		print("ERROR: Server State Not Found in Lobby", lobby_num)
 		get_tree().quit(-1)
+		return
+	if(PuzzleVar.ordered_pieces_array.is_empty()):
+		print("Trying to update puzzle state to empty????")
 		return
 	var puzzle_data = []
 	var group_ids = {}
@@ -392,8 +413,10 @@ func write_puzzle_state_server(lobby_num):
 	# update current_puzzle
 	state.add_or_update_field("puzzle_choice", PuzzleVar.choice)
 	state.add_or_update_field("piece_locations", puzzle_data)
+	state.add_or_update_field("piece_locations2", puzzle_data)
 	state.add_or_update_field("progress", int(percentage_done))
 	await lobby_puzzle.update(state)
+	print("updated state on server")
 
 func get_puzzle_state(puzzle_name):
 	''' Senior Project
@@ -410,25 +433,27 @@ func get_puzzle_state_server():
 	''' Senior Project
 	Returns the puzzle state for the user's selected lobby
 	'''
-	if(!NetworkManager.is_online):
-		return
+	
 	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(PuzzleVar.lobby_number))
 	print(lobby_puzzle)
 	var state = await lobby_puzzle.get_doc("state")
 	if(!state):
-		get_tree().quit()
+		print("FB Could not find state for lobby", PuzzleVar.lobby_number)
+		lobby_puzzle.add("state", {"progress": 0})
+		return []
 	# set puzzle choice
 	var choice = state.get_value("puzzle_choice")
 	if !choice:
 		print("ERROR: Lobby", PuzzleVar.lobby_number, " has no puzzle choice")
-		get_tree().quit(-1)
-	# get location
-	var loc = state.get_value("piece_locations")
-	if(!loc):
-		print("SERVER: LOC NOT FOUND")
 		return []
-	print(loc)
+	# get location
+	var loc = state.get_value("piece_locations2")
+	if(!loc):
+		print("FB: LOC NOT FOUND")
+		return []
+	print("FB COMPLETE: ", loc)
 	return parse_firestore_puzzle_data(loc)
+
 
 func write_complete(puzzle_name):
 	''' Senior Project
@@ -451,6 +476,24 @@ func write_complete(puzzle_name):
 	})
 	# now delete from active 
 	await active_puzzles.delete(current_puzzle)
+
+
+func write_complete_server():
+	''' Senior Project
+	
+	For Multiplayer, we simply remove all of the fields in state,
+	on next time joining multiplayer, a new puzzle will be loaded in
+	'''
+	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(PuzzleVar.lobby_number))
+	var state = await lobby_puzzle.get_doc("state")
+	state.add_or_update_field("piece_locations2", [])
+	state.add_or_update_field("progress", 0)
+	state.add_or_update_field("puzzle_choice", {})
+	await lobby_puzzle.update(state)
+
+
+	
+	
 	
 	
 

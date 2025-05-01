@@ -53,7 +53,7 @@ func _ready():
 	# create puzzle pieces and place in scene
 	PuzzleVar.load_and_or_add_puzzle_random_loc(self, sprite_scene, selected_puzzle_dir, true)
 
-	if FireAuth.is_online:
+	if FireAuth.is_online and !NetworkManager.is_server:
 		# client is connected to firebase
 		var puzzle_name_with_size = PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"])
 		await load_firebase_state(puzzle_name_with_size)
@@ -72,10 +72,10 @@ func load_firebase_state(p_name):
 	print("LOADING STATE")
 	var saved_piece_data: Array
 	if(NetworkManager.is_online):
-		print("SERVER: SYNC P LOC")
+		print("FB: Update")
 		update_online_status_label("Syncing puzzle state...")
 		saved_piece_data = await FireAuth.get_puzzle_state_server()
-		print("SERVER: SYNC P LOC")
+		print("FB: SYNC")
 		
 	else: 
 		await FireAuth.update_active_puzzle(p_name)
@@ -397,7 +397,7 @@ func show_win_screen():
 
 	#-------------------------BUTTON LOGIC-----------------------#
 	var button = $MainMenu
-	button.visible = true
+	button.visible = false # we dont want this @TODO remove this 
 	# Change the font size
 	button.add_theme_font_override("font", font)
 	button.add_theme_font_size_override("font_size", 120)
@@ -408,27 +408,31 @@ func show_win_screen():
 	
 	# If in online mode, leave the puzzle on the server
 	if NetworkManager.is_online:
+		if(FireAuth.is_online):
+			print("Puzzle complete, deleting state")
+			FireAuth.write_complete_server()
 		NetworkManager.leave_puzzle()
+		
 	elif !NetworkManager.is_online and FireAuth.is_online:
 		FireAuth.write_complete(PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]))
+	
 	complete = true
 		
 # Handles leaving the puzzle scene, saving state, and disconnecting if online client
 func _on_back_pressed() -> void:
 	loading.show()
-	# 1. Save puzzle state if needed
-	#    Saving might be relevant even if NetworkManager.is_online is true,
-	#    if we use Firebase alongside the server for persistence
-	if !complete and FireAuth.is_online and !NetworkManager.is_online: # Check if Firebase is initialized/logged in
-		print("Saving puzzle state to Firebase before leaving...")
-		await FireAuth.write_puzzle_state(
-			PuzzleVar.ordered_pieces_array,
-			PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]),
-			PuzzleVar.global_num_pieces
-		)
-		
-		# Jumpstart
-		#await FireAuth.write_puzzle_state_server(1)
+	# 1. Save puzzle state BEFORE clearing any data or freeing nodes
+	if !complete and FireAuth.is_online:
+		if NetworkManager.is_online:
+			#await FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
+			pass
+		else:
+			await FireAuth.write_puzzle_state(
+				PuzzleVar.ordered_pieces_array,
+				PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]),
+				PuzzleVar.global_num_pieces
+			)
+
 
 	# 2. Handle multiplayer disconnection if this is an online client
 	if NetworkManager.is_online and not NetworkManager.is_server:
@@ -440,20 +444,20 @@ func _on_back_pressed() -> void:
 		else:
 			printerr("ERROR: NetworkManager.multiplayer is not available to close connection.")
 
-	# 3. Clean up local scene resources
-	print("Cleaning up puzzle scene resources...")
-
-	# Free all puzzle pieces currently in the scene
-	for piece in get_tree().get_nodes_in_group("puzzle_pieces"):
-		piece.queue_free()
-
-	# Clear global puzzle variables to reset state for the next puzzle
-	PuzzleVar.ordered_pieces_array.clear()
-	PuzzleVar.global_coordinates_list.clear()
-	PuzzleVar.adjacent_pieces_list.clear()
-	PuzzleVar.global_num_pieces = 0
-	PuzzleVar.choice = {}
-	print("Puzzle resources cleared.")
+	## 3. Clean up local scene resources
+	#print("Cleaning up puzzle scene resources...")
+#
+	## Free all puzzle pieces currently in the scene
+	#for piece in get_tree().get_nodes_in_group("puzzle_pieces"):
+		#piece.queue_free()
+#
+	## Clear global puzzle variables to reset state for the next puzzle
+	#PuzzleVar.ordered_pieces_array.clear()
+	#PuzzleVar.global_coordinates_list.clear()
+	#PuzzleVar.adjacent_pieces_list.clear()
+	#PuzzleVar.global_num_pieces = 0
+	#PuzzleVar.choice = {}
+	#print("Puzzle resources cleared.")
 
 	# 4. Change back to the puzzle selection scene
 	print("Returning to puzzle selection screen.")
