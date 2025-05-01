@@ -7,7 +7,7 @@ var mute_button: Button
 var unmute_button: Button
 var offline_button: Button
 var online_status_label: Label
-
+var complete = false;
 @onready var back_button = $UI_Button/Back
 @onready var loading = $LoadingScreen
 
@@ -80,7 +80,7 @@ func load_firebase_state(p_name):
 	else: 
 		await FireAuth.update_active_puzzle(p_name)
 		saved_piece_data = await FireAuth.get_puzzle_state(p_name)
-	var notComplete = 0
+	var notComplete	 = 0
 	var groupArray = []
 	for idx in range(len(saved_piece_data)):
 		var data = saved_piece_data[idx]
@@ -123,7 +123,9 @@ func load_firebase_state(p_name):
 				var reference_piece = group_pieces[0]
 				for other_piece in group_pieces.slice(1, group_pieces.size()):
 					reference_piece.snap_and_connect(other_piece.ID, 1)
-
+	complete = false
+	
+	
 # Network event handlers
 func _on_player_joined(_client_id, client_name):
 	connected_players.append(client_name)
@@ -408,15 +410,16 @@ func show_win_screen():
 	if NetworkManager.is_online:
 		NetworkManager.leave_puzzle()
 	elif !NetworkManager.is_online and FireAuth.is_online:
-		FireAuth.remove_current_user_from_activePuzzle(selected_puzzle_name)
-
+		FireAuth.write_complete(PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]))
+	complete = true
+		
 # Handles leaving the puzzle scene, saving state, and disconnecting if online client
 func _on_back_pressed() -> void:
 	loading.show()
 	# 1. Save puzzle state if needed
 	#    Saving might be relevant even if NetworkManager.is_online is true,
 	#    if we use Firebase alongside the server for persistence
-	if FireAuth.is_online and !NetworkManager.is_online: # Check if Firebase is initialized/logged in
+	if !complete and FireAuth.is_online and !NetworkManager.is_online: # Check if Firebase is initialized/logged in
 		print("Saving puzzle state to Firebase before leaving...")
 		await FireAuth.write_puzzle_state(
 			PuzzleVar.ordered_pieces_array,
@@ -449,6 +452,7 @@ func _on_back_pressed() -> void:
 	PuzzleVar.global_coordinates_list.clear()
 	PuzzleVar.adjacent_pieces_list.clear()
 	PuzzleVar.global_num_pieces = 0
+	PuzzleVar.choice = {}
 	print("Puzzle resources cleared.")
 
 	# 4. Change back to the puzzle selection scene

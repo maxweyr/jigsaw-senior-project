@@ -1,13 +1,13 @@
 [gd_scene load_steps=10 format=3 uid="uid://dr6qnsfg5v8bf"]
 
 [ext_resource type="Script" uid="uid://cn0v4jk621ejf" path="res://assets/scripts/jigsaw_puzzle_1.gd" id="1_p57kp"]
-[ext_resource type="Texture2D" uid="uid://7d68ij6kdk3x" path="res://assets/images/puzzle_background.jpg" id="2_1s5nt"]
-[ext_resource type="Texture2D" uid="uid://fdsqaxc6rx0h" path="res://assets/puzzles/seattle.jpg" id="3_p7ub0"]
+[ext_resource type="Texture2D" uid="uid://q5cshs21bjdb" path="res://assets/images/puzzle_background.jpg" id="2_1s5nt"]
+[ext_resource type="Texture2D" uid="uid://0sfjms6m7vqv" path="res://assets/puzzles/seattle.jpg" id="3_p7ub0"]
 [ext_resource type="Script" uid="uid://dff2jx1ums0vv" path="res://assets/scripts/Camera2D.gd" id="4_823ux"]
-[ext_resource type="FontFile" uid="uid://dbfwm247cqnhw" path="res://assets/scripts/LinLibertine_I.otf" id="5_a27gv"]
+[ext_resource type="FontFile" uid="uid://dw84tdskfen3y" path="res://assets/scripts/LinLibertine_I.otf" id="5_a27gv"]
 [ext_resource type="Theme" uid="uid://0xk2aimn5x6r" path="res://assets/themes/main_menu_buttons.tres" id="6_nllai"]
-[ext_resource type="Texture2D" uid="uid://dvxn8ldd6oavs" path="res://assets/images/throbber1.png" id="7_yauer"]
-[ext_resource type="Script" path="res://assets/scripts/throbber.gd" id="8_l353k"]
+[ext_resource type="Texture2D" uid="uid://cl2oqc6l05bh5" path="res://assets/images/throbber1.png" id="7_yauer"]
+[ext_resource type="Script" uid="uid://b7kl13vp3afn1" path="res://assets/scripts/throbber.gd" id="8_l353k"]
 [ext_resource type="Theme" uid="uid://cfxebjeqy3ke7" path="res://assets/themes/bold_text.tres" id="9_l353k"]
 
 [node name="Node2D" type="Node2D"]
@@ -85,6 +85,7 @@ offset_right = 40.0
 offset_bottom = 23.0
 
 [node name="LoadingScreen" type="CanvasLayer" parent="."]
+visible = false
 
 [node name="Background" type="Control" parent="LoadingScreen"]
 layout_mode = 3
