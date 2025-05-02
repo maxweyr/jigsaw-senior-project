@@ -17,7 +17,7 @@ signal puzzle_info_received(puzzle_id: String)
 
 # Variables
 var DEFAULT_PORT = 8080
-var SERVER_IP = "127.0.0.1"
+var SERVER_IP = "ec2-3-12-166-162.us-east-2.compute.amazonaws.com"
 var is_online: bool = false # True ONLY for active ENet connection to AWS server
 var is_server: bool = false # True ONLY for the dedicated AWS instance
 var is_offline_authority: bool = false # True ONLY when playing offline (using OfflineMultiplayerPeer)
@@ -37,7 +37,7 @@ func _ready():
 		print("could not read env file: ",err)
 	else: 
 		DEFAULT_PORT = env.get_value("server", "PORT", 8080)
-		SERVER_IP = str(env.get_value("server", "SERVER_IP", "127.0.0.1"))
+		SERVER_IP = str(env.get_value("server", "SERVER_IP", "ec2-3-12-166-162.us-east-2.compute.amazonaws.com"))
 	# Prioritize Dedicated Server Check
 	if OS.has_feature("server") or "--server" in OS.get_cmdline_args() \
 	or OS.has_feature("headless") or "--headless" in OS.get_cmdline_args():
@@ -137,7 +137,7 @@ func set_offline_mode():
 
 # Start a server with a default puzzle
 func start_server():
-	print("NetworkManager starting headless server at ", str(SERVER_IP), " and port ", DEFAULT_PORT)
+	print("NetworkManager starting headless server for ", str(SERVER_IP), " and port ", DEFAULT_PORT)
 	# For server, just pick a default puzzle ID (can be changed via args later)
 	var puzzle_id = PuzzleVar.default_path 
 	if OS.get_cmdline_args().size() > 1:

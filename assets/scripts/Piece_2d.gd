@@ -390,7 +390,6 @@ func _on_network_pieces_moved(_piece_positions):
 			#print("New position: ", updated_position)
 			piece.position = updated_position
 			PuzzleVar.ordered_pieces_array[piece_id] = piece
-	#
 
 
 # This function handles network updates for connected pieces
