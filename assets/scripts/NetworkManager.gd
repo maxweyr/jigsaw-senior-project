@@ -176,7 +176,7 @@ func join_server() -> bool:
 	print("NetworkManager attempting to connect to server at ", SERVER_IP)
 	
 	var enet_peer = ENetMultiplayerPeer.new()
-	var error = enet_peer.create_client(SERVER_IP, DEFAULT_PORT)
+	var error = enet_peer.create_client(SERVER_IP, int(DEFAULT_PORT))
 	
 	if error != OK:
 		print("WARNING: NetworkManager failed to connect to server: ", error)

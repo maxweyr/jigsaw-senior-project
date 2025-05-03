@@ -364,8 +364,7 @@ func check_lobby_choice(lobby_num):
 	if(!choice):
 		return {}
 	return choice
-	
-	
+
 func check_lobby_puzzle_state_server(lobby_num):
 	''' Senior Project
 	Checks the lobby number for a valid position array
@@ -435,7 +434,7 @@ func get_puzzle_state_server():
 	'''
 	
 	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(PuzzleVar.lobby_number))
-	print(lobby_puzzle)
+	#print(lobby_puzzle)
 	var state = await lobby_puzzle.get_doc("state")
 	if(!state):
 		print("FB Could not find state for lobby", PuzzleVar.lobby_number)

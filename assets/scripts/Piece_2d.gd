@@ -380,7 +380,7 @@ func move_to_position(target_position: Vector2):
 
 # Handles network connction for moed pieces
 func _on_network_pieces_moved(_piece_positions):
-	print("SIGNAL::_on_network_pieces_moved")
+	#print("SIGNAL::_on_network_pieces_moved")
 	# update all piece according to the received positions
 	for piece_info in _piece_positions:
 		var piece_id = piece_info.id
@@ -394,7 +394,7 @@ func _on_network_pieces_moved(_piece_positions):
 
 # This function handles network updates for connected pieces
 func _on_network_pieces_connected(_source_piece_id, _connected_piece_id, new_group_number, piece_positions):
-	print("SIGNAL::_on_network_pieces_connected")
+	#print("SIGNAL::_on_network_pieces_connected")
 	# Update all pieces according to the received positions
 	for piece_info in piece_positions:
 		var updated_piece_id = piece_info.id
