@@ -80,7 +80,7 @@ func get_online_choice():
 	if(choice):
 		return choice
 	else:
-		return get_random_puzzles_w_size(1000)
+		return get_random_puzzles_w_size(100)
 		
 func load_and_or_add_puzzle_random_loc(parent_node: Node, sprite_scene: PackedScene, selected_puzzle_dir: String, add: bool) -> void:
 	PuzzleVar.ordered_pieces_array.clear()
@@ -101,7 +101,7 @@ func load_and_or_add_puzzle_random_loc(parent_node: Node, sprite_scene: PackedSc
 		collision_box.shape.extents = Vector2(sprite.texture.get_width() / 2, sprite.texture.get_height() / 2)
 
 		var spawnarea = parent_node.get_viewport_rect()
-		piece.position = Vector2(randi_range(50, spawnarea.size.x), randi_range(50, spawnarea.size.y))
+		piece.position = Vector2(randi_range(5, spawnarea.size.x), randi_range(5, spawnarea.size.y))
 		PuzzleVar.ordered_pieces_array.append(piece)
 		if(add):
 			parent_node.call_deferred("add_child", piece) 
