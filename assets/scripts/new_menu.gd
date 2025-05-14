@@ -9,7 +9,7 @@ func _ready():
 	# Prevents pieces from being loaded multiple times
 	if(PuzzleVar.open_first_time):
 		print("Adding Puzzles")
-		load(PuzzleVar.path)
+		#load(PuzzleVar.path)
 		var dir = DirAccess.open(PuzzleVar.path)
 		if dir:
 			dir.list_dir_begin()
