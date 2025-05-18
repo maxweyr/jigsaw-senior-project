@@ -181,7 +181,7 @@ func _input(event):
 			
 	if event is InputEventKey:
 		if event.is_pressed():
-			if event.keycode == KEY_P:
+			if event.keycode == KEY_P and (Input.is_key_pressed(KEY_SHIFT)):
 				# Arrange grid
 				arrange_grid()
 			elif event.keycode == KEY_M:
