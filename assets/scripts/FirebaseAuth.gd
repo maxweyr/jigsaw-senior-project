@@ -231,11 +231,9 @@ func write_last_login_time():
 		user.add_or_update_field("last_login", Time.get_datetime_string_from_system())
 		users.update(user)
 
-
 func _on_login_failed(code, message):
 	login_failed.emit()
 	print("Login failed with code: ", code, " message: ", message)
-
 
 # increments a users total_playing_time field by 1 (int)
 func write_total_playing_time() -> void:
@@ -255,6 +253,37 @@ func write_total_playing_time() -> void:
 	user.add_or_update_field("total_playing_time", newTime)
 	await users.update(user)
 
+# increments a users multiplayer playing time field by 1 (int)
+func write_mult_playing_time() -> void:
+	''' Senior Project
+	Updates the amount of time the player has been playing
+	Note: this only counts up if the player is in a puzzle
+	'''
+	var users: FirestoreCollection = Firebase.Firestore.collection("sp_users")
+	var user = await users.get_doc(get_box_id())
+	var current_user_time = user.get_value("mult_playing_time")
+	if(!current_user_time):
+		user.set("mult_playing_time", 1)
+		users.update(user)
+		return
+	var newTime = int(current_user_time) + 1
+	print("UPDATING MULTIPLAYER PLAYTIME TO ", newTime)
+	user.add_or_update_field("mult_playing_time", newTime)
+	await users.update(user)
+
+# Call this whenever you (re)join the lobby
+func update_my_player_entry(lobby_num: int) -> void:
+	if NetworkManager.is_server: return # SAFETY CHECK (Only run on clients)
+
+	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(lobby_num))
+	var players = await lobby_puzzle.get_doc("players")
+	
+	if !players:
+		print("ADDING PLAYERS TO SERVER FB DB: ", "players")
+		await lobby_puzzle.add("players", {get_box_id(): Time.get_datetime_string_from_system()})
+	else:
+		players.add_or_update_field(get_box_id(), Time.get_datetime_string_from_system())
+		lobby_puzzle.update(players)
 
 func write_puzzle_time_spent(puzzle_name):
 	''' Senior Project
@@ -279,7 +308,6 @@ func write_completed_puzzle(puzzle_name):
 	Gets the user's info about puzzle and stores it in completed puzzles DB
 	'''
 	pass
-
 
 #func add_user_completed_puzzles(completedPuzzle: Dictionary) -> void:
 	#var userCollection: FirestoreCollection = Firebase.Firestore.collection("users")
@@ -364,8 +392,7 @@ func check_lobby_choice(lobby_num):
 	if(!choice):
 		return {}
 	return choice
-	
-	
+
 func check_lobby_puzzle_state_server(lobby_num):
 	''' Senior Project
 	Checks the lobby number for a valid position array
@@ -435,7 +462,7 @@ func get_puzzle_state_server():
 	'''
 	
 	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(PuzzleVar.lobby_number))
-	print(lobby_puzzle)
+	#print(lobby_puzzle)
 	var state = await lobby_puzzle.get_doc("state")
 	if(!state):
 		print("FB Could not find state for lobby", PuzzleVar.lobby_number)
@@ -490,24 +517,3 @@ func write_complete_server():
 	state.add_or_update_field("progress", 0)
 	state.add_or_update_field("puzzle_choice", {})
 	await lobby_puzzle.update(state)
-
-
-	
-	
-	
-	
-
-#func get_progress() -> void:
-	#var progressCollection: FirestoreCollection = await Firebase.Firestore.collection("progress")
-	#var userProgressDoc = await progressCollection.get_doc(FireAuth.get_user_id())
-	#for i in range(0,12):
-		#var PUZZLE_NAME = puzzleNames[i][0]
-		#var puzzle_data = userProgressDoc.document.get(str(PUZZLE_NAME + "progress"))
-		#if puzzle_data and puzzle_data is Dictionary:
-			#if "doubleValue" in puzzle_data:
-				#GlobalProgress.progress_arr.append(int(puzzle_data["doubleValue"]))
-			#elif "integerValue" in puzzle_data:
-				#GlobalProgress.progress_arr.append(int(puzzle_data["integerValue"]))
-	#
-	#return
-	#

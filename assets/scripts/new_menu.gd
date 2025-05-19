@@ -9,7 +9,7 @@ func _ready():
 	# Prevents pieces from being loaded multiple times
 	if(PuzzleVar.open_first_time):
 		print("Adding Puzzles")
-		load(PuzzleVar.path)
+		#load(PuzzleVar.path)
 		var dir = DirAccess.open(PuzzleVar.path)
 		if dir:
 			dir.list_dir_begin()
@@ -94,6 +94,7 @@ func _on_play_online_pressed():
 		connecting_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		connecting_label.position = Vector2(get_viewport_rect().size.x / 2 - 100, get_viewport_rect().size.y / 2)
 		add_child(connecting_label)
+		await FireAuth.update_my_player_entry(1)
 	else:
 		print("Failed to initiate connection")
 		# Show error message

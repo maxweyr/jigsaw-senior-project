@@ -21,6 +21,7 @@ var choice = {}
 var path = "res://assets/puzzles/jigsawpuzzleimages" # path for the images
 var default_path = "res://assets/puzzles/jigsawpuzzleimages/dog.jpg"
 var images = [] # this will be loaded up in the new menu scene
+const PuzzleImageData = preload("res://puzzle_image_list.gd")
 
 # these are the actual size of the puzzle piece, I am putting them in here so
 # that piece_2d can access them and use them for sizing upon instantiation
@@ -65,6 +66,11 @@ func get_random_puzzles():
 	# choose a random size for the puzzle ranging from 2x2 to 10x10
 	var sizes = [10, 100, 1000]
 	var random_size = sizes[randi_range(0, 2)]
+	
+	print("Selected type: ", typeof(selected)) # Should be TYPE_DICTIONARY == 19
+	print("Selected value: ", selected)
+
+	
 	selected["size"] = random_size
 	return selected
 	
@@ -80,7 +86,7 @@ func get_online_choice():
 	if(choice):
 		return choice
 	else:
-		return get_random_puzzles_w_size(1000)
+		return get_random_puzzles_w_size(100)
 		
 func load_and_or_add_puzzle_random_loc(parent_node: Node, sprite_scene: PackedScene, selected_puzzle_dir: String, add: bool) -> void:
 	PuzzleVar.ordered_pieces_array.clear()
@@ -140,36 +146,14 @@ func load_and_or_add_puzzle_random_loc(parent_node: Node, sprite_scene: PackedSc
 		PuzzleVar.ordered_pieces_array.append(piece)
 		if add:
 			parent_node.call_deferred("add_child", piece)
-			
-				
+
 func get_avail_puzzles():
-	# Your existing function is fine
 	var ret_arr = []
-	var dir = DirAccess.open(PuzzleVar.path)
-	if not dir:
-		get_tree().quit(-1)
-	dir.list_dir_begin()
-	# get first file_name
-	var file_name = dir.get_next()
-	while file_name != "":
-		# only add to ret_arr if valid path
-		if not dir.current_is_dir() and (file_name.ends_with(".png") or file_name.ends_with(".jpg")):
-			# in fact, we only want to say avail if the puzzle dirs exist for all 3 puzzle sizes
-			# ie puzzle_name_[10, 100, 1000]
-			var file_path = PuzzleVar.path + '/' + file_name
-			var size10 = file_path.get_basename() + "_10"
-			var size100 = file_path.get_basename() + "_100"
-			var size1000 = file_path.get_basename() + "_1000"
-			if !(DirAccess.dir_exists_absolute(size10) and DirAccess.dir_exists_absolute(size100) and DirAccess.dir_exists_absolute(size1000)):
-				file_name = dir.get_next()
-				continue
-			ret_arr.append(
-				{
-					"file_name": file_name,
-					"file_path": file_path,
-					"base_name": file_name.get_basename(),
-					"base_file_path": file_path.get_basename()
-				}
-			)
-		file_name = dir.get_next()
+	for puzzle in PuzzleImageData.PUZZLE_DATA:
+		var size10 = puzzle.base_file_path + "_10"
+		var size100 = puzzle.base_file_path + "_100"
+		var size1000 = puzzle.base_file_path + "_1000"
+		if DirAccess.dir_exists_absolute(size10) and DirAccess.dir_exists_absolute(size100) and DirAccess.dir_exists_absolute(size1000):
+			ret_arr.append(puzzle.duplicate())
+	print(ret_arr)
 	return ret_arr

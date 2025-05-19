@@ -6,15 +6,25 @@ var is_muted
 var mute_button: Button
 var unmute_button: Button
 var offline_button: Button
-var online_status_label: Label
 var complete = false;
 @onready var back_button = $UI_Button/Back
 @onready var loading = $LoadingScreen
 
-# Network-related variables
-var connected_players = []
+# --- Network-related variables ---
 var selected_puzzle_dir = ""
 var selected_puzzle_name = ""
+
+# --- UI Element Variables ---
+var floating_status_box: PanelContainer
+var online_status_label: Label
+
+# --- Network Data ---
+var connected_players = [] # Array to store connected player names (excluding self)
+
+# --- Constants for Styling ---
+const BOX_BACKGROUND_COLOR = Color(0.15, 0.15, 0.2, 0.85) # Dark semi-transparent
+const BOX_BORDER_COLOR = Color(0.4, 0.4, 0.45, 0.9)
+const BOX_FONT_COLOR = Color(0.95, 0.95, 0.95)
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -32,7 +42,7 @@ func _ready():
 		NetworkManager.player_left.connect(_on_player_left)
 		#back_button.pressed.connect(_on_back_pressed)
 		# Create online status label
-		create_online_status_label()
+		create_floating_player_display()
 	
 	# load up reference image
 	var ref_image = PuzzleVar.choice["file_path"]
@@ -66,6 +76,9 @@ func _ready():
 	#var back_button = $UI_Button/Back
 	#back_button.connect("pressed", Callable(self, "_on_back_button_pressed"))
 	loading.hide()
+	
+	if NetworkManager.is_online:
+		update_online_status_label()
 
 # Load state from Firebase (for offline mode)
 func load_firebase_state(p_name):
@@ -124,43 +137,133 @@ func load_firebase_state(p_name):
 				for other_piece in group_pieces.slice(1, group_pieces.size()):
 					reference_piece.snap_and_connect(other_piece.ID, 1)
 	complete = false
+
+#-----------------------------------------------------------------------------
+# UI CREATION AND MANAGEMENT
+#-----------------------------------------------------------------------------
+
+func create_floating_player_display():
+	# Create PanelContainer (the floating box itself)
+	floating_status_box = PanelContainer.new()
+	floating_status_box.name = "FloatingPlayerDisplayBox"
 	
+	# Style the PanelContainer
+	var style_box = StyleBoxFlat.new()
+	style_box.bg_color = BOX_BACKGROUND_COLOR
+	style_box.border_width_left = 2
+	style_box.border_width_top = 2
+	style_box.border_width_right = 2
+	style_box.border_width_bottom = 2
+	style_box.border_color = BOX_BORDER_COLOR
+	style_box.corner_radius_top_left = 6
+	style_box.corner_radius_top_right = 6
+	style_box.corner_radius_bottom_left = 6
+	style_box.corner_radius_bottom_right = 6
+	# These margins provide padding INSIDE the box, around the label
+	style_box.content_margin_left = 10
+	style_box.content_margin_top = 8
+	style_box.content_margin_right = 10
+	style_box.content_margin_bottom = 8
+	floating_status_box.add_theme_stylebox_override("panel", style_box)
+
+	# Position the floating box (e.g., top-right)
+	floating_status_box.anchor_left = 1.0 # Anchor to the right
+	floating_status_box.anchor_top = 0.0  # Anchor to the top
+	floating_status_box.anchor_right = 1.0
+	floating_status_box.anchor_bottom = 0.0
+	floating_status_box.offset_left = -270 # Offset from right edge (box width + margin)
+	floating_status_box.offset_top = 20     # Margin from top
+	floating_status_box.offset_right = -20  # Margin from right edge
+	# Let height be determined by content, or set offset_bottom for fixed height
+	floating_status_box.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	floating_status_box.grow_vertical = Control.GROW_DIRECTION_END
 	
+	floating_status_box.custom_minimum_size = Vector2(250, 0) # Min width 250, height auto
+	
+	#add_child(floating_status_box)
+	var ui_layer = $UI_Button
+	ui_layer.add_child(floating_status_box)
+
+	# Create and add the online status label directly to the PanelContainer
+	_create_online_status_label_in_box(floating_status_box)
+
+
+func _create_online_status_label_in_box(parent_node: PanelContainer): # Parent is now the PanelContainer
+	online_status_label = Label.new()
+	online_status_label.name = "OnlineStatusLabel"
+	online_status_label.add_theme_font_size_override("font_size", 18)
+	online_status_label.add_theme_color_override("font_color", BOX_FONT_COLOR)
+	online_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD # Allow text to wrap if it's too long
+	
+	# The PanelContainer will handle its child's size based on content and padding.
+	# For a Label to fill the width of the PanelContainer (respecting content margins):
+	online_status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	online_status_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER # Or SIZE_EXPAND_FILL if you want it to take vertical space
+	
+	parent_node.add_child(online_status_label)
+	# update_online_status_label() will be called from _ready or when players change
+
+
+func update_online_status_label(custom_text=""):
+	if not is_instance_valid(online_status_label):
+		printerr("Online status label is not valid!") # Use printerr for errors
+		return
+
+	if custom_text != "":
+		online_status_label.text = custom_text
+		return
+
+	var local_player_display_name = "You" # Default name for the local player
+	# You can enhance this if you have a stored player name:
+	# if MyGameGlobals.has("player_name") and MyGameGlobals.player_name != "":
+	# local_player_display_name = MyGameGlobals.player_name
+	
+	var displayed_players = [local_player_display_name] # Start with self
+	displayed_players.append_array(connected_players) # Add other known players
+
+	var player_count = displayed_players.size()
+	var status_text = "Active Players (%s): " % player_count
+	status_text += ", ".join(displayed_players)
+	
+	online_status_label.text = status_text
+
+
 # Network event handlers
 func _on_player_joined(_client_id, client_name):
-	connected_players.append(client_name)
+	if not client_name in connected_players:
+		connected_players.append(client_name)
 	update_online_status_label()
 
 func _on_player_left(_client_id, client_name):
 	connected_players.erase(client_name)
 	update_online_status_label()
 
-# Create and update the online status label
-func create_online_status_label():
-	online_status_label = Label.new()
-	online_status_label.text = "Online Mode"
-	online_status_label.add_theme_font_size_override("font_size", 20)
-	online_status_label.add_theme_color_override("font_color", Color(0, 1, 0))
-	online_status_label.position = Vector2(20, 20)
-	add_child(online_status_label)
-	
-	update_online_status_label()
+## Create and update the online status label
+#func create_online_status_label():
+	#online_status_label = Label.new()
+	#online_status_label.text = "Online Mode"
+	#online_status_label.add_theme_font_size_override("font_size", 20)
+	#online_status_label.add_theme_color_override("font_color", Color(0, 1, 0))
+	#online_status_label.position = Vector2(20, 20)
+	#add_child(online_status_label)
+	#
+	#update_online_status_label()
 
-func update_online_status_label(custom_text = ""):
-	if not online_status_label:
-		return
-		
-	if custom_text != "":
-		online_status_label.text = custom_text
-		return
-		
-	var player_count = connected_players.size() + 1  # +1 for self
-	online_status_label.text = "Online Mode - " + str(player_count) + " player"
-	if player_count != 1:
-		online_status_label.text += "s"
-	
-	if connected_players.size() > 0:
-		online_status_label.text += ": " + ", ".join(connected_players)
+#func update_online_status_label(custom_text = ""):
+	#if not online_status_label:
+		#return
+		#
+	#if custom_text != "":
+		#online_status_label.text = custom_text
+		#return
+		#
+	#var player_count = connected_players.size() + 1  # +1 for self
+	#online_status_label.text = "Online Mode - " + str(player_count) + " player"
+	#if player_count != 1:
+		#online_status_label.text += "s"
+	#
+	#if connected_players.size() > 0:
+		#online_status_label.text += ": " + ", ".join(connected_players)
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(_delta):
@@ -181,7 +284,7 @@ func _input(event):
 			
 	if event is InputEventKey:
 		if event.is_pressed():
-			if event.keycode == KEY_P and (Input.is_key_pressed(KEY_SHIFT)):
+			if event.keycode == KEY_P && Input.is_key_pressed(KEY_SHIFT):
 				# Arrange grid
 				arrange_grid()
 			elif event.keycode == KEY_M:
