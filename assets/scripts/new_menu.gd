@@ -94,6 +94,7 @@ func _on_play_online_pressed():
 		connecting_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		connecting_label.position = Vector2(get_viewport_rect().size.x / 2 - 100, get_viewport_rect().size.y / 2)
 		add_child(connecting_label)
+		await FireAuth.update_my_player_entry(1)
 	else:
 		print("Failed to initiate connection")
 		# Show error message

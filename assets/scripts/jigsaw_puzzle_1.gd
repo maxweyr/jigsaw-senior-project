@@ -180,7 +180,9 @@ func create_floating_player_display():
 	
 	floating_status_box.custom_minimum_size = Vector2(250, 0) # Min width 250, height auto
 	
-	add_child(floating_status_box)
+	#add_child(floating_status_box)
+	var ui_layer = $UI_Button
+	ui_layer.add_child(floating_status_box)
 
 	# Create and add the online status label directly to the PanelContainer
 	_create_online_status_label_in_box(floating_status_box)
@@ -220,7 +222,7 @@ func update_online_status_label(custom_text=""):
 	displayed_players.append_array(connected_players) # Add other known players
 
 	var player_count = displayed_players.size()
-	var status_text = "Players (%s): " % player_count
+	var status_text = "Active Players (%s): " % player_count
 	status_text += ", ".join(displayed_players)
 	
 	online_status_label.text = status_text

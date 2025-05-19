@@ -294,7 +294,6 @@ func _on_connected_to_server():
 	client_connected.emit() # Signal UI etc
 	
 	# Register player with the server
-	var player_name = "Player"
 	if FireAuth.is_online and FireAuth.get_box_id() != "":
 		print("NetworkManager: Registering player '", FireAuth.get_box_id(), "' with server.")
 		rpc_id(1, "register_player", FireAuth.get_box_id())
