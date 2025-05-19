@@ -35,7 +35,7 @@ func _ready():
 	var err = env.load("res://.env")
 	if err != OK:
 		print("could not read env file: ",err)
-	else: 
+	else:
 		DEFAULT_PORT = env.get_value("server", "PORT", 8080)
 		SERVER_IP = str(env.get_value("server", "SERVER_IP", "127.0.0.1"))
 	# Prioritize Dedicated Server Check
@@ -137,7 +137,7 @@ func set_offline_mode():
 
 # Start a server with a default puzzle
 func start_server():
-	print("NetworkManager starting headless server at ", str(SERVER_IP), " and port ", DEFAULT_PORT)
+	print("NetworkManager starting headless server for ", str(SERVER_IP), " and port ", DEFAULT_PORT)
 	# For server, just pick a default puzzle ID (can be changed via args later)
 	var puzzle_id = PuzzleVar.default_path 
 	if OS.get_cmdline_args().size() > 1:
@@ -176,7 +176,7 @@ func join_server() -> bool:
 	print("NetworkManager attempting to connect to server at ", SERVER_IP)
 	
 	var enet_peer = ENetMultiplayerPeer.new()
-	var error = enet_peer.create_client(SERVER_IP, DEFAULT_PORT)
+	var error = enet_peer.create_client(SERVER_IP, int(DEFAULT_PORT))
 	
 	if error != OK:
 		print("WARNING: NetworkManager failed to connect to server: ", error)
@@ -199,12 +199,12 @@ func join_server() -> bool:
 func disconnect_from_server():
 	if is_server: return # Dedicated server doesn't disconnect this way
 	if not is_online: return # Already offline
-
+	
 	print("NetworkManager (Client): Disconnecting...")
 	if peer != null and peer is ENetMultiplayerPeer:
 		if peer.get_connection_status() != MultiplayerPeer.CONNECTION_DISCONNECTED:
 			peer.close()
-
+	
 	# Reset state and explicitly go back to offline mode
 	set_offline_mode()
 	print("NetworkManager (Client): Disconnected. Switched to Offline Mode.")
@@ -274,7 +274,7 @@ func _on_peer_connected(id):
 			rpc_id(id, "_send_puzzle_info", current_puzzle_id)
 		else:
 			printerr("ERROR::NetworkManager (Server): Cannot send puzzle info, current_puzzle_id is null!")
-			
+
 func _on_peer_disconnected(id):
 	if not is_online: return # Ignore if not in an online session
 	print("NetworkManager: Peer disconnected: ", id)
@@ -294,7 +294,6 @@ func _on_connected_to_server():
 	client_connected.emit() # Signal UI etc
 	
 	# Register player with the server
-	var player_name = "Player"
 	if FireAuth.is_online and FireAuth.get_box_id() != "":
 		print("NetworkManager: Registering player '", FireAuth.get_box_id(), "' with server.")
 		rpc_id(1, "register_player", FireAuth.get_box_id())

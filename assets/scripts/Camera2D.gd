@@ -4,7 +4,7 @@ var zoom_speed = 100
 var zoom_margin = 0.3
 
 var zoom_min = 0.2
-var zoom_max = 1
+var zoom_max = 2
 
 var zoom_pos = Vector2()
 var zoom_factor = 1.0
