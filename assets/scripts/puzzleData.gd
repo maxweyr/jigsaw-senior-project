@@ -90,6 +90,11 @@ func get_online_choice():
 		
 func load_and_or_add_puzzle_random_loc(parent_node: Node, sprite_scene: PackedScene, selected_puzzle_dir: String, add: bool) -> void:
 	PuzzleVar.ordered_pieces_array.clear()
+	#var placed_pieces: Array = [] #Array of placed pieces for overlap detection
+	#var max_attempts = 1000  # Avoid infinite loops during overlap detection
+	
+	randomize()
+	
 	for x in range(PuzzleVar.global_num_pieces):
 		var piece = sprite_scene.instantiate()
 		piece.add_to_group("puzzle_pieces")
@@ -107,43 +112,40 @@ func load_and_or_add_puzzle_random_loc(parent_node: Node, sprite_scene: PackedSc
 		collision_box.shape.extents = Vector2(sprite.texture.get_width() / 2, sprite.texture.get_height() / 2)
 
 		var spawnarea = parent_node.get_viewport_rect()
-		piece.position = Vector2(randi_range(5, spawnarea.size.x), randi_range(5, spawnarea.size.y))
-		PuzzleVar.ordered_pieces_array.append(piece)
-		if(add):
-			parent_node.call_deferred("add_child", piece) 
+		var max_x = spawnarea.size.x - piece.piece_width
+		var max_y = spawnarea.size.y - piece.piece_height
 
-#func get_avail_puzzles():
-	## existing function is fine
-	#var ret_arr = []
-	#var dir = DirAccess.open(PuzzleVar.path)
-	#if not dir:
-		#get_tree().quit(-1)
-	#dir.list_dir_begin()
-	## get first file_name
-	#var file_name = dir.get_next()
-	#while file_name != "":
-		## only add to ret_arr if valid path
-		#if not dir.current_is_dir() and (file_name.ends_with(".png") or file_name.ends_with(".jpg")):
-			## in fact, we only want to say avail if the puzzle dirs exist for all 3 puzzle sizes
-			## ie puzzle_name_[10, 100, 1000]
-			#var file_path = PuzzleVar.path + '/' + file_name
-			#var size10 = file_path.get_basename() + "_10"
-			#var size100 = file_path.get_basename() + "_100"
-			#var size1000 = file_path.get_basename() + "_1000"
-			#if !(DirAccess.dir_exists_absolute(size10) and DirAccess.dir_exists_absolute(size100) and DirAccess.dir_exists_absolute(size1000)):
-				#file_name = dir.get_next()
-				#continue
-			#ret_arr.append(
-				#{
-					#"file_name": file_name,
-					#"file_path": file_path,
-					#"base_name": file_name.get_basename(),
-					#"base_file_path": file_path.get_basename()
-				#}
+		piece.position = Vector2(randi_range(0, int(max_x)),randi_range(0, int(max_y)))
+		#piece.position = Vector2(randi_range(1, spawnarea.size.x), randi_range(1, spawnarea.size.y))
+		#PuzzleVar.ordered_pieces_array.append(piece)
+		#var piece_size = Vector2(sprite.texture.get_width(), sprite.texture.get_height())
+		#var position_found = false
+		#var attempts = 0
+		
+		#while not position_found and attempts < max_attempts:
+			#var candidate_pos = Vector2(
+				#randi_range(50, int(spawnarea.size.x - piece_size.x)),
+				#randi_range(50, int(spawnarea.size.y - piece_size.y))
 			#)
-		#file_name = dir.get_next()
-	#print(ret_arr)
-	#return ret_arr
+			#var new_rect = Rect2(candidate_pos, piece_size)
+			#
+			#var overlaps = false
+			#for existing_rect in placed_pieces:
+				#if new_rect.intersects(existing_rect):
+					#overlaps = true
+					#break
+			#
+			#if not overlaps:
+				#position_found = true
+				#piece.position = candidate_pos
+				#placed_pieces.append(new_rect)
+				#
+		#if not position_found:
+			#print("Could not find non-overlapping position for piece ", x)
+			#
+		PuzzleVar.ordered_pieces_array.append(piece)
+		if add:
+			parent_node.call_deferred("add_child", piece)
 
 func get_avail_puzzles():
 	var ret_arr = []

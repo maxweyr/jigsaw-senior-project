@@ -52,9 +52,9 @@ func create_overlay():
 
 func _on_start_random_pressed():
 	$AudioStreamPlayer.play()
-	PuzzleVar.choice = PuzzleVar.get_random_puzzles()
+	#PuzzleVar.choice = PuzzleVar.get_random_puzzles()
 	# load the texture and get the size of the puzzle image so that the game
-	get_tree().change_scene_to_file("res://assets/scenes/jigsaw_puzzle_1.tscn")
+	get_tree().change_scene_to_file("res://assets/scenes/random_menu.tscn")
 
 func _on_logged_in() -> void:
 	pass
