@@ -19,7 +19,7 @@ var active_piece= -1
 var choice = {}
 
 var path = "res://assets/puzzles/jigsawpuzzleimages" # path for the images
-var default_path = "res://assets/puzzles/jigsawpuzzleimages/dog.png"
+var default_path = "res://assets/puzzles/jigsawpuzzleimages/dog.jpg"
 var images = [] # this will be loaded up in the new menu scene
 
 # these are the actual size of the puzzle piece, I am putting them in here so
@@ -84,6 +84,11 @@ func get_online_choice():
 		
 func load_and_or_add_puzzle_random_loc(parent_node: Node, sprite_scene: PackedScene, selected_puzzle_dir: String, add: bool) -> void:
 	PuzzleVar.ordered_pieces_array.clear()
+	#var placed_pieces: Array = [] #Array of placed pieces for overlap detection
+	#var max_attempts = 1000  # Avoid infinite loops during overlap detection
+	
+	randomize()
+	
 	for x in range(PuzzleVar.global_num_pieces):
 		var piece = sprite_scene.instantiate()
 		piece.add_to_group("puzzle_pieces")
@@ -101,12 +106,42 @@ func load_and_or_add_puzzle_random_loc(parent_node: Node, sprite_scene: PackedSc
 		collision_box.shape.extents = Vector2(sprite.texture.get_width() / 2, sprite.texture.get_height() / 2)
 
 		var spawnarea = parent_node.get_viewport_rect()
-		piece.position = Vector2(randi_range(50, spawnarea.size.x), randi_range(50, spawnarea.size.y))
-		PuzzleVar.ordered_pieces_array.append(piece)
-		if(add):
-			parent_node.call_deferred("add_child", piece) 
+		var max_x = spawnarea.size.x - piece.piece_width
+		var max_y = spawnarea.size.y - piece.piece_height
 
-	
+		piece.position = Vector2(randi_range(0, int(max_x)),randi_range(0, int(max_y)))
+		#piece.position = Vector2(randi_range(1, spawnarea.size.x), randi_range(1, spawnarea.size.y))
+		#PuzzleVar.ordered_pieces_array.append(piece)
+		#var piece_size = Vector2(sprite.texture.get_width(), sprite.texture.get_height())
+		#var position_found = false
+		#var attempts = 0
+		
+		#while not position_found and attempts < max_attempts:
+			#var candidate_pos = Vector2(
+				#randi_range(50, int(spawnarea.size.x - piece_size.x)),
+				#randi_range(50, int(spawnarea.size.y - piece_size.y))
+			#)
+			#var new_rect = Rect2(candidate_pos, piece_size)
+			#
+			#var overlaps = false
+			#for existing_rect in placed_pieces:
+				#if new_rect.intersects(existing_rect):
+					#overlaps = true
+					#break
+			#
+			#if not overlaps:
+				#position_found = true
+				#piece.position = candidate_pos
+				#placed_pieces.append(new_rect)
+				#
+		#if not position_found:
+			#print("Could not find non-overlapping position for piece ", x)
+			#
+		PuzzleVar.ordered_pieces_array.append(piece)
+		if add:
+			parent_node.call_deferred("add_child", piece)
+			
+				
 func get_avail_puzzles():
 	# Your existing function is fine
 	var ret_arr = []

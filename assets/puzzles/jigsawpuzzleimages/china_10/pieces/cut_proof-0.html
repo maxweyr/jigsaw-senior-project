@@ -1,0 +1,70 @@
+
+<!doctype html>
+<html>
+<head>
+<title>Cut Proof - 11</title>
+<link rel="stylesheet" media="all" href="sprite_p.css">
+<style>
+
+body {
+background: black;
+color: white;
+}
+.container {
+position: relative;
+display: flex;
+flex-wrap: wrap;
+}
+.p {
+transition: opacity linear 0.5s;
+background-image: none;
+}
+input[name=assembled]:checked + .container .p {
+position: absolute;
+}
+.p.is-highlight,
+.p:hover,
+.p:active {
+opacity: 0;
+}
+
+
+</style>
+</head>
+<body>
+<p>
+Piece count: 15<br>
+<button>
+<label for="assembled">Toggle Assembled State</label>
+</button>
+</p>
+
+<!-- All the piece div elements -->
+<input type="checkbox" checked id="assembled" name="assembled">
+<div class="container">
+<div id='p-0' class='p pc-0' style='left:78px;top:139px;transform-origin:40.0px 34.5px;transform:rotate(0deg);'><img class='p-img' src='raster/image-0/0.png?1747619061' width='80' height='69'></div><div id='p-1' class='p pc-1' style='left:155px;top:52px;transform-origin:43.0px 45.0px;transform:rotate(0deg);'><img class='p-img' src='raster/image-0/1.png?1747619061' width='86' height='90'></div><div id='p-2' class='p pc-2' style='left:295px;top:66px;transform-origin:51.0px 47.0px;transform:rotate(0deg);'><img class='p-img' src='raster/image-0/2.png?1747619061' width='102' height='94'></div><div id='p-3' class='p pc-3' style='left:220px;top:122px;transform-origin:50.0px 43.0px;transform:rotate(0deg);'><img class='p-img' src='raster/image-0/3.png?1747619061' width='100' height='86'></div><div id='p-4' class='p pc-4' style='left:294px;top:139px;transform-origin:51.5px 34.5px;transform:rotate(0deg);'><img class='p-img' src='raster/image-0/4.png?1747619061' width='103' height='69'></div><div id='p-5' class='p pc-5' style='left:0px;top:118px;transform-origin:53.0px 45.0px;transform:rotate(0deg);'><img class='p-img' src='raster/image-0/5.png?1747619061' width='106' height='90'></div><div id='p-6' class='p pc-6' style='left:0px;top:0px;transform-origin:51.0px 36.0px;transform:rotate(0deg);'><img class='p-img' src='raster/image-0/6.png?1747619061' width='102' height='72'></div><div id='p-7' class='p pc-7' style='left:317px;top:0px;transform-origin:40.0px 45.0px;transform:rotate(0deg);'><img class='p-img' src='raster/image-0/7.png?1747619061' width='80' height='90'></div><div id='p-8' class='p pc-8' style='left:212px;top:52px;transform-origin:53.5px 46.5px;transform:rotate(0deg);'><img class='p-img' src='raster/image-0/8.png?1747619061' width='107' height='93'></div><div id='p-9' class='p pc-9' style='left:218px;top:0px;transform-origin:61.0px 35.5px;transform:rotate(0deg);'><img class='p-img' src='raster/image-0/9.png?1747619061' width='122' height='71'></div><div id='p-10' class='p pc-10' style='left:78px;top:69px;transform-origin:52.5px 45.0px;transform:rotate(0deg);'><img class='p-img' src='raster/image-0/10.png?1747619061' width='105' height='90'></div><div id='p-11' class='p pc-11' style='left:74px;top:0px;transform-origin:53.0px 46.5px;transform:rotate(0deg);'><img class='p-img' src='raster/image-0/11.png?1747619061' width='106' height='93'></div><div id='p-12' class='p pc-12' style='left:0px;top:50px;transform-origin:52.5px 45.0px;transform:rotate(0deg);'><img class='p-img' src='raster/image-0/12.png?1747619061' width='105' height='90'></div><div id='p-13' class='p pc-13' style='left:159px;top:0px;transform-origin:41.0px 35.5px;transform:rotate(0deg);'><img class='p-img' src='raster/image-0/13.png?1747619061' width='82' height='71'></div><div id='p-14' class='p pc-14' style='left:136px;top:118px;transform-origin:52.5px 45.0px;transform:rotate(0deg);'><img class='p-img' src='raster/image-0/14.png?1747619061' width='105' height='90'></div>
+</div>
+
+<script>
+/* Toggle the adjacent pieces next to the one that is clicked. */
+fetch("/adjacent.json")
+.then(response => response.json())
+.then(adjacent => {
+    document.addEventListener('click', (event) => {
+        for (let target = event.target; target && target != this; target = target.parentNode) {
+            if (target.classList && target.classList.contains('p')) {
+                const $piece = target;
+                const piece_id = $piece.getAttribute("id").replace("p-", "");
+                const adjacent_piece_ids = adjacent[piece_id];
+                adjacent_piece_ids
+                    .map(pc => {return document.getElementById("p-"+pc)})
+                    .map(el => el.classList.toggle('is-highlight'))
+                break;
+            }
+        }
+    }, false);
+});
+</script>
+
+</body>
+</html>

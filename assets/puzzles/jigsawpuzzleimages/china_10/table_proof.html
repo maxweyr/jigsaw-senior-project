@@ -2,7 +2,7 @@
 <!doctype html>
 <html>
 <head>
-<title>Table Proof - 100</title>
+<title>Table Proof - 11</title>
 <style>
 
 body {
@@ -32,7 +32,7 @@ image-rendering: crisp-edges;
 </head>
 <body>
 <p class="piece-count">
-Piece count: 12<br>
+Piece count: 15<br>
 </p>
 <div class="controls">
 <button>
@@ -41,16 +41,19 @@ Piece count: 12<br>
 <input type="checkbox" id="assembled" name="assembled">
 <button id="zoom-in">+</button>
 <button id="zoom-out">-</button>
+
+        <label>
+        <input type="radio" id="side-0" name="side" value="0">
+        side 0
+        </label>
+    
 </div>
 
 <div class="container">
-    <canvas class="piecemaker-table" id="piecemaker-table" data-size="100">
-        <img id="piecemaker-sprite_without_padding" style="image-rendering:crisp-edges;" width="2856" height="1870" src="size-100/sprite_without_padding.png">
-
-        <!-- TODO: Option to switch to clip paths
-        <img id="piecemaker-sprite_with_padding" style="image-rendering:crisp-edges;" width="2866" height="1876" src="size-100/sprite_with_padding.jpg">
+    <canvas class="piecemaker-table" id="piecemaker-table" data-size="11">
         
-        -->
+    <img data-side-index="0" style="image-rendering:crisp-edges;" width="436" height="344" src="size-11/sprite_without_padding-0.png">
+    
     </canvas>
 </div>
 
