@@ -151,6 +151,8 @@ func _on_quit_pressed():
 	#$AudioStreamPlayer.play() # doesn't work, quits too fast
 	get_tree().quit() # closes the scene tree to leave the game
 
+
+
 # this is used to check for events such as a key press
 func _input(event):
 	if event is InputEventKey and event.pressed and event.echo == false:
@@ -162,6 +164,8 @@ func _input(event):
 				else:
 					$Label.hide()
 				print("debug mode is: "+str(PuzzleVar.debug))
+	if event.is_action_pressed("ui_cancel"):
+		_on_quit_pressed()
 
 func _on_login() -> void:
 	overlay.visible = false # Hide the overlay after login completes
