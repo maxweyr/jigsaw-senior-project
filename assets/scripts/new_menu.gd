@@ -148,10 +148,11 @@ func _on_connection_failed():
 
 func _on_quit_pressed():
 	# quit the game
-	#$AudioStreamPlayer.play() # doesn't work, quits too fast
-	get_tree().quit() # closes the scene tree to leave the game
-
-
+	if(OS.get_name() == "Linux"):
+		print("shutting down")
+		OS.execute("shutdown", ["h", "now"])
+	else:
+		print("tried shutting down but not on linux")
 
 # this is used to check for events such as a key press
 func _input(event):
@@ -165,7 +166,7 @@ func _input(event):
 					$Label.hide()
 				print("debug mode is: "+str(PuzzleVar.debug))
 	if event.is_action_pressed("ui_cancel"):
-		_on_quit_pressed()
+		get_tree().quit()
 
 func _on_login() -> void:
 	overlay.visible = false # Hide the overlay after login completes
