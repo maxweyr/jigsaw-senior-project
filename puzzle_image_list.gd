@@ -24,4 +24,10 @@ const PUZZLE_DATA = [
 		"base_name": "fpeacock",
 		"base_file_path": "res://assets/puzzles/jigsawpuzzleimages/fpeacock"
 	},
+	{
+		"file_name": "cat.jpg",
+		"file_path": "res://assets/puzzles/jigsawpuzzleimages/cat.jpg",
+		"base_name": "cat",
+		"base_file_path": "res://assets/puzzles/jigsawpuzzleimages/cat"
+	},
 ]
