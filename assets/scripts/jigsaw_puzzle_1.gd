@@ -481,23 +481,34 @@ func on_unmute_button_press():
 #Logic for showing the winning labels and buttons
 func show_win_screen():
 	#-------------------------LABEL LOGIC------------------------#
-	var label = Label.new()
-	
-	# Set the text for the Label
-	label.text = "You've Finished the Puzzle!"
-	
-	# Set the font size as well as the color
-	label.add_theme_font_size_override("font_size", 200)
-	label.add_theme_color_override("font_color", Color(0, 204, 0))
-	
 	# Load the font file 
 	var font = load("res://assets/fonts/KiriFont.ttf") as FontFile
-	label.add_theme_font_override("font", font)
 	
-	# Change label poistion and add the label to the current scene
-	label.position = Vector2(-1000, -700)
-	get_tree().current_scene.add_child(label)
+	var canvas_layer = CanvasLayer.new()
+	canvas_layer.layer = 100
+	
+	var label = Label.new()
+	label.text = "You've Finished the Puzzle!"
+	
+	# Label size settings
+	label.add_theme_font_override("font", font)
+	label.add_theme_font_size_override("font_size", 60)  
+	label.add_theme_color_override("font_color", Color(0, 204, 0))
 
+	# Align label to center
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	
+	label.custom_minimum_size = get_viewport().size
+	
+	# Position label to correct location
+	label.position = Vector2(get_viewport().size) / 2 + Vector2(-1000, -700) 
+
+	canvas_layer.add_child(label)
+	get_tree().current_scene.add_child(canvas_layer)
+	
 	#-------------------------BUTTON LOGIC-----------------------#
 	var button = $MainMenu
 	button.visible = false # we dont want this @TODO remove this 

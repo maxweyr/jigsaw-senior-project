@@ -11,8 +11,8 @@ config_version=5
 [application]
 
 config/name="jigsaw"
-run/main_scene="uid://dye8ygfcvmig0"
-config/features=PackedStringArray("4.4", "GL Compatibility")
+run/main_scene="res://assets/scenes/new_menu.tscn"
+config/features=PackedStringArray("4.3", "GL Compatibility")
 config/icon="res://icon.svg"
 
 [autoload]
