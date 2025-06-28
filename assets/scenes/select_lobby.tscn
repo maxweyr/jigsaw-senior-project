@@ -1,8 +1,8 @@
 [gd_scene load_steps=6 format=3 uid="uid://d3q3u3b0ad0au"]
 
-[ext_resource type="Texture2D" uid="uid://c6arhvbthh2fo" path="res://assets/puzzles/new_background.jpg" id="1_oqbou"]
-[ext_resource type="FontFile" uid="uid://beiqlkkwpmupt" path="res://assets/fonts/ArchitectsDaughter.ttf" id="2_ypnid"]
-[ext_resource type="Texture2D" uid="uid://d1uvv78fvqwyf" path="res://assets/puzzles/jigsawpuzzleimages/fpeacock.jpg" id="3_oseos"]
+[ext_resource type="Texture2D" uid="uid://biax1h17lnus3" path="res://assets/puzzles/new_background.jpg" id="1_oqbou"]
+[ext_resource type="FontFile" uid="uid://bdgcyx2nvpcr0" path="res://assets/fonts/ArchitectsDaughter.ttf" id="2_ypnid"]
+[ext_resource type="Texture2D" uid="uid://do2kpd12a40ic" path="res://assets/puzzles/jigsawpuzzleimages/fpeacock.jpg" id="3_oseos"]
 [ext_resource type="Theme" uid="uid://cfxebjeqy3ke7" path="res://assets/themes/bold_text.tres" id="4_hduis"]
 [ext_resource type="Theme" uid="uid://0xk2aimn5x6r" path="res://assets/themes/main_menu_buttons.tres" id="5_tsqta"]
 

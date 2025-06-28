@@ -152,7 +152,7 @@ func _on_quit_pressed():
 		print("shutting down")
 		OS.execute("shutdown", ["h", "now"])
 	else:
-		print("tried shutting down but not on linux")
+		print("ERROR: Attempted System Shutdown, not on linux! Try 'Esc'")
 
 # this is used to check for events such as a key press
 func _input(event):

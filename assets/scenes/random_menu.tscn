@@ -1,11 +1,11 @@
 [gd_scene load_steps=8 format=3 uid="uid://cbuu63odfviuv"]
 
 [ext_resource type="Script" uid="uid://v3wdg7t6a861" path="res://assets/scripts/random_menu.gd" id="1_aq8lu"]
-[ext_resource type="Texture2D" uid="uid://dyynwq7llg20s" path="res://assets/puzzles/AdobeStock_104619688.jpeg" id="2_vdqvg"]
-[ext_resource type="Texture2D" uid="uid://bc0gsyfg1o6ay" path="res://assets/puzzles/new_background.jpg" id="3_mx5q3"]
-[ext_resource type="FontFile" uid="uid://c8eo3wiuuc6i4" path="res://assets/fonts/KiriFont.ttf" id="4_d58bj"]
+[ext_resource type="Texture2D" uid="uid://40vnf4gik7c8" path="res://assets/puzzles/AdobeStock_104619688.jpeg" id="2_vdqvg"]
+[ext_resource type="Texture2D" uid="uid://biax1h17lnus3" path="res://assets/puzzles/new_background.jpg" id="3_mx5q3"]
+[ext_resource type="FontFile" uid="uid://7d4dtbjia36x" path="res://assets/fonts/KiriFont.ttf" id="4_d58bj"]
 [ext_resource type="Theme" uid="uid://0xk2aimn5x6r" path="res://assets/themes/main_menu_buttons.tres" id="5_ftyle"]
-[ext_resource type="AudioStream" uid="uid://ddk1c4ivgbty2" path="res://assets/sounds/finger-snap-179180.mp3" id="6_jpntb"]
+[ext_resource type="AudioStream" uid="uid://d4llfcne3eq2l" path="res://assets/sounds/finger-snap-179180.mp3" id="6_jpntb"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_75luh"]
 font = ExtResource("4_d58bj")

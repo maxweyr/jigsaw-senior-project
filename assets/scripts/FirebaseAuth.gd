@@ -10,6 +10,7 @@ signal login_failed
 var user_id = ""
 var currentPuzzle = ""
 var is_online: bool = false
+var box_id: String
 
 const USER_COLLECTION: String = "sp_users"
 const USER_SUBCOLLECTIONS = ["active_puzzles", "completed_puzzles"]
@@ -57,8 +58,24 @@ var puzzleNames = {
 
 # called when the node enters the scene tree for the first time
 func _ready() -> void:
+	box_id = _parse_user_arg()
 	Firebase.Auth.signup_succeeded.connect(_on_signup_succeeded)
 	Firebase.Auth.login_failed.connect(_on_login_failed)
+
+func _parse_user_arg() -> String:
+	var args: PackedStringArray = OS.get_cmdline_args()
+	for arg in args:
+		# two common styles: --user=Foo  or  --user Foo
+		if arg.begins_with("--user="):
+			return arg.get_slice("=", 1)
+	# fallback: look for --user and take the next arg as its value
+	var idx = args.find("--user")
+	if idx != -1 and idx + 1 < args.size():
+		return args[idx + 1]
+	print("Missing required --user argument")
+	#push_error("Missing required --user argument")
+	get_tree().quit(-1)
+	return ""
 
 # attempt anonymous login
 func attempt_anonymous_login() -> void:
@@ -114,18 +131,21 @@ func handle_login() -> bool:
 # get current user id
 func get_user_id() -> String:
 	return Firebase.Auth.get_user_id()
-	
+
 func get_box_id() -> String:
-	var env = ConfigFile.new()
-	var err = env.load("res://.env")
-	if err != OK:
-		print("Could not read envfile")
-		get_tree().quit(-1)
-	var res = env.get_value("credentials", "USER", "not found")
-	if(res == "not found"):
-		print("env user not found")
-		get_tree().quit(-1)
-	return res
+	return box_id
+
+#func get_box_id() -> String:
+	#var env = ConfigFile.new()
+	#var err = env.load("res://.env")
+	#if err != OK:
+		#print("Could not read envfile")
+		#get_tree().quit(-1)
+	#var res = env.get_value("credentials", "USER", "not found")
+	#if(res == "not found"):
+		#print("env user not found")
+		#get_tree().quit(-1)
+	#return res
 
 func get_current_puzzle() -> String:
 	return str(currentPuzzle)

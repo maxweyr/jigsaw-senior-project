@@ -1,8 +1,8 @@
 [gd_resource type="Theme" load_steps=9 format=3 uid="uid://0xk2aimn5x6r"]
 
-[ext_resource type="FontFile" uid="uid://dy2cum01uldht" path="res://assets/fonts/ArchitectsDaughter.ttf" id="1_oqx3l"]
-[ext_resource type="Texture2D" uid="uid://dv525arw8xjg5" path="res://assets/images/wood_button_pressed.png" id="2_rfdb6"]
-[ext_resource type="Texture2D" uid="uid://cv3w5gvtdevrf" path="res://assets/images/wood_button_normal.png" id="3_a2pm8"]
+[ext_resource type="FontFile" uid="uid://bdgcyx2nvpcr0" path="res://assets/fonts/ArchitectsDaughter.ttf" id="1_oqx3l"]
+[ext_resource type="Texture2D" uid="uid://cdfvlgxfdflrh" path="res://assets/images/wood_button_pressed.png" id="2_rfdb6"]
+[ext_resource type="Texture2D" uid="uid://coce8074jiuas" path="res://assets/images/wood_button_normal.png" id="3_a2pm8"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vlwfn"]
 content_margin_left = 4.0
