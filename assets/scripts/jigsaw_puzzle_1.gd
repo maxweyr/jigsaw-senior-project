@@ -168,12 +168,13 @@ func create_floating_player_display():
 
 	# Position the floating box (e.g., top-right)
 	floating_status_box.anchor_left = 1.0 # Anchor to the right
-	floating_status_box.anchor_top = 0.0  # Anchor to the top
+	floating_status_box.anchor_top = 1.0  # Anchor to the bottom
 	floating_status_box.anchor_right = 1.0
-	floating_status_box.anchor_bottom = 0.0
+	floating_status_box.anchor_bottom = 1.0 # Anchor to the bottom
 	floating_status_box.offset_left = -270 # Offset from right edge (box width + margin)
-	floating_status_box.offset_top = 20     # Margin from top
+	floating_status_box.offset_top = -80     # Margin from bottom
 	floating_status_box.offset_right = -20  # Margin from right edge
+	floating_status_box.offset_bottom = -20  # Margin from bottom
 	# Let height be determined by content, or set offset_bottom for fixed height
 	floating_status_box.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	floating_status_box.grow_vertical = Control.GROW_DIRECTION_END
@@ -191,7 +192,7 @@ func create_floating_player_display():
 func _create_online_status_label_in_box(parent_node: PanelContainer): # Parent is now the PanelContainer
 	online_status_label = Label.new()
 	online_status_label.name = "OnlineStatusLabel"
-	online_status_label.add_theme_font_size_override("font_size", 18)
+	online_status_label.add_theme_font_size_override("font_size", 20)
 	online_status_label.add_theme_color_override("font_color", BOX_FONT_COLOR)
 	online_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD # Allow text to wrap if it's too long
 	
