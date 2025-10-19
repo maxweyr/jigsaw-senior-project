@@ -147,14 +147,14 @@ func load_firebase_state(p_name):
 #-----------------------------------------------------------------------------
 
 #var _digit_width := 40
-var _font_size := 56
+var _font_size := 80
 
 var _total_label: Label
 var _slash_label: Label
 var _cur_count_label: Label
 
 func create_piece_count_display():
-	var font = load("res://assets/fonts/KiriFont.ttf") as FontFile
+	var font = load("res://assets/fonts/Montserrat-Bold.ttf") as FontFile
 
 	# --- Total Piece Count label ---
 	_total_label = Label.new()
@@ -171,7 +171,7 @@ func create_piece_count_display():
 
 	_total_label.offset_top = 40
 	_total_label.offset_right = -20
-	_total_label.offset_left = _total_label.offset_right - 300
+	_total_label.offset_left = _total_label.offset_right - 260
 	$UI_Button.add_child(_total_label)
 
 	# --- Slash label ---
@@ -190,7 +190,7 @@ func create_piece_count_display():
 
 	_slash_label.offset_top = 40
 	_slash_label.offset_right = _total_label.offset_left - 5
-	_slash_label.offset_left = _slash_label.offset_right - 50
+	_slash_label.offset_left = _slash_label.offset_right - 70
 	$UI_Button.add_child(_slash_label)
 
 	# --- Current Count label ---
@@ -208,7 +208,7 @@ func create_piece_count_display():
 
 	_cur_count_label.offset_top = 40
 	_cur_count_label.offset_right = _slash_label.offset_left - 5
-	_cur_count_label.offset_left = _cur_count_label.offset_right - 300
+	_cur_count_label.offset_left = _cur_count_label.offset_right - 260
 	$UI_Button.add_child(_cur_count_label)
 
 	update_piece_count_display()
