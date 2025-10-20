@@ -167,13 +167,16 @@ func snap_and_connect(adjacent_piece_id: int, loadFlag = 0, is_network = false):
 	var current_left_diff = Vector2(adjusted_current_upper_left - adjusted_adjacent_upper_left)
 	var dist = current_left_diff - ref_upper_left_diff
 	
+	# Create reference to main scene for both snap sound and counter update
+	var main_scene = get_node("/root/JigsawPuzzleNode")
+
 	if PuzzleVar.draw_green_check == false and loadFlag == 0 and not is_network:
 		# Calculate the midpoint between the two connecting sides
 		var green_check_midpoint = (current_global_pos + adjacent_global_pos) / 2
 		# Pass the midpoint to show_image_on_snap() so the green checkmark appears
 		show_image_on_snap(green_check_midpoint)
-		var main_scene = get_node("/root/JigsawPuzzleNode")
-		main_scene.play_snap_sound()
+		if main_scene:
+			main_scene.play_snap_sound()
 
 		PuzzleVar.draw_green_check = true
 	
@@ -197,6 +200,10 @@ func snap_and_connect(adjacent_piece_id: int, loadFlag = 0, is_network = false):
 	# The function below is called to physically move the piece and join it to the 
 	# appropriate group
 	move_pieces_to_connect(dist, prev_group_number, new_group_number)
+
+	# Update the piece count display
+	if main_scene and main_scene.has_method("update_piece_count_display"):
+		main_scene.update_piece_count_display()
 	
 	var finished = true
 	
@@ -224,8 +231,8 @@ func snap_and_connect(adjacent_piece_id: int, loadFlag = 0, is_network = false):
 					FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
 	
 	if (finished):
-		var main_scene = get_node("/root/JigsawPuzzleNode")
-		main_scene.show_win_screen()
+		if main_scene:
+			main_scene.show_win_screen()
 		
 		# If we're in online mode, notify the server we completed the puzzle
 		if NetworkManager.is_online:
@@ -408,3 +415,8 @@ func _on_network_pieces_connected(_source_piece_id, _connected_piece_id, new_gro
 			piece.position = piece_position
 			PuzzleVar.ordered_pieces_array[updated_piece_id] = piece
 	#FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
+
+	# Update the piece counter for network connections
+	var main_scene = get_node("/root/JigsawPuzzleNode")
+	if main_scene and main_scene.has_method("update_piece_count_display"):
+		main_scene.update_piece_count_display()

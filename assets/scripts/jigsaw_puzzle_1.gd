@@ -15,6 +15,7 @@ var selected_puzzle_dir = ""
 var selected_puzzle_name = ""
 
 # --- UI Element Variables ---
+var piece_count_label: Label
 var floating_status_box: PanelContainer
 var online_status_label: Label
 
@@ -62,6 +63,9 @@ func _ready():
 	
 	# create puzzle pieces and place in scene
 	PuzzleVar.load_and_or_add_puzzle_random_loc(self, sprite_scene, selected_puzzle_dir, true)
+
+	# create piece count display
+	create_piece_count_display()
 
 	if FireAuth.is_online and !NetworkManager.is_server:
 		# client is connected to firebase
@@ -142,6 +146,93 @@ func load_firebase_state(p_name):
 # UI CREATION AND MANAGEMENT
 #-----------------------------------------------------------------------------
 
+#var _digit_width := 40
+var _font_size := 80
+
+var _total_label: Label
+var _slash_label: Label
+var _cur_count_label: Label
+
+func create_piece_count_display():
+	var font = load("res://assets/fonts/Montserrat-Bold.ttf") as FontFile
+
+	# --- Total Piece Count label ---
+	_total_label = Label.new()
+	_total_label.name = "PieceCountTotal"
+	_total_label.add_theme_font_override("font", font)
+	_total_label.add_theme_font_size_override("font_size", _font_size)
+	_total_label.add_theme_color_override("font_color", Color("#c95b0c"))
+	_total_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+
+	_total_label.anchor_left = 1.0
+	_total_label.anchor_right = 1.0
+	_total_label.anchor_top = 0.0
+	_total_label.anchor_bottom = 0.0
+
+	_total_label.offset_top = 40
+	_total_label.offset_right = -20
+	_total_label.offset_left = _total_label.offset_right - 260
+	$UI_Button.add_child(_total_label)
+
+	# --- Slash label ---
+	_slash_label = Label.new()
+	_slash_label.name = "SlashLabel"
+	_slash_label.text = "/"
+	_slash_label.add_theme_font_override("font", font)
+	_slash_label.add_theme_font_size_override("font_size", _font_size)
+	_slash_label.add_theme_color_override("font_color", Color("#c95b0c"))
+	_slash_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+	_slash_label.anchor_left = 1.0
+	_slash_label.anchor_right = 1.0
+	_slash_label.anchor_top = 0.0
+	_slash_label.anchor_bottom = 0.0
+
+	_slash_label.offset_top = 40
+	_slash_label.offset_right = _total_label.offset_left - 5
+	_slash_label.offset_left = _slash_label.offset_right - 70
+	$UI_Button.add_child(_slash_label)
+
+	# --- Current Count label ---
+	_cur_count_label = Label.new()
+	_cur_count_label.name = "CurrentPieceCount"
+	_cur_count_label.add_theme_font_override("font", font)
+	_cur_count_label.add_theme_font_size_override("font_size", _font_size)
+	_cur_count_label.add_theme_color_override("font_color", Color("#c95b0c"))
+	_cur_count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+
+	_cur_count_label.anchor_left = 1.0
+	_cur_count_label.anchor_right = 1.0
+	_cur_count_label.anchor_top = 0.0
+	_cur_count_label.anchor_bottom = 0.0
+
+	_cur_count_label.offset_top = 40
+	_cur_count_label.offset_right = _slash_label.offset_left - 5
+	_cur_count_label.offset_left = _cur_count_label.offset_right - 260
+	$UI_Button.add_child(_cur_count_label)
+
+	update_piece_count_display()
+
+
+func update_piece_count_display():
+	if not is_instance_valid(_cur_count_label):
+		return
+
+	var remaining = -1
+	for x in range(PuzzleVar.global_num_pieces):
+		if PuzzleVar.ordered_pieces_array[x].group_number == PuzzleVar.ordered_pieces_array[x].ID:
+			remaining += 1
+
+	if remaining == -1:
+		remaining = PuzzleVar.global_num_pieces
+
+	var completed = PuzzleVar.global_num_pieces - remaining
+
+	# No layout adjustments needed anymore
+	_cur_count_label.text = str(completed)
+	_total_label.text = str(PuzzleVar.global_num_pieces)
+
+
 func create_floating_player_display():
 	# Create PanelContainer (the floating box itself)
 	floating_status_box = PanelContainer.new()
@@ -168,12 +259,13 @@ func create_floating_player_display():
 
 	# Position the floating box (e.g., top-right)
 	floating_status_box.anchor_left = 1.0 # Anchor to the right
-	floating_status_box.anchor_top = 0.0  # Anchor to the top
+	floating_status_box.anchor_top = 1.0  # Anchor to the bottom
 	floating_status_box.anchor_right = 1.0
-	floating_status_box.anchor_bottom = 0.0
+	floating_status_box.anchor_bottom = 1.0 # Anchor to the bottom
 	floating_status_box.offset_left = -270 # Offset from right edge (box width + margin)
-	floating_status_box.offset_top = 20     # Margin from top
+	floating_status_box.offset_top = -80     # Margin from bottom
 	floating_status_box.offset_right = -20  # Margin from right edge
+	floating_status_box.offset_bottom = -20  # Margin from bottom
 	# Let height be determined by content, or set offset_bottom for fixed height
 	floating_status_box.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	floating_status_box.grow_vertical = Control.GROW_DIRECTION_END
@@ -191,7 +283,7 @@ func create_floating_player_display():
 func _create_online_status_label_in_box(parent_node: PanelContainer): # Parent is now the PanelContainer
 	online_status_label = Label.new()
 	online_status_label.name = "OnlineStatusLabel"
-	online_status_label.add_theme_font_size_override("font_size", 18)
+	online_status_label.add_theme_font_size_override("font_size", 20)
 	online_status_label.add_theme_color_override("font_color", BOX_FONT_COLOR)
 	online_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD # Allow text to wrap if it's too long
 	
