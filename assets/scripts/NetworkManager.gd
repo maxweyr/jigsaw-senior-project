@@ -11,8 +11,8 @@ signal client_disconnected
 signal connection_failed
 signal player_joined(client_id, client_name)
 signal player_left(client_id, client_name)
-signal pieces_connected(piece_positions)
-signal pieces_moved(piece_id, piece_group_id, piece_positions)
+signal pieces_connected(piece_id, connected_piece_id, new_group_number, piece_positions)
+signal pieces_moved(piece_positions)
 signal puzzle_info_received(puzzle_id: String)
 
 # Variables
@@ -22,11 +22,16 @@ var is_online: bool = false # True ONLY for active ENet connection to AWS server
 var is_server: bool = false # True ONLY for the dedicated AWS instance
 var is_offline_authority: bool = false # True ONLY when playing offline (using OfflineMultiplayerPeer)
 var peer: MultiplayerPeer = null # Can hold ENetMultiplayerPeer or OfflineMultiplayerPeer
-var current_puzzle_id = null
+var current_puzzle_id: String = ""
 var connected_players = {}
 var should_load_game = false
 var ready_to_load = false
 const MAX_PLAYERS = 8
+
+# --- server-side lobby maps (server only) ---
+var client_lobby: Dictionary = {}        # { peer_id: lobby_number }
+var lobby_players: Dictionary = {}       # { lobby_number: { peer_id: player_name } }
+var lobby_puzzle: Dictionary = {}        # { lobby_number: puzzle_id }  # optional; falls back to current_puzzle_id
 
 func _ready():
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -43,32 +48,13 @@ func _ready():
 	or OS.has_feature("headless") or "--headless" in OS.get_cmdline_args():
 		print("NetworkManager: Starting as Dedicated Server...")
 		is_server = true # This is an actual server
+		print("NetworkManager: Dedicated Server Mode Enabled.")
 		# is_online will be set true inside start_server()
 		start_server() # Start the ENet server immediately
 	else:
 		# If not a dedicated server, start in offline mode by default
 		set_offline_mode() # Setup OfflineMultiplayerPeer
 	
-	# TODO CHANGE THIS TO NUMBER OF LOBBIES 
-	# TODO OR MAYBE ONE FIREBASE CALL TO CHECK ALL 3 LOBBIES?
-	#PuzzleVar.choice = { 
-				#"file_name": "china.jpg",
-				 #"file_path": "res://assets/puzzles/jigsawpuzzleimages/china.jpg",
-				 #"base_name": "china", "base_file_path": "res://assets/puzzles/jigsawpuzzleimages/china",
-				 #"size": 1000 }
-				## Check if lobby has a valid state
-	#var spirit_scene = preload("res://assets/scenes/Piece_2d.tscn")
-	#var selected_puzzle_dir = PuzzleVar.choice["base_file_path"] + "_" + str(PuzzleVar.choice["size"])
-	#var res = await FireAuth.check_lobby_puzzle_state_server(1)
-	##print("SERVER CHECK STATE: ", res)
-	#if(res == false):
-		## ensure that the puzzle piece get random locations in PuzzleVar
-		#PuzzleVar.load_and_or_add_puzzle_random_loc(null, spirit_scene, selected_puzzle_dir, false)
-		## load these into state
-		#print("writing")
-		#await FireAuth.write_puzzle_state_server(1)
-		#print("done")
-		
 	# Connect to multiplayer signals
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
@@ -92,7 +78,6 @@ func _process(_delta):
 			should_load_game = false
 			ready_to_load = false
 			# Change the scene
-			
 			tree.change_scene_to_file(scene_path)
 		else:
 			print("ERROR: NetworkManager unable to get scene tree")
@@ -132,7 +117,7 @@ func set_offline_mode():
 	is_online = false
 	is_server = false # Client instance is never the "server"
 	is_offline_authority = true # It IS the authority locally for offline play
-	current_puzzle_id = null
+	current_puzzle_id = ""
 	connected_players.clear()
 
 # Start a server with a default puzzle
@@ -220,32 +205,81 @@ func leave_puzzle():
 ## RPC Methods
 ##=============
 
-# Send piece connection info to all clients
+# One-time handshake: client tells server name and lobby ONCE
+@rpc("any_peer", "call_remote", "reliable")
+func hello(player_name: String, lobby_number: int):
+	if not is_server:
+		return
+	var id: int = multiplayer.get_remote_sender_id()
+	client_lobby[id] = lobby_number
+
+	if not lobby_players.has(lobby_number):
+		lobby_players[lobby_number] = {}
+	lobby_players[lobby_number][id] = player_name
+
+	connected_players[id] = player_name
+
+	var puzzle_id: String = lobby_puzzle.get(lobby_number, current_puzzle_id)
+	if puzzle_id != null:
+		rpc_id(id, "_send_puzzle_info", puzzle_id)
+	rpc_id(id, "_update_player_list", lobby_players[lobby_number])
+
+	for pid in lobby_players[lobby_number].keys():
+		rpc_id(pid, "_update_player_list", lobby_players[lobby_number])
+
+	player_joined.emit(id, player_name)
+
+# Send piece connection info FROM client -> server -> other clients (scoped to lobby)
 @rpc("any_peer", "call_remote", "reliable")
 func sync_connected_pieces(piece_id: int, connected_piece_id: int, new_group_number: int, piece_positions: Array):
-	if not is_online: # dont need to sync when not in a multiplayer game
-		return
-	rpc("_receive_piece_connection", piece_id, connected_piece_id, new_group_number, piece_positions)
+	if not is_online: return
+	if is_server:
+		var from_id: int = multiplayer.get_remote_sender_id()
+		if not client_lobby.has(from_id): return
+		var lobby: int = int(client_lobby[from_id])
+		for pid in lobby_players.get(lobby, {}).keys():
+			if pid != from_id:
+				rpc_id(pid, "_receive_piece_connection", piece_id, connected_piece_id, new_group_number, piece_positions)
+	else:
+		# clients call this on the server; server re-broadcasts
+		pass
 
 @rpc("any_peer", "call_remote", "reliable")
 func register_player(player_name: String):
+	# Kept for compatibility with older clients; prefer hello()
 	var id = multiplayer.get_remote_sender_id()
 	connected_players[id] = player_name
-	if is_server: # Broadcast to all clients that a new player joined
+	if is_server:
 		rpc("_update_player_list", connected_players)
 	print("Player registered: ", player_name, " (", id, ")")
 	player_joined.emit(id, player_name)
 
-@rpc("any_peer", "call_remote", "reliable")
+# Server -> clients: apply remote connection
+@rpc("authority", "call_remote", "reliable")
 func _receive_piece_connection(piece_id: int, connected_piece_id: int, new_group_number: int, piece_positions: Array):
-	if not is_online: return # don't sync if not MP game
+	if not is_online: return
 	print("RPC::_receive_piece_connection")
 	pieces_connected.emit(piece_id, connected_piece_id, new_group_number, piece_positions)
 
+# Client -> server -> clients: moved pieces (scoped to lobby)
 @rpc("any_peer", "call_remote", "reliable")
 func _receive_piece_move(piece_positions: Array):
 	if not is_online: return
-	print("RPC::_receive_piece_move")
+	if is_server:
+		var from_id: int = multiplayer.get_remote_sender_id()
+		if not client_lobby.has(from_id): return
+		var lobby: int = int(client_lobby[from_id])
+		for pid in lobby_players.get(lobby, {}).keys():
+			if pid != from_id:
+				rpc_id(pid, "_receive_piece_move_client", piece_positions)
+	else:
+		# clients shouldn't call this locally
+		pass
+
+# Server -> clients: apply moved pieces
+@rpc("authority", "call_remote", "reliable")
+func _receive_piece_move_client(piece_positions: Array):
+	if not is_online: return
 	pieces_moved.emit(piece_positions)
 
 @rpc("authority", "call_remote", "reliable")
@@ -278,14 +312,19 @@ func _on_peer_connected(id):
 func _on_peer_disconnected(id):
 	if not is_online: return # Ignore if not in an online session
 	print("NetworkManager: Peer disconnected: ", id)
-	# saving state
-	#FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
-	if connected_players.has(id):
-		var player_name = connected_players[id]
+	if is_server:
+		var lobby: int = int(client_lobby[id]) if client_lobby.has(id) else -1
+		var player_name := ""
+		if lobby != -1 and lobby_players.has(lobby) and lobby_players[lobby].has(id):
+			player_name = str(lobby_players[lobby][id])
+			lobby_players[lobby].erase(id)
+			# update that lobby’s player list
+			var peers: Array = lobby_players[lobby].keys() if lobby_players.has(lobby) else Array()
+			for pid in peers:
+				rpc_id(pid, "_update_player_list", lobby_players[lobby])
 		connected_players.erase(id)
-		player_left.emit(id, player_name) # Emit signal
-		if is_server: # If we are the online server
-			rpc("_update_player_list", connected_players)
+		client_lobby.erase(id)
+		player_left.emit(id, player_name)
 
 func _on_connected_to_server():
 	if not is_online: return # Should only happen when joining online
@@ -293,10 +332,9 @@ func _on_connected_to_server():
 	# is_online should already be true from join_server initiation
 	client_connected.emit() # Signal UI etc
 	
-	# Register player with the server
 	if FireAuth.is_online and FireAuth.get_box_id() != "":
-		print("NetworkManager: Registering player '", FireAuth.get_box_id(), "' with server.")
-		rpc_id(1, "register_player", FireAuth.get_box_id())
+		print("NetworkManager: Sending hello for '", FireAuth.get_box_id(), "'")
+		rpc_id(1, "hello", FireAuth.get_box_id(), PuzzleVar.lobby_number)
 	else:
 		print("ERROR::NetworkManager: Unable to register player, FireAuth is offline or box ID invalid")
 

@@ -433,7 +433,7 @@ func write_puzzle_state_server(lobby_num):
 	'''
 	if(NetworkManager.is_server):
 		return
-	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby1")
+	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(lobby_num))
 	var state = await lobby_puzzle.get_doc("state")
 	if not state:
 		print("ERROR: Server State Not Found in Lobby", lobby_num)
