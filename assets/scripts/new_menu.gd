@@ -79,12 +79,8 @@ func _on_play_online_pressed():
 		add_child(popup)
 		popup.popup_centered()
 		return
-	
-	## Update Firebase mode
-	#if FireAuth.is_online:
-		#FireAuth.addUserMode("Multiplayer")
-	
-	# Attempt to connect to the hard-coded server
+		# Attempt to connect to the hard-coded server
+
 	print("Attempting to connect to server...")
 	if NetworkManager.join_server():
 		# Show simple connecting message

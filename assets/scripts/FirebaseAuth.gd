@@ -59,10 +59,19 @@ var puzzleNames = {
 # called when the node enters the scene tree for the first time
 func _ready() -> void:
 	box_id = _parse_user_arg()
+	print("FirebaseAuth: Box ID set to ", box_id)
 	Firebase.Auth.signup_succeeded.connect(_on_signup_succeeded)
 	Firebase.Auth.login_failed.connect(_on_login_failed)
 
 func _parse_user_arg() -> String:
+	# check for saved username file
+	var file_path = "user://user_data.txt" # Use "user://" for user-specific data, or "res://" for project resources
+	var file = FileAccess.open(file_path, FileAccess.READ) # Open in read mode
+	if file != null and file.get_length() > 0:
+		var username := file.get_as_text().strip_edges()
+		file.close()
+		return username
+
 	var args: PackedStringArray = OS.get_cmdline_args()
 	for arg in args:
 		# two common styles: --user=Foo  or  --user Foo
@@ -102,7 +111,7 @@ func handle_login() -> bool:
 		return true
 	# 2. Try loading from the auth file
 	print("FirebaseAuth: No active session, checking auth file...")
-	await check_auth_file() # Wait for the check to complete
+	await check_auth_file() # Wait for the check to completed
 	# Check again: Did loading the file log us in?
 	if not Firebase.Auth.needs_login():
 		print("FirebaseAuth: Login successful via auth file.")
@@ -127,6 +136,26 @@ func handle_login() -> bool:
 		print("FirebaseAuth: Anonymous login failed or still requires login.")
 		is_online = false
 		return false
+
+# handle username login for lobby number
+func handle_username_login(username: String) -> bool:
+	print("FirebaseAuth: Handling username...")
+	var col = Firebase.Firestore.collection(USER_COLLECTION)
+	var doc = await col.get_doc(username)
+	#return doc != null and doc.doc_feilds.size() > 0
+	return doc != null
+	
+# get the users assigned lobby from firebase
+func get_user_lobby(username: String) -> void:
+	var user_lobbies: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION)
+	var lobby = await user_lobbies.get_doc(username)
+	var num = int(lobby.get_value("lobby"))
+	if num:
+		PuzzleVar.lobby_number = num
+		print("ASSIGNED LOBBY_NUMBER: ", PuzzleVar.lobby_number)
+	else:
+		PuzzleVar.lobby_number = 0
+		print("No lobby assigned in firebase. Set lobby to 0")
 
 # get current user id
 func get_user_id() -> String:
@@ -202,7 +231,6 @@ func parse_firestore_puzzle_data(raw_array: Dictionary) -> Array:
 # returns the collection "sp_users"
 func get_user_collection() -> FirestoreCollection:
 	return Firebase.Firestore.collection(USER_COLLECTION)
-
 
 # updates a specific user within "sp_users"
 func update_user(doc: FirestoreDocument) -> void:

@@ -47,7 +47,7 @@ var background_clicked = false
 
 # New variables for online mode
 var is_online_mode = false
-var lobby_number = 1
+var lobby_number
 
 func get_random_puzzles_w_size(size):
 	randomize() # initialize a random seed for the random number generator
