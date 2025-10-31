@@ -45,6 +45,7 @@ func _on_login_button_pressed():
 		file.store_string(username)
 		file.close()
 		await FireAuth.get_user_lobby(username)
-		FireAuth.box_id = username 
+		FireAuth.box_id = username
+		FireAuth.write_last_login_time() 
 		get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn")
 	
