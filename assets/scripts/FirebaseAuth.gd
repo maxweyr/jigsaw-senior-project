@@ -71,19 +71,8 @@ func _parse_user_arg() -> String:
 		var username := file.get_as_text().strip_edges()
 		file.close()
 		return username
-
-	# var args: PackedStringArray = OS.get_cmdline_args()
-	# for arg in args:
-	# 	# two common styles: --user=Foo  or  --user Foo
-	# 	if arg.begins_with("--user="):
-	# 		return arg.get_slice("=", 1)
-	# # fallback: look for --user and take the next arg as its value
-	# var idx = args.find("--user")
-	# if idx != -1 and idx + 1 < args.size():
-	# 	return args[idx + 1]
-	# print("Missing required --user argument")
-	# #push_error("Missing required --user argument")
-	# get_tree().quit(-1)
+		
+	# if no saved file, set default username
 	return "default_user"
 
 # attempt anonymous login
