@@ -71,20 +71,9 @@ func _parse_user_arg() -> String:
 		var username := file.get_as_text().strip_edges()
 		file.close()
 		return username
-
-	var args: PackedStringArray = OS.get_cmdline_args()
-	for arg in args:
-		# two common styles: --user=Foo  or  --user Foo
-		if arg.begins_with("--user="):
-			return arg.get_slice("=", 1)
-	# fallback: look for --user and take the next arg as its value
-	var idx = args.find("--user")
-	if idx != -1 and idx + 1 < args.size():
-		return args[idx + 1]
-	print("Missing required --user argument")
-	#push_error("Missing required --user argument")
-	get_tree().quit(-1)
-	return ""
+		
+	# if no saved file, set default username
+	return "default_user"
 
 # attempt anonymous login
 func attempt_anonymous_login() -> void:
@@ -149,7 +138,9 @@ func handle_username_login(username: String) -> bool:
 func get_user_lobby(username: String) -> void:
 	var user_lobbies: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION)
 	var lobby = await user_lobbies.get_doc(username)
-	var num = int(lobby.get_value("lobby"))
+	var num = (lobby.get_value("lobby"))
+	if num != null:
+		num = int(num)
 	if num:
 		PuzzleVar.lobby_number = num
 		print("ASSIGNED LOBBY_NUMBER: ", PuzzleVar.lobby_number)
