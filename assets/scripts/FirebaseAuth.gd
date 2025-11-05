@@ -11,6 +11,7 @@ var user_id = ""
 var currentPuzzle = ""
 var is_online: bool = false
 var box_id: String
+var nickname: String
 
 const USER_COLLECTION: String = "sp_users"
 const USER_SUBCOLLECTIONS = ["active_puzzles", "completed_puzzles"]
@@ -60,6 +61,8 @@ var puzzleNames = {
 func _ready() -> void:
 	box_id = _parse_user_arg()
 	print("FirebaseAuth: Box ID set to ", box_id)
+	nickname = _parse_nickname()
+	print("FirebaseAuth: Nickname set to ", nickname)
 	Firebase.Auth.signup_succeeded.connect(_on_signup_succeeded)
 	Firebase.Auth.login_failed.connect(_on_login_failed)
 
@@ -68,11 +71,26 @@ func _parse_user_arg() -> String:
 	var file_path = "user://user_data.txt" # Use "user://" for user-specific data, or "res://" for project resources
 	var file = FileAccess.open(file_path, FileAccess.READ) # Open in read mode
 	if file != null and file.get_length() > 0:
-		var username := file.get_as_text().strip_edges()
+		var username := file.get_line().strip_edges()
 		file.close()
 		return username
 		
 	# if no saved file, set default username
+	return "default_user"
+
+func _parse_nickname() -> String:
+	# check for saved nickname file
+	var file_path = "user://user_data.txt" # Use "user://" for user-specific data, or "res://" for project resources
+	var file = FileAccess.open(file_path, FileAccess.READ) # Open in read mode
+	if file != null and file.get_length() > 0:
+		file.get_line() # skip first line
+		var username := file.get_line().strip_edges()
+		if username == "":
+			username = "default_nickname"
+		file.close()
+		return username
+		
+	# if no saved file, set default nickname
 	return "default_user"
 
 # attempt anonymous login
@@ -154,6 +172,9 @@ func get_user_id() -> String:
 
 func get_box_id() -> String:
 	return box_id
+
+func get_nickname() -> String:
+	return nickname
 
 #func get_box_id() -> String:
 	#var env = ConfigFile.new()
