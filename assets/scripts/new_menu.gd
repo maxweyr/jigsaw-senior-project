@@ -149,20 +149,20 @@ func _on_quit_pressed():
 		OS.execute("shutdown", ["h", "now"])
 	else:
 		print("ERROR: Attempted System Shutdown, not on linux! Try 'Esc'")
-## commented out for now, type d for any reason will crash the game
-## this is used to check for events such as a key press
-#func _input(event):
-	#if event is InputEventKey and event.pressed and event.echo == false:
-		#if event.keycode == 68: # if key that is pressed is d
-				## toggle debug mode
-				#PuzzleVar.debug = !PuzzleVar.debug
-				#if PuzzleVar.debug:
-					#$Label.show()
-				#else:
-					#$Label.hide()
-				#print("debug mode is: "+str(PuzzleVar.debug))
-	#if event.is_action_pressed("ui_cancel"):
-		#get_tree().quit()
+# commented out for now, type d for any reason will crash the game
+# this is used to check for events such as a key press
+func _input(event):
+	# if event is InputEventKey and event.pressed and event.echo == false:
+	# 	if event.keycode == 68: # if key that is pressed is d
+	# 			# toggle debug mode
+	# 			PuzzleVar.debug = !PuzzleVar.debug
+	# 			if PuzzleVar.debug:
+	# 				$Label.show()
+	# 			else:
+	# 				$Label.hide()
+	# 			print("debug mode is: "+str(PuzzleVar.debug))
+	if event.is_action_pressed("ui_cancel"):
+		get_tree().quit()
 
 func _on_login() -> void:
 	overlay.visible = false # Hide the overlay after login completes

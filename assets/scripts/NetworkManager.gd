@@ -332,9 +332,9 @@ func _on_connected_to_server():
 	# is_online should already be true from join_server initiation
 	client_connected.emit() # Signal UI etc
 	
-	if FireAuth.is_online and FireAuth.get_box_id() != "":
-		print("NetworkManager: Sending hello for '", FireAuth.get_box_id(), "'")
-		rpc_id(1, "hello", FireAuth.get_box_id(), PuzzleVar.lobby_number)
+	if FireAuth.is_online and FireAuth.get_nickname() != "":
+		print("NetworkManager: Sending hello for '", FireAuth.get_nickname(), "'")
+		rpc_id(1, "hello", FireAuth.get_nickname(), PuzzleVar.lobby_number)
 	else:
 		print("ERROR::NetworkManager: Unable to register player, FireAuth is offline or box ID invalid")
 
