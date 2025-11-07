@@ -222,7 +222,6 @@ func hello(player_name: String, lobby_number: int):
 	var puzzle_id: String = lobby_puzzle.get(lobby_number, current_puzzle_id)
 	if puzzle_id != null:
 		rpc_id(id, "_send_puzzle_info", puzzle_id)
-	rpc_id(id, "_update_player_list", lobby_players[lobby_number])
 
 	for pid in lobby_players[lobby_number].keys():
 		rpc_id(pid, "_update_player_list", lobby_players[lobby_number])
@@ -284,10 +283,10 @@ func _receive_piece_move_client(piece_positions: Array):
 
 @rpc("authority", "call_remote", "reliable")
 func _update_player_list(players: Dictionary):
+	players.erase(multiplayer.get_unique_id()) # Remove self from list
 	connected_players = players
-	for id in players: # Notify about each player
-		if id != multiplayer.get_unique_id():  # Not self
-			player_joined.emit(id, players[id])
+	print("NetworkManager: Updated player list: ", connected_players)
+	player_joined.emit(-1, "") # Dummy emit to signal update
 
 @rpc("authority", "call_remote", "unreliable_ordered")
 func _send_puzzle_info(puzzle_id: String):
