@@ -300,6 +300,7 @@ func _on_player_left(_client_id, client_name):
 	update_online_status_label()
 	
 func update_online_status_label(custom_text=""):
+	connected_players.clear()
 	for id in NetworkManager.connected_players.keys():
 		if id != multiplayer.get_unique_id():
 			connected_players.append(NetworkManager.connected_players[id])
