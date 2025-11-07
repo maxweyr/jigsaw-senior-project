@@ -148,7 +148,8 @@ func _on_quit_pressed():
 		print("shutting down")
 		OS.execute("shutdown", ["h", "now"])
 	else:
-		print("ERROR: Attempted System Shutdown, not on linux! Try 'Esc'")
+		get_tree().quit()
+		print("Quitting game")
 # commented out for now, type d for any reason will crash the game
 # this is used to check for events such as a key press
 func _input(event):
