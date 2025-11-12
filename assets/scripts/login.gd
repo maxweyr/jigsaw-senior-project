@@ -15,7 +15,7 @@ func _ready():
 			loading.hide()
 			var popup = AcceptDialog.new()
 			popup.title = "Login Failed"
-			popup.dialog_text = "Username does not exist. Please try again."
+			popup.dialog_text = "Email does not exist. Please try again."
 			add_child(popup)
 			popup.popup_centered()
 			return
@@ -25,7 +25,6 @@ func _ready():
 			var nickname = file.get_line()
 			if nickname == "":
 				file.close()
-				get_tree().change_scene_to_file("res://assets/scenes/nickname.tscn")
 				loading.hide()
 				return
 			file.close()
@@ -40,8 +39,8 @@ func _on_login_button_pressed():
 	if username.strip_edges() == "":
 		# Show an error message if the username is empty
 		var popup = AcceptDialog.new()
-		popup.title = "Invalid Username"
-		popup.dialog_text = "Please enter a valid username."
+		popup.title = "Invalid Email"
+		popup.dialog_text = "Please enter a valid email."
 		add_child(popup)
 		popup.popup_centered()
 		return
@@ -49,7 +48,7 @@ func _on_login_button_pressed():
 	if(user_exist == false):
 		var popup = AcceptDialog.new()
 		popup.title = "Login Failed"
-		popup.dialog_text = "Username does not exist. Please try again."
+		popup.dialog_text = "Email does not exist. Please try again."
 		add_child(popup)
 		popup.popup_centered()
 		return
@@ -63,5 +62,27 @@ func _on_login_button_pressed():
 		FireAuth.box_id = username
 		
 		FireAuth.write_last_login_time() 
-		get_tree().change_scene_to_file("res://assets/scenes/nickname.tscn")
-	
+	var nickname = %NicknameLineEdit.text
+	if nickname.strip_edges() == "":
+		# Show an error message if the nickname is empty
+		var popup = AcceptDialog.new()
+		popup.title = "Invalid Nickname"
+		popup.dialog_text = "Please enter a valid nickname."
+		add_child(popup)
+		popup.popup_centered()
+		return
+	else:
+		# Save nickname to file
+		var file_path = "user://user_data.txt" 
+		var file = FileAccess.open(file_path, FileAccess.READ_WRITE) 
+		if file:
+			file.seek_end()
+			file.store_line(nickname)
+			file.close()
+			
+			FireAuth.nickname = nickname
+			print("Nickname saved: ", FireAuth.nickname)
+			# Proceed to the next scene
+			get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn")
+		else:
+			print("Failed to open file for writing.")
