@@ -43,7 +43,7 @@ theme_override_constants/separation = 20
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 65
-text = "Not logged in"
+text = "Please Create an Account"
 
 [node name="UsernameLineEdit" type="LineEdit" parent="VBoxContainer"]
 unique_name_in_owner = true
@@ -51,10 +51,16 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 65
 placeholder_text = "Email"
 
+[node name="NicknameLineEdit" type="LineEdit" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 65
+placeholder_text = "Nickname"
+
 [node name="LoginButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 65
-text = "Log in"
+text = "Sign Up"
 
 [node name="LoadingScreen" type="CanvasLayer" parent="."]
 visible = false
