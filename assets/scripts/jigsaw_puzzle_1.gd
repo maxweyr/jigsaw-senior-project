@@ -38,11 +38,8 @@ func _ready():
 	is_muted = false
 	
 	if NetworkManager.is_online:
-		# Connect to network signals
 		NetworkManager.player_joined.connect(_on_player_joined)
 		NetworkManager.player_left.connect(_on_player_left)
-		#back_button.pressed.connect(_on_back_pressed)
-		# Create online status label
 		create_floating_player_display()
 	
 	# load up reference image
@@ -295,8 +292,19 @@ func _create_online_status_label_in_box(parent_node: PanelContainer): # Parent i
 	parent_node.add_child(online_status_label)
 	# update_online_status_label() will be called from _ready or when players change
 
+# Network event handlers
+func _on_player_joined(_client_id, client_name):
+	update_online_status_label()
 
+func _on_player_left(_client_id, client_name):
+	update_online_status_label()
+	
 func update_online_status_label(custom_text=""):
+	connected_players.clear()
+	for id in NetworkManager.connected_players.keys():
+		if id != multiplayer.get_unique_id():
+			connected_players.append(NetworkManager.connected_players[id])
+
 	if not is_instance_valid(online_status_label):
 		printerr("Online status label is not valid!") # Use printerr for errors
 		return
@@ -319,43 +327,6 @@ func update_online_status_label(custom_text=""):
 	
 	online_status_label.text = status_text
 
-
-# Network event handlers
-func _on_player_joined(_client_id, client_name):
-	if not client_name in connected_players:
-		connected_players.append(client_name)
-	update_online_status_label()
-
-func _on_player_left(_client_id, client_name):
-	connected_players.erase(client_name)
-	update_online_status_label()
-
-## Create and update the online status label
-#func create_online_status_label():
-	#online_status_label = Label.new()
-	#online_status_label.text = "Online Mode"
-	#online_status_label.add_theme_font_size_override("font_size", 20)
-	#online_status_label.add_theme_color_override("font_color", Color(0, 1, 0))
-	#online_status_label.position = Vector2(20, 20)
-	#add_child(online_status_label)
-	#
-	#update_online_status_label()
-
-#func update_online_status_label(custom_text = ""):
-	#if not online_status_label:
-		#return
-		#
-	#if custom_text != "":
-		#online_status_label.text = custom_text
-		#return
-		#
-	#var player_count = connected_players.size() + 1  # +1 for self
-	#online_status_label.text = "Online Mode - " + str(player_count) + " player"
-	#if player_count != 1:
-		#online_status_label.text += "s"
-	#
-	#if connected_players.size() > 0:
-		#online_status_label.text += ": " + ", ".join(connected_players)
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(_delta):
@@ -471,7 +442,7 @@ func build_grid():
 	for x in range(PuzzleVar.global_num_pieces):
 		#compute the midpont of each piece
 		var node_bounding_box = PuzzleVar.global_coordinates_list[str(x)]
-		var midpoint = Vector2((node_bounding_box[2]+node_bounding_box[0])/2, (node_bounding_box[3]+node_bounding_box[1])/2)
+		var midpoint = Vector2((node_bounding_box[2] + node_bounding_box[0]) / 2, (node_bounding_box[3] + node_bounding_box[1]) / 2)
 		midpoints.append(midpoint) # append the midpoint of each piece
 
 	var row_join_counter = 1
@@ -596,14 +567,14 @@ func show_win_screen():
 	label.custom_minimum_size = get_viewport().size
 	
 	# Position label to correct location
-	label.position = Vector2(get_viewport().size) / 2 + Vector2(-1000, -700) 
+	label.position = Vector2(get_viewport().size) / 2 + Vector2(-1000, -700)
 
 	canvas_layer.add_child(label)
 	get_tree().current_scene.add_child(canvas_layer)
 	
 	#-------------------------BUTTON LOGIC-----------------------#
 	var button = $MainMenu
-	button.visible = false # we dont want this @TODO remove this 
+	button.visible = false # we dont want this @TODO remove this
 	# Change the font size
 	button.add_theme_font_override("font", font)
 	button.add_theme_font_size_override("font_size", 120)
