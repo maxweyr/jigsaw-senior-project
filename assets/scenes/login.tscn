@@ -43,19 +43,20 @@ theme_override_constants/separation = 20
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 65
-text = "Please Create an Account"
+text = "Create an Account"
+horizontal_alignment = 1
 
 [node name="UsernameLineEdit" type="LineEdit" parent="VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 65
-placeholder_text = "Email"
+placeholder_text = "Enter Your Email"
 
 [node name="NicknameLineEdit" type="LineEdit" parent="VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 65
-placeholder_text = "Nickname"
+placeholder_text = "Pick a Nickname"
 
 [node name="LoginButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
