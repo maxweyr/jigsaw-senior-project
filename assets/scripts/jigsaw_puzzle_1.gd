@@ -438,6 +438,17 @@ func _process(_delta):
 
 # Handle esc
 func _input(event):
+	var chat_has_focus := is_instance_valid(chat_input) and chat_input.has_focus()
+	if chat_has_focus and event is InputEventKey:
+		if event.is_pressed() and event.echo == false and event.keycode == KEY_ESCAPE:
+			get_tree().quit()
+		return
+
+	if is_instance_valid(chat_panel) and event is InputEventMouseButton and event.pressed:
+		var chat_rect := chat_panel.get_global_rect()
+		if chat_rect.has_point(event.position):
+			return
+
 	# Check if the event is a key press event
 	if event is InputEventKey and event.is_pressed() and event.echo == false:
 		# Check if the pressed key is the Escape key
