@@ -9,6 +9,7 @@ var offline_button: Button
 var complete = false;
 @onready var back_button = $UI_Button/Back
 @onready var loading = $LoadingScreen
+signal main_menu
 
 # --- Network-related variables ---
 var selected_puzzle_dir = ""
@@ -29,7 +30,7 @@ var chat_minimized := false
 var chat_expanded_height := 200.0
 var chat_bottom_offset := -120.0
 
-# --- Network Data ---
+# --- Network Data ---you
 var connected_players = [] # Array to store connected player names (excluding self)
 
 # --- Constants for Styling ---
@@ -90,6 +91,8 @@ func _ready():
 	# Connect the back button signal
 	#var back_button = $UI_Button/Back
 	#back_button.connect("pressed", Callable(self, "_on_back_button_pressed"))
+	main_menu.connect(show_win_screen)
+
 	loading.hide()
 	
 	if NetworkManager.is_online:
@@ -701,41 +704,27 @@ func show_win_screen():
 	# Load the font file 
 	var font = load("res://assets/fonts/KiriFont.ttf") as FontFile
 	
-	var canvas_layer = CanvasLayer.new()
-	canvas_layer.layer = 100
+	var overlay := Control.new()
+	overlay.name = "WinOverlay"
+	overlay.set_as_top_level(true) 
+	overlay.anchors_preset = Control.PRESET_FULL_RECT
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	
-	var label = Label.new()
-	label.text = "You've Finished the Puzzle!"
+	var label := Label.new()
 	
-	# Label size settings
-	label.add_theme_font_override("font", font)
-	label.add_theme_font_size_override("font_size", 60)  
+	label.add_theme_font_override("font", font) 
+	label.add_theme_font_size_override("font_size", 60) 
 	label.add_theme_color_override("font_color", Color(0, 204, 0))
-
-	# Align label to center
+	
+	label.anchors_preset = Control.PRESET_FULL_RECT
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	label.text = "You Have Finished the Puzzle!"
+	overlay.add_child(label)
+	get_tree().root.add_child(overlay)
 	
-	label.custom_minimum_size = get_viewport().size
-	
-	# Position label to correct location
-	label.position = Vector2(get_viewport().size) / 2 + Vector2(-1000, -700)
-
-	canvas_layer.add_child(label)
-	get_tree().current_scene.add_child(canvas_layer)
-	
-	#-------------------------BUTTON LOGIC-----------------------#
-	var button = $MainMenu
-	button.visible = false # we dont want this @TODO remove this
-	# Change the font size
-	button.add_theme_font_override("font", font)
-	button.add_theme_font_size_override("font_size", 120)
-	# Change the text color to white
-	var font_color = Color(1, 1, 1)  # RGB (1, 1, 1) = white
-	button.add_theme_color_override("font_color", font_color)
-	button.connect("pressed", Callable(self, "on_main_menu_button_pressed")) 
+	# wait for user to leave the puzzle
+	await main_menu
 	
 	# If in online mode, leave the puzzle on the server
 	if NetworkManager.is_online:
@@ -748,9 +737,12 @@ func show_win_screen():
 		FireAuth.write_complete(PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]))
 	
 	complete = true
-		
+	
+	
+	
 # Handles leaving the puzzle scene, saving state, and disconnecting if online client
 func _on_back_pressed() -> void:
+	emit_signal("main_menu")
 	loading.show()
 	# 1. Save puzzle state BEFORE clearing any data or freeing nodes
 	if !complete and FireAuth.is_online:
