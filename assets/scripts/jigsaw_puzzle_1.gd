@@ -265,7 +265,7 @@ func create_floating_player_display():
 	floating_status_box.anchor_top = 1.0  # Anchor to the bottom
 	floating_status_box.anchor_right = 1.0
 	floating_status_box.anchor_bottom = 1.0 # Anchor to the bottom
-	floating_status_box.offset_left = -270 # Offset from right edge (box width + margin)
+	floating_status_box.offset_left = -320 # Offset from right edge (box width + margin)
 	floating_status_box.offset_top = -80     # Margin from bottom
 	floating_status_box.offset_right = -20  # Margin from right edge
 	floating_status_box.offset_bottom = -20  # Margin from bottom
