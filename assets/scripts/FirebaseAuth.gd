@@ -154,7 +154,12 @@ func handle_username_login(username: String) -> bool:
 func get_user_lobby(username: String) -> void:
 	var user_lobbies: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION)
 	var lobby = await user_lobbies.get_doc(username)
-	var num = (lobby.get_value("lobby"))
+	var num
+	if lobby != null:
+		num = (lobby.get_value("lobby"))
+	else:
+		num = 0
+		print("ERROR: lobby number returned null")
 	if num != null:
 		num = int(num)
 	if num:
