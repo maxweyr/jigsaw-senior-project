@@ -692,11 +692,8 @@ func show_win_screen():
 	# Load the font file 
 	var font = load("res://assets/fonts/KiriFont.ttf") as FontFile
 	
-	var overlay := Control.new()
-	overlay.name = "WinOverlay"
-	overlay.set_as_top_level(true) 
-	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var canvas_layer = CanvasLayer.new()
+	canvas_layer.layer = 100
 	
 	var label := Label.new()
 	
@@ -712,19 +709,10 @@ func show_win_screen():
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.text = "You Have Finished the Puzzle!"
 	overlay.add_child(label)
-	
-	var ui := get_tree().current_scene.get_node_or_null("UI")
-	if ui == null:
-		ui = CanvasLayer.new()
-		ui.name = "UI"
-		ui.layer = 0
-		ui.follow_viewport_enabled = false
-		get_tree().current_scene.add_child(ui)
-	ui.add_child(overlay)
+	get_tree().root.add_child(overlay)
 	
 	# wait for user to leave the puzzle
 	await main_menu
-	overlay.queue_free()
 	
 	# If in online mode, leave the puzzle on the server
 	if NetworkManager.is_online:
@@ -735,13 +723,14 @@ func show_win_screen():
 	elif !NetworkManager.is_online and FireAuth.is_online:
 		FireAuth.write_complete(PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]))
 	
-	
+	complete = true
 	
 	
 	
 # Handles leaving the puzzle scene, saving state, and disconnecting if online client
 func _on_back_pressed() -> void:
-	loading.show()	
+	emit_signal("main_menu")
+	loading.show()
 	# 1. Save puzzle state BEFORE clearing any data or freeing nodes
 	if !complete and FireAuth.is_online:
 		if NetworkManager.is_online:
