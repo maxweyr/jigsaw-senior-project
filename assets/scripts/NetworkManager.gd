@@ -216,7 +216,8 @@ func _receive_chat_message(sender_name: String, message: String):
 	if is_server:
 		# Re-broadcast to all clients except sender
 		var from_id: int = multiplayer.get_remote_sender_id()
-		for pid in connected_players.keys():
+		var lobby = client_lobby.get(from_id)
+		for pid in lobby_players.get(lobby, {}).keys():
 			if pid != from_id:
 				rpc_id(pid, "_receive_chat_message", sender_name, message)
 	else: 
