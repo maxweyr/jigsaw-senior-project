@@ -340,11 +340,10 @@ func create_chat_window():
 	chat_panel.offset_left = -270
 	chat_panel.offset_right = -20
 	chat_panel.offset_top = -320
-	chat_panel.offset_bottom = chat_bottom_offset
+	chat_panel.offset_bottom = -120
 	chat_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	chat_panel.grow_vertical = Control.GROW_DIRECTION_END
-	chat_expanded_height = chat_panel.offset_bottom - chat_panel.offset_top
-	chat_panel.custom_minimum_size = Vector2(300, chat_expanded_height)
+	chat_panel.custom_minimum_size = Vector2(300, 220)
 
 	var ui_layer = $UI_Button
 	ui_layer.add_child(chat_panel)
@@ -356,29 +355,11 @@ func create_chat_window():
 	layout.add_theme_constant_override("separation", 6)
 	chat_panel.add_child(layout)
 
-	var header_row = HBoxContainer.new()
-	header_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header_row.add_theme_constant_override("separation", 6)
-	layout.add_child(header_row)
-
 	var title_label = Label.new()
 	title_label.text = "Chat"
 	title_label.add_theme_font_size_override("font_size", 18)
 	title_label.add_theme_color_override("font_color", BOX_FONT_COLOR)
-	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header_row.add_child(title_label)
-
-	chat_toggle_button = Button.new()
-	chat_toggle_button.text = "Minimize"
-	chat_toggle_button.focus_mode = Control.FOCUS_NONE
-	chat_toggle_button.pressed.connect(_on_chat_toggle_button_pressed)
-	header_row.add_child(chat_toggle_button)
-
-	chat_content_container = VBoxContainer.new()
-	chat_content_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	chat_content_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	chat_content_container.add_theme_constant_override("separation", 6)
-	layout.add_child(chat_content_container)
+	layout.add_child(title_label)
 
 	chat_messages_label = RichTextLabel.new()
 	chat_messages_label.name = "ChatMessages"
@@ -390,24 +371,24 @@ func create_chat_window():
 	chat_messages_label.bbcode_enabled = false
 	chat_messages_label.add_theme_color_override("default_color", BOX_FONT_COLOR)
 	chat_messages_label.text = ""
-	chat_content_container.add_child(chat_messages_label)
+	layout.add_child(chat_messages_label)
 
-	chat_input_row = HBoxContainer.new()
-	chat_input_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	chat_content_container.add_child(chat_input_row)
+	var input_row = HBoxContainer.new()
+	input_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	layout.add_child(input_row)
 
 	chat_input = LineEdit.new()
 	chat_input.name = "ChatInput"
 	chat_input.placeholder_text = "Type a message..."
 	chat_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	chat_input.text_submitted.connect(_on_chat_text_submitted)
-	chat_input_row.add_child(chat_input)
+	input_row.add_child(chat_input)
 
 	chat_send_button = Button.new()
 	chat_send_button.name = "ChatSendButton"
 	chat_send_button.text = "Send"
 	chat_send_button.pressed.connect(_on_chat_send_button_pressed)
-	chat_input_row.add_child(chat_send_button)
+	input_row.add_child(chat_send_button)
 
 func _on_chat_send_button_pressed():
 	if not is_instance_valid(chat_input):
@@ -429,21 +410,13 @@ func append_chat_message(sender: String, message: String):
 	chat_messages_label.append_text("[%s] %s\n" % [sender, message])
 	chat_messages_label.scroll_to_line(chat_messages_label.get_line_count())
 
-func _on_chat_toggle_button_pressed():
-	chat_minimized = !chat_minimized
-	if not is_instance_valid(chat_panel):
-		return
-
-	chat_content_container.visible = not chat_minimized
-	chat_toggle_button.text = "Expand" if chat_minimized else "Minimize"
-
-	var new_height := 48.0 if chat_minimized else chat_expanded_height
-	chat_panel.offset_top = chat_bottom_offset - new_height
-	chat_panel.custom_minimum_size = Vector2(chat_panel.custom_minimum_size.x, new_height)
+# Network event handlers
+func _on_player_joined(_client_id, client_name):
+	update_online_status_label()
 
 # Network event handlers
 func _on_player_joined(_client_id, client_name):
-	update_online_status_label() 
+	update_online_status_label()
 
 func _on_player_left(_client_id, client_name):
 	update_online_status_label()
@@ -483,6 +456,17 @@ func _process(_delta):
 
 # Handle esc
 func _input(event):
+	var chat_has_focus := is_instance_valid(chat_input) and chat_input.has_focus()
+	if chat_has_focus and event is InputEventKey:
+		if event.is_pressed() and event.echo == false and event.keycode == KEY_ESCAPE:
+			get_tree().quit()
+		return
+
+	if is_instance_valid(chat_panel) and event is InputEventMouseButton and event.pressed:
+		var chat_rect := chat_panel.get_global_rect()
+		if chat_rect.has_point(event.position):
+			return
+
 	var chat_has_focus := is_instance_valid(chat_input) and chat_input.has_focus()
 	if chat_has_focus and event is InputEventKey:
 		if event.is_pressed() and event.echo == false and event.keycode == KEY_ESCAPE:
