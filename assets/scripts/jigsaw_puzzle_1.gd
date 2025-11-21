@@ -400,6 +400,10 @@ func append_chat_message(sender: String, message: String):
 func _on_player_joined(_client_id, client_name):
 	update_online_status_label()
 
+# Network event handlers
+func _on_player_joined(_client_id, client_name):
+	update_online_status_label()
+
 func _on_player_left(_client_id, client_name):
 	update_online_status_label()
 	
