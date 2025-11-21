@@ -14,6 +14,7 @@ signal player_left(client_id, client_name)
 signal pieces_connected(piece_id, connected_piece_id, new_group_number, piece_positions)
 signal pieces_moved(piece_positions)
 signal puzzle_info_received(puzzle_id: String)
+signal chat_message_received(sender_name: String, message: String)
 
 # Variables
 var DEFAULT_PORT = 8080
@@ -180,6 +181,11 @@ func join_server() -> bool:
 	print("NetworkManager (Client): Connection initiated...")
 	return true
 
+func send_chat_message(message: String):
+	if not is_online:
+		return
+	# Client only: send chat message to server	
+	rpc_id(1, "_receive_chat_message", FireAuth.get_nickname(), message)
 # Disconnect from the current session
 func disconnect_from_server():
 	if is_server: return # Dedicated server doesn't disconnect this way
@@ -204,6 +210,18 @@ func leave_puzzle():
 ##=============
 ## RPC Methods
 ##=============
+@rpc("any_peer", "call_remote", "reliable")
+func _receive_chat_message(sender_name: String, message: String):
+	if not is_online: return
+	if is_server:
+		# Re-broadcast to all clients except sender
+		var from_id: int = multiplayer.get_remote_sender_id()
+		var lobby = client_lobby.get(from_id)
+		for pid in lobby_players.get(lobby, {}).keys():
+			if pid != from_id:
+				rpc_id(pid, "_receive_chat_message", sender_name, message)
+	else: 
+		chat_message_received.emit(sender_name, message)
 
 # One-time handshake: client tells server name and lobby ONCE
 @rpc("any_peer", "call_remote", "reliable")
@@ -242,16 +260,6 @@ func sync_connected_pieces(piece_id: int, connected_piece_id: int, new_group_num
 	else:
 		# clients call this on the server; server re-broadcasts
 		pass
-
-@rpc("any_peer", "call_remote", "reliable")
-func register_player(player_name: String):
-	# Kept for compatibility with older clients; prefer hello()
-	var id = multiplayer.get_remote_sender_id()
-	connected_players[id] = player_name
-	if is_server:
-		rpc("_update_player_list", connected_players)
-	print("Player registered: ", player_name, " (", id, ")")
-	player_joined.emit(id, player_name)
 
 # Server -> clients: apply remote connection
 @rpc("authority", "call_remote", "reliable")

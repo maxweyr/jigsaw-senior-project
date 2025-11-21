@@ -18,6 +18,10 @@ var selected_puzzle_name = ""
 var piece_count_label: Label
 var floating_status_box: PanelContainer
 var online_status_label: Label
+var chat_panel: PanelContainer
+var chat_messages_label: RichTextLabel
+var chat_input: LineEdit
+var chat_send_button: Button
 
 # --- Network Data ---
 var connected_players = [] # Array to store connected player names (excluding self)
@@ -40,7 +44,9 @@ func _ready():
 	if NetworkManager.is_online:
 		NetworkManager.player_joined.connect(_on_player_joined)
 		NetworkManager.player_left.connect(_on_player_left)
+		NetworkManager.chat_message_received.connect(append_chat_message)
 		create_floating_player_display()
+		create_chat_window()
 	
 	# load up reference image
 	var ref_image = PuzzleVar.choice["file_path"]
@@ -259,7 +265,7 @@ func create_floating_player_display():
 	floating_status_box.anchor_top = 1.0  # Anchor to the bottom
 	floating_status_box.anchor_right = 1.0
 	floating_status_box.anchor_bottom = 1.0 # Anchor to the bottom
-	floating_status_box.offset_left = -270 # Offset from right edge (box width + margin)
+	floating_status_box.offset_left = -320 # Offset from right edge (box width + margin)
 	floating_status_box.offset_top = -80     # Margin from bottom
 	floating_status_box.offset_right = -20  # Margin from right edge
 	floating_status_box.offset_bottom = -20  # Margin from bottom
@@ -291,6 +297,104 @@ func _create_online_status_label_in_box(parent_node: PanelContainer): # Parent i
 	
 	parent_node.add_child(online_status_label)
 	# update_online_status_label() will be called from _ready or when players change
+
+func create_chat_window():
+	chat_panel = PanelContainer.new()
+	chat_panel.name = "ChatWindow"
+
+	var style_box = StyleBoxFlat.new()
+	style_box.bg_color = BOX_BACKGROUND_COLOR
+	style_box.border_color = BOX_BORDER_COLOR
+	style_box.border_width_left = 2
+	style_box.border_width_top = 2
+	style_box.border_width_right = 2
+	style_box.border_width_bottom = 2
+	style_box.corner_radius_top_left = 6
+	style_box.corner_radius_top_right = 6
+	style_box.corner_radius_bottom_left = 6
+	style_box.corner_radius_bottom_right = 6
+	style_box.content_margin_left = 10
+	style_box.content_margin_top = 8
+	style_box.content_margin_right = 10
+	style_box.content_margin_bottom = 8
+	chat_panel.add_theme_stylebox_override("panel", style_box)
+
+	chat_panel.anchor_left = 1.0
+	chat_panel.anchor_top = 1.0
+	chat_panel.anchor_right = 1.0
+	chat_panel.anchor_bottom = 1.0
+	chat_panel.offset_left = -270
+	chat_panel.offset_right = -20
+	chat_panel.offset_top = -320
+	chat_panel.offset_bottom = -120
+	chat_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	chat_panel.grow_vertical = Control.GROW_DIRECTION_END
+	chat_panel.custom_minimum_size = Vector2(300, 220)
+
+	var ui_layer = $UI_Button
+	ui_layer.add_child(chat_panel)
+
+	var layout = VBoxContainer.new()
+	layout.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	layout.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	layout.custom_minimum_size = Vector2(0, 0)
+	layout.add_theme_constant_override("separation", 6)
+	chat_panel.add_child(layout)
+
+	var title_label = Label.new()
+	title_label.text = "Chat"
+	title_label.add_theme_font_size_override("font_size", 18)
+	title_label.add_theme_color_override("font_color", BOX_FONT_COLOR)
+	layout.add_child(title_label)
+
+	chat_messages_label = RichTextLabel.new()
+	chat_messages_label.name = "ChatMessages"
+	chat_messages_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chat_messages_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	chat_messages_label.custom_minimum_size = Vector2(0, 140)
+	chat_messages_label.scroll_active = true
+	chat_messages_label.scroll_following = true
+	chat_messages_label.bbcode_enabled = false
+	chat_messages_label.add_theme_color_override("default_color", BOX_FONT_COLOR)
+	chat_messages_label.text = ""
+	layout.add_child(chat_messages_label)
+
+	var input_row = HBoxContainer.new()
+	input_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	layout.add_child(input_row)
+
+	chat_input = LineEdit.new()
+	chat_input.name = "ChatInput"
+	chat_input.placeholder_text = "Type a message..."
+	chat_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chat_input.text_submitted.connect(_on_chat_text_submitted)
+	input_row.add_child(chat_input)
+
+	chat_send_button = Button.new()
+	chat_send_button.name = "ChatSendButton"
+	chat_send_button.text = "Send"
+	chat_send_button.pressed.connect(_on_chat_send_button_pressed)
+	input_row.add_child(chat_send_button)
+
+func _on_chat_send_button_pressed():
+	if not is_instance_valid(chat_input):
+		return
+	var text := chat_input.text.strip_edges()
+	if text == "":
+		return
+	append_chat_message("You", text)
+	NetworkManager.send_chat_message(text)
+	chat_input.clear()
+
+func _on_chat_text_submitted(text: String):
+	chat_input.text = text
+	_on_chat_send_button_pressed()
+
+func append_chat_message(sender: String, message: String):
+	if not is_instance_valid(chat_messages_label):
+		return
+	chat_messages_label.append_text("[%s] %s\n" % [sender, message])
+	chat_messages_label.scroll_to_line(chat_messages_label.get_line_count())
 
 # Network event handlers
 func _on_player_joined(_client_id, client_name):
@@ -334,6 +438,17 @@ func _process(_delta):
 
 # Handle esc
 func _input(event):
+	var chat_has_focus := is_instance_valid(chat_input) and chat_input.has_focus()
+	if chat_has_focus and event is InputEventKey:
+		if event.is_pressed() and event.echo == false and event.keycode == KEY_ESCAPE:
+			get_tree().quit()
+		return
+
+	if is_instance_valid(chat_panel) and event is InputEventMouseButton and event.pressed:
+		var chat_rect := chat_panel.get_global_rect()
+		if chat_rect.has_point(event.position):
+			return
+
 	# Check if the event is a key press event
 	if event is InputEventKey and event.is_pressed() and event.echo == false:
 		# Check if the pressed key is the Escape key
