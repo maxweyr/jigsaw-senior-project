@@ -19,9 +19,15 @@ var piece_count_label: Label
 var floating_status_box: PanelContainer
 var online_status_label: Label
 var chat_panel: PanelContainer
+var chat_content_container: VBoxContainer
 var chat_messages_label: RichTextLabel
 var chat_input: LineEdit
 var chat_send_button: Button
+var chat_toggle_button: Button
+var chat_input_row: HBoxContainer
+var chat_minimized := false
+var chat_expanded_height := 200.0
+var chat_bottom_offset := -120.0
 
 # --- Network Data ---
 var connected_players = [] # Array to store connected player names (excluding self)
@@ -326,10 +332,11 @@ func create_chat_window():
 	chat_panel.offset_left = -270
 	chat_panel.offset_right = -20
 	chat_panel.offset_top = -320
-	chat_panel.offset_bottom = -120
+	chat_panel.offset_bottom = chat_bottom_offset
 	chat_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	chat_panel.grow_vertical = Control.GROW_DIRECTION_END
-	chat_panel.custom_minimum_size = Vector2(300, 220)
+	chat_expanded_height = chat_panel.offset_bottom - chat_panel.offset_top
+	chat_panel.custom_minimum_size = Vector2(300, chat_expanded_height)
 
 	var ui_layer = $UI_Button
 	ui_layer.add_child(chat_panel)
@@ -341,11 +348,29 @@ func create_chat_window():
 	layout.add_theme_constant_override("separation", 6)
 	chat_panel.add_child(layout)
 
+	var header_row = HBoxContainer.new()
+	header_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header_row.add_theme_constant_override("separation", 6)
+	layout.add_child(header_row)
+
 	var title_label = Label.new()
 	title_label.text = "Chat"
 	title_label.add_theme_font_size_override("font_size", 18)
 	title_label.add_theme_color_override("font_color", BOX_FONT_COLOR)
-	layout.add_child(title_label)
+	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header_row.add_child(title_label)
+
+	chat_toggle_button = Button.new()
+	chat_toggle_button.text = "Minimize"
+	chat_toggle_button.focus_mode = Control.FOCUS_NONE
+	chat_toggle_button.pressed.connect(_on_chat_toggle_button_pressed)
+	header_row.add_child(chat_toggle_button)
+
+	chat_content_container = VBoxContainer.new()
+	chat_content_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chat_content_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	chat_content_container.add_theme_constant_override("separation", 6)
+	layout.add_child(chat_content_container)
 
 	chat_messages_label = RichTextLabel.new()
 	chat_messages_label.name = "ChatMessages"
@@ -357,24 +382,24 @@ func create_chat_window():
 	chat_messages_label.bbcode_enabled = false
 	chat_messages_label.add_theme_color_override("default_color", BOX_FONT_COLOR)
 	chat_messages_label.text = ""
-	layout.add_child(chat_messages_label)
+	chat_content_container.add_child(chat_messages_label)
 
-	var input_row = HBoxContainer.new()
-	input_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	layout.add_child(input_row)
+	chat_input_row = HBoxContainer.new()
+	chat_input_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chat_content_container.add_child(chat_input_row)
 
 	chat_input = LineEdit.new()
 	chat_input.name = "ChatInput"
 	chat_input.placeholder_text = "Type a message..."
 	chat_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	chat_input.text_submitted.connect(_on_chat_text_submitted)
-	input_row.add_child(chat_input)
+	chat_input_row.add_child(chat_input)
 
 	chat_send_button = Button.new()
 	chat_send_button.name = "ChatSendButton"
 	chat_send_button.text = "Send"
 	chat_send_button.pressed.connect(_on_chat_send_button_pressed)
-	input_row.add_child(chat_send_button)
+	chat_input_row.add_child(chat_send_button)
 
 func _on_chat_send_button_pressed():
 	if not is_instance_valid(chat_input):
@@ -395,6 +420,18 @@ func append_chat_message(sender: String, message: String):
 		return
 	chat_messages_label.append_text("[%s] %s\n" % [sender, message])
 	chat_messages_label.scroll_to_line(chat_messages_label.get_line_count())
+
+func _on_chat_toggle_button_pressed():
+	chat_minimized = !chat_minimized
+	if not is_instance_valid(chat_panel):
+		return
+
+	chat_content_container.visible = not chat_minimized
+	chat_toggle_button.text = "Expand" if chat_minimized else "Minimize"
+
+	var new_height := 48.0 if chat_minimized else chat_expanded_height
+	chat_panel.offset_top = chat_bottom_offset - new_height
+	chat_panel.custom_minimum_size = Vector2(chat_panel.custom_minimum_size.x, new_height)
 
 # Network event handlers
 func _on_player_joined(_client_id, client_name):
