@@ -178,7 +178,7 @@ func _on_login() -> void:
 
 func _refresh_nickname_display():
 	if nickname_label:
-		nickname_label.text = "Nickname: %s" % FireAuth.get_nickname()
+		nickname_label.text = "Welcome, %s !" % FireAuth.get_nickname()
 
 func _on_change_nickname_pressed():
 	if not rename_popup or not nickname_line_edit:

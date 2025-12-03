@@ -17,6 +17,16 @@ shadow_size = 30
 shadow_color = Color(0.419608, 0.294118, 0.196078, 1)
 shadow_offset = Vector2(5, 5)
 
+[sub_resource type="LabelSettings" id="LabelSettings_15luh"]
+font = ExtResource("4_6yxl4")
+font_size = 30
+font_color = Color(0.941176, 0.67451, 0.0431373, 1)
+outline_size = 5
+outline_color = Color(0.305882, 0.176471, 0.109804, 1)
+shadow_size = 10
+shadow_color = Color(0.419608, 0.294118, 0.196078, 1)
+shadow_offset = Vector2(5, 5)
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxRenamePopup"]
 bg_color = Color(0.07, 0.07, 0.08, 0.92)
 border_color = Color(0.44, 0.39, 0.37, 1)
@@ -74,10 +84,11 @@ label_settings = SubResource("LabelSettings_75luh")
 horizontal_alignment = 1
 
 [node name="NicknameLabel" type="Label" parent="VBoxContainer"]
- custom_minimum_size = Vector2(0, 5)
+custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
+label_settings = SubResource("LabelSettings_15luh")
 theme_override_font_sizes/font_size = 25
-text = "Nickname: "
+text = "Welcome,  "
 horizontal_alignment = 1
 
 [node name="select puzzle" type="Button" parent="VBoxContainer"]
