@@ -240,6 +240,9 @@ func update_piece_count_display():
 	if remaining == -1:
 		remaining = PuzzleVar.global_num_pieces
 
+	if remaining == 0:
+		show_win_screen()
+
 	var completed = PuzzleVar.global_num_pieces - remaining
 
 	# No layout adjustments needed anymore
@@ -440,7 +443,7 @@ func _on_chat_toggle_button_pressed():
 
 # Network event handlers
 func _on_player_joined(_client_id, client_name):
-	update_online_status_label()
+	update_online_status_label() 
 
 func _on_player_left(_client_id, client_name):
 	update_online_status_label()
@@ -700,6 +703,7 @@ func on_unmute_button_press():
 
 #Logic for showing the winning labels and buttons
 func show_win_screen():
+	complete = true
 	#-------------------------LABEL LOGIC------------------------#
 	# Load the font file 
 	var font = load("res://assets/fonts/KiriFont.ttf") as FontFile
@@ -717,6 +721,9 @@ func show_win_screen():
 	label.add_theme_color_override("font_color", Color(0, 204, 0))
 	
 	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var dy := -200
+	label.offset_top += dy
+	label.offset_bottom += dy
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.text = "You Have Finished the Puzzle!"
@@ -726,35 +733,31 @@ func show_win_screen():
 	if ui == null:
 		ui = CanvasLayer.new()
 		ui.name = "UI"
-		ui.layer = 100
+		ui.layer = 0
 		ui.follow_viewport_enabled = false
 		get_tree().current_scene.add_child(ui)
 	ui.add_child(overlay)
-
 	
 	# wait for user to leave the puzzle
 	await main_menu
 	overlay.queue_free()
-	ui.queue_free()
-
+	
 	# If in online mode, leave the puzzle on the server
 	if NetworkManager.is_online:
 		if(FireAuth.is_online):
 			print("Puzzle complete, deleting state")
 			FireAuth.write_complete_server()
-		NetworkManager.leave_puzzle()
 		
 	elif !NetworkManager.is_online and FireAuth.is_online:
 		FireAuth.write_complete(PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]))
 	
-	complete = true
+	
 	
 	
 	
 # Handles leaving the puzzle scene, saving state, and disconnecting if online client
 func _on_back_pressed() -> void:
-	emit_signal("main_menu")
-	loading.show()
+	loading.show()	
 	# 1. Save puzzle state BEFORE clearing any data or freeing nodes
 	if !complete and FireAuth.is_online:
 		if NetworkManager.is_online:
@@ -766,7 +769,10 @@ func _on_back_pressed() -> void:
 				PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]),
 				PuzzleVar.global_num_pieces
 			)
-
+	elif complete and FireAuth.is_online:
+		if NetworkManager.is_online:
+			print("Puzzle complete, deleting state")
+			FireAuth.write_complete_server()
 
 	# 2. Handle multiplayer disconnection if this is an online client
 	if NetworkManager.is_online and not NetworkManager.is_server:

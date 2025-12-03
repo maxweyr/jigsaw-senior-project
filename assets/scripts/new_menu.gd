@@ -99,6 +99,7 @@ func _on_play_online_pressed():
 		connecting_label.position = Vector2(get_viewport_rect().size.x / 2 - 100, get_viewport_rect().size.y / 2)
 		add_child(connecting_label)
 		await FireAuth.update_my_player_entry(1)
+		FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
 	else:
 		print("Failed to initiate connection")
 		# Show error message
