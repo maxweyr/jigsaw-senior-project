@@ -267,34 +267,6 @@ texture = ExtResource("3_p7ub0")
 [node name="PieceSpawner" type="MultiplayerSpawner" parent="."]
 spawn_path = NodePath("..")
 
-[node name="CanvasLayer" type="CanvasLayer" parent="."]
-
-[node name="HUD" type="Control" parent="CanvasLayer"]
-clip_contents = true
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="HBoxContainer" type="HBoxContainer" parent="CanvasLayer/HUD"]
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -960.0
-offset_top = 20.0
-offset_right = -860.0
-offset_bottom = 70.0
-grow_horizontal = 2
-
-[node name="ZoomOutButton" type="TextureButton" parent="CanvasLayer/HUD/HBoxContainer"]
-layout_mode = 2
-
-[node name="ZoomInButton" type="TextureButton" parent="CanvasLayer/HUD/HBoxContainer"]
-layout_mode = 2
-
 [connection signal="pressed" from="UI_Button/Back" to="." method="_on_back_pressed"]
 [connection signal="pressed" from="UI_Button/ZoomBox/ZoomOutButton" to="UI_Button" method="_on_ZoomOutButton_pressed"]
 [connection signal="pressed" from="UI_Button/ZoomBox/ZoomInButton" to="UI_Button" method="_on_ZoomInButton_pressed"]
