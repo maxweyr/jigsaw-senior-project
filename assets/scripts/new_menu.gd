@@ -2,8 +2,15 @@ extends Control
 
 var progress_arr = []
 var overlay
+@onready var nickname_label: Label = $VBoxContainer/NicknameLabel
+var rename_popup: PopupPanel
+var nickname_line_edit: LineEdit
 
 func _ready():
+	rename_popup = get_node_or_null("RenamePopup")
+	if rename_popup:
+		nickname_line_edit = rename_popup.get_node_or_null("VBoxContainer/NicknameLineEdit")
+		rename_popup.hide()
 	#await Firebase.Auth.remove_auth()
 	create_overlay()
 	# Prevents pieces from being loaded multiple times
@@ -33,6 +40,7 @@ func _ready():
 	if FireAuth:
 		FireAuth.logged_in.connect(_on_login)
 		FireAuth.login_failed.connect(_on_login)
+	_refresh_nickname_display()
 
 func _process(_delta):
 	pass
@@ -167,3 +175,61 @@ func _input(event):
 
 func _on_login() -> void:
 	overlay.visible = false # Hide the overlay after login completes
+
+func _refresh_nickname_display():
+	if nickname_label:
+		nickname_label.text = "Nickname: %s" % FireAuth.get_nickname()
+
+func _on_change_nickname_pressed():
+	if not rename_popup or not nickname_line_edit:
+		return
+	nickname_line_edit.text = FireAuth.get_nickname()
+	nickname_line_edit.grab_focus()
+	nickname_line_edit.caret_column = nickname_line_edit.text.length()
+	rename_popup.popup_centered()
+
+func _on_nickname_line_edit_text_submitted(_text):
+	_on_rename_save_pressed()
+
+func _on_rename_save_pressed():
+	if not nickname_line_edit:
+		return
+	var new_nickname := nickname_line_edit.text.strip_edges()
+	if new_nickname == "":
+		_show_simple_popup("Invalid Nickname", "Please enter a valid nickname.")
+		return
+
+	_save_nickname(new_nickname)
+	FireAuth.nickname = new_nickname
+	_refresh_nickname_display()
+	_show_simple_popup("Nickname Updated", "Your nickname is now \"%s\"." % new_nickname)
+	rename_popup.hide()
+
+func _on_rename_cancel_pressed():
+	rename_popup.hide()
+
+func _save_nickname(new_nickname: String):
+	var file_path = "user://user_data.txt"
+	var username := FireAuth.get_box_id()
+
+	var existing_file = FileAccess.open(file_path, FileAccess.READ)
+	if existing_file and existing_file.get_length() > 0:
+		var first_line = existing_file.get_line().strip_edges()
+		if first_line != "":
+			username = first_line
+		existing_file.close()
+
+	var file = FileAccess.open(file_path, FileAccess.WRITE)
+	if file:
+		file.store_line(username)
+		file.store_line(new_nickname)
+		file.close()
+	else:
+		printerr("Failed to save nickname to ", file_path)
+
+func _show_simple_popup(title: String, message: String):
+	var popup = AcceptDialog.new()
+	popup.title = title
+	popup.dialog_text = message
+	add_child(popup)
+	popup.popup_centered()

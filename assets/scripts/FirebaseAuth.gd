@@ -147,10 +147,8 @@ func handle_login() -> bool:
 # handle username login for lobby number
 func handle_username_login(username: String) -> bool:
 	print("FirebaseAuth: Handling username...")
-	var col = Firebase.Firestore.collection(USER_COLLECTION)
-	var doc = await col.get_doc(username)
-	#return doc != null and doc.doc_feilds.size() > 0
-	return doc != null
+	var user = await get_user_doc(username)
+	return user != null
 	
 # get the users assigned lobby from firebase
 func get_user_lobby(username: String) -> void:
