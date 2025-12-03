@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://dr6qnsfg5v8bf"]
+[gd_scene load_steps=24 format=3 uid="uid://dr6qnsfg5v8bf"]
 
 [ext_resource type="Script" uid="uid://cn0v4jk621ejf" path="res://assets/scripts/jigsaw_puzzle_1.gd" id="1_p57kp"]
 [ext_resource type="Texture2D" uid="uid://bmy016lv74u8h" path="res://assets/images/puzzle_background.jpg" id="2_1s5nt"]
@@ -6,9 +6,86 @@
 [ext_resource type="Script" uid="uid://dff2jx1ums0vv" path="res://assets/scripts/Camera2D.gd" id="4_823ux"]
 [ext_resource type="FontFile" uid="uid://bh1dea3fkg787" path="res://assets/scripts/LinLibertine_I.otf" id="5_a27gv"]
 [ext_resource type="Theme" uid="uid://0xk2aimn5x6r" path="res://assets/themes/main_menu_buttons.tres" id="6_nllai"]
+[ext_resource type="Script" uid="uid://cbetb0m2r8wmu" path="res://assets/scenes/ui_button.gd" id="6_xhu8f"]
 [ext_resource type="Texture2D" uid="uid://1gto0cal0d8t" path="res://assets/images/throbber1.png" id="7_yauer"]
+[ext_resource type="Texture2D" uid="uid://cjx1litkce5rf" path="res://assets/images/zoom in.png" id="8_355s3"]
 [ext_resource type="Script" uid="uid://b7kl13vp3afn1" path="res://assets/scripts/throbber.gd" id="8_l353k"]
+[ext_resource type="Texture2D" uid="uid://4h10fwkwe8lp" path="res://assets/images/zoom out.png" id="8_sh5u1"]
+[ext_resource type="Texture2D" uid="uid://coulp8ui4qvb" path="res://assets/images/wood_button_pressed.png" id="8_vb4a4"]
 [ext_resource type="Theme" uid="uid://cfxebjeqy3ke7" path="res://assets/themes/bold_text.tres" id="9_l353k"]
+[ext_resource type="Texture2D" uid="uid://b2lh81eqc65yt" path="res://assets/images/hide image.png" id="9_sh5u1"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_1781w"]
+texture = ExtResource("8_vb4a4")
+expand_margin_left = 8.0
+expand_margin_top = 8.0
+expand_margin_right = 8.0
+expand_margin_bottom = 8.0
+region_rect = Rect2(29, 115, 302, 130)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_cpyxs"]
+texture = ExtResource("8_vb4a4")
+expand_margin_left = 8.0
+expand_margin_top = 8.0
+expand_margin_right = 8.0
+expand_margin_bottom = 8.0
+region_rect = Rect2(29, 115, 302, 130)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_3lxxw"]
+texture = ExtResource("8_vb4a4")
+expand_margin_left = 8.0
+expand_margin_top = 8.0
+expand_margin_right = 8.0
+expand_margin_bottom = 8.0
+region_rect = Rect2(29, 115, 302, 130)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_c8kq2"]
+texture = ExtResource("8_vb4a4")
+expand_margin_left = 8.0
+expand_margin_top = 8.0
+expand_margin_right = 8.0
+expand_margin_bottom = 8.0
+region_rect = Rect2(29, 115, 302, 130)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_gc3tl"]
+texture = ExtResource("8_vb4a4")
+expand_margin_left = 8.0
+expand_margin_top = 8.0
+expand_margin_right = 8.0
+expand_margin_bottom = 8.0
+region_rect = Rect2(29, 115, 302, 130)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_t1oxr"]
+texture = ExtResource("8_vb4a4")
+expand_margin_left = 8.0
+expand_margin_top = 8.0
+expand_margin_right = 8.0
+expand_margin_bottom = 8.0
+region_rect = Rect2(29, 115, 302, 130)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_355s3"]
+texture = ExtResource("8_vb4a4")
+expand_margin_left = 8.0
+expand_margin_top = 8.0
+expand_margin_right = 8.0
+expand_margin_bottom = 8.0
+region_rect = Rect2(29, 115, 302, 130)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_usqnr"]
+texture = ExtResource("8_vb4a4")
+expand_margin_left = 8.0
+expand_margin_top = 8.0
+expand_margin_right = 8.0
+expand_margin_bottom = 8.0
+region_rect = Rect2(29, 115, 302, 130)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_vlbav"]
+texture = ExtResource("8_vb4a4")
+expand_margin_left = 8.0
+expand_margin_top = 8.0
+expand_margin_right = 8.0
+expand_margin_bottom = 8.0
+region_rect = Rect2(29, 115, 302, 130)
 
 [node name="Node2D" type="Node2D"]
 script = ExtResource("1_p57kp")
@@ -17,10 +94,10 @@ script = ExtResource("1_p57kp")
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -9055.0
-offset_top = -5955.0
-offset_right = 11385.0
-offset_bottom = 8637.0
+offset_left = -9264.0
+offset_top = -5897.0
+offset_right = 11176.0
+offset_bottom = 8695.0
 grow_horizontal = 2
 grow_vertical = 2
 texture = ExtResource("2_1s5nt")
@@ -31,10 +108,10 @@ zoom = Vector2(0.35, 0.35)
 script = ExtResource("4_823ux")
 
 [node name="Label" type="Label" parent="."]
-offset_left = -156.0
-offset_top = -197.0
-offset_right = 2065.0
-offset_bottom = -59.0
+offset_left = -246.0
+offset_top = -176.0
+offset_right = 1975.0
+offset_bottom = -38.0
 theme_override_colors/font_color = Color(1, 1, 0, 1)
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
 theme_override_fonts/font = ExtResource("5_a27gv")
@@ -63,6 +140,7 @@ theme_override_font_sizes/font_size = 70
 text = "Main Menu"
 
 [node name="UI_Button" type="CanvasLayer" parent="."]
+script = ExtResource("6_xhu8f")
 
 [node name="Back" type="Button" parent="UI_Button"]
 anchors_preset = 2
@@ -84,6 +162,47 @@ text = "Return to Menu"
 visible = false
 offset_right = 40.0
 offset_bottom = 23.0
+
+[node name="ZoomBox" type="HBoxContainer" parent="UI_Button"]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -116.0
+offset_right = 116.0
+offset_bottom = 128.0
+grow_horizontal = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="ZoomOutButton" type="Button" parent="UI_Button/ZoomBox"]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_styles/normal = SubResource("StyleBoxTexture_1781w")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_cpyxs")
+theme_override_styles/hover = SubResource("StyleBoxTexture_3lxxw")
+icon = ExtResource("8_355s3")
+
+[node name="ZoomInButton" type="Button" parent="UI_Button/ZoomBox"]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_styles/normal = SubResource("StyleBoxTexture_c8kq2")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_gc3tl")
+theme_override_styles/hover = SubResource("StyleBoxTexture_t1oxr")
+icon = ExtResource("8_sh5u1")
+
+[node name="HideImageButton" type="Button" parent="UI_Button/ZoomBox"]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_styles/normal = SubResource("StyleBoxTexture_355s3")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_usqnr")
+theme_override_styles/hover = SubResource("StyleBoxTexture_vlbav")
+icon = ExtResource("9_sh5u1")
 
 [node name="LoadingScreen" type="CanvasLayer" parent="."]
 visible = false
@@ -149,4 +268,7 @@ texture = ExtResource("3_p7ub0")
 spawn_path = NodePath("..")
 
 [connection signal="pressed" from="UI_Button/Back" to="." method="_on_back_pressed"]
+[connection signal="pressed" from="UI_Button/ZoomBox/ZoomOutButton" to="UI_Button" method="_on_ZoomOutButton_pressed"]
+[connection signal="pressed" from="UI_Button/ZoomBox/ZoomInButton" to="UI_Button" method="_on_ZoomInButton_pressed"]
+[connection signal="pressed" from="UI_Button/ZoomBox/HideImageButton" to="UI_Button" method="_on_HideImageButton_pressed"]
 [connection signal="spawned" from="PieceSpawner" to="." method="_piece_spawned"]
