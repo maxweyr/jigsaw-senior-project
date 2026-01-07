@@ -24,6 +24,7 @@ var page_string = "%d out of %d"
 @onready var hbox = $"HBoxContainer"
 @onready var panel = $"Panel"
 @onready var thumbnail = $Panel/VBoxContainer/Thumbnail
+@onready var loading = $LoadingScreen
 
 # grid reference:
 #have an array of images to pull from that will correspond to an integer returned by the buttons
@@ -275,6 +276,8 @@ func add_custom_label(button, percentage):
 
 
 func _on_start_puzzle_pressed() -> void:
+	loading.show()  # show loading screen immediately
+	await get_tree().process_frame  # pause
 	get_tree().change_scene_to_file("res://assets/scenes/jigsaw_puzzle_1.tscn")
 
 

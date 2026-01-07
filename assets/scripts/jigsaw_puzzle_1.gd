@@ -39,7 +39,9 @@ const BOX_FONT_COLOR = Color(0.95, 0.95, 0.95)
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	# Render the loading screen immediately
 	loading.show()
+	await get_tree().process_frame 
 
 	name = "JigsawPuzzleNode"
 	selected_puzzle_dir = PuzzleVar.choice["base_file_path"] + "_" + str(PuzzleVar.choice["size"])

@@ -429,6 +429,12 @@ focus_mode = 0
 icon = ExtResource("9_i8mdc")
 flat = true
 
+[node name="LoadingScreen" type="Control" parent="."]
+visible = false
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
 [connection signal="pressed" from="Panel/VBoxContainer/Start_Puzzle" to="." method="_on_start_puzzle_pressed"]
 [connection signal="pressed" from="Panel/VBoxContainer/Go_Back" to="." method="_on_go_back_pressed"]
 [connection signal="pressed" from="GoBackToMenu" to="." method="_on_go_back_to_menu_pressed"]
