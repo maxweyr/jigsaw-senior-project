@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://dye8ygfcvmig0"]
+[gd_scene load_steps=10 format=3 uid="uid://dye8ygfcvmig0"]
 
 [ext_resource type="Script" uid="uid://clejxby4nxls2" path="res://assets/scripts/new_menu.gd" id="1_0jmf4"]
 [ext_resource type="Texture2D" uid="uid://cjejvll72xhdf" path="res://assets/puzzles/new_background.jpg" id="2_1empl"]
@@ -86,9 +86,9 @@ horizontal_alignment = 1
 [node name="NicknameLabel" type="Label" parent="VBoxContainer"]
 custom_minimum_size = Vector2(0, 5)
 layout_mode = 2
-label_settings = SubResource("LabelSettings_15luh")
 theme_override_font_sizes/font_size = 25
 text = "Welcome,  "
+label_settings = SubResource("LabelSettings_15luh")
 horizontal_alignment = 1
 
 [node name="select puzzle" type="Button" parent="VBoxContainer"]
@@ -105,13 +105,12 @@ theme = ExtResource("3_ro0bn")
 theme_override_font_sizes/font_size = 50
 text = "Multiplayer"
 
-[node name="start random" type="Button" parent="VBoxContainer"]
-visible = false
+[node name="ChangeNickname" type="Button" parent="VBoxContainer"]
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 theme = ExtResource("3_ro0bn")
 theme_override_font_sizes/font_size = 50
-text = "Start Random Game"
+text = "Change Nickname"
 
 [node name="BottomRow" type="HBoxContainer" parent="VBoxContainer"]
 layout_mode = 2
@@ -126,13 +125,13 @@ theme = ExtResource("3_ro0bn")
 theme_override_font_sizes/font_size = 45
 text = "Quit Game"
 
-[node name="ChangeNickname" type="Button" parent="VBoxContainer/BottomRow"]
+[node name="SignOut" type="Button" parent="VBoxContainer/BottomRow"]
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("3_ro0bn")
-theme_override_font_sizes/font_size = 35
-text = "Change Nickname"
+theme_override_font_sizes/font_size = 45
+text = "Sign Out"
 
 [node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("6_7rt3t")
@@ -153,8 +152,8 @@ theme_override_styles/panel = SubResource("StyleBoxRenamePopup")
 [node name="VBoxContainer" type="VBoxContainer" parent="RenamePopup"]
 offset_left = 16.0
 offset_top = 16.0
-offset_right = 84.0
-offset_bottom = 84.0
+offset_right = 411.0
+offset_bottom = 164.0
 theme_override_constants/separation = 10
 alignment = 1
 
@@ -187,8 +186,8 @@ text = "Cancel"
 
 [connection signal="pressed" from="VBoxContainer/select puzzle" to="." method="_on_select_puzzle_pressed"]
 [connection signal="pressed" from="VBoxContainer/PlayOnline" to="." method="_on_play_online_pressed"]
-[connection signal="pressed" from="VBoxContainer/start random" to="." method="_on_start_random_pressed"]
+[connection signal="pressed" from="VBoxContainer/ChangeNickname" to="." method="_on_change_nickname_pressed"]
 [connection signal="pressed" from="VBoxContainer/BottomRow/quit" to="." method="_on_quit_pressed"]
-[connection signal="pressed" from="VBoxContainer/BottomRow/ChangeNickname" to="." method="_on_change_nickname_pressed"]
+[connection signal="pressed" from="VBoxContainer/BottomRow/SignOut" to="." method="_on_sign_out_pressed"]
 [connection signal="pressed" from="RenamePopup/VBoxContainer/ButtonRow/SaveButton" to="." method="_on_rename_save_pressed"]
 [connection signal="pressed" from="RenamePopup/VBoxContainer/ButtonRow/CancelButton" to="." method="_on_rename_cancel_pressed"]
