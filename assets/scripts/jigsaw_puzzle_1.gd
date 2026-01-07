@@ -106,6 +106,7 @@ func load_firebase_state(p_name):
 		print("FB: Update")
 		update_online_status_label("Syncing puzzle state...")
 		saved_piece_data = await FireAuth.get_puzzle_state_server()
+		print("saved_piece_data: ", saved_piece_data)
 		print("FB: SYNC")
 		
 	else: 
@@ -722,14 +723,14 @@ func show_win_screen():
 	await main_menu
 	overlay.queue_free()
 	
-	# If in online mode, leave the puzzle on the server
-	if NetworkManager.is_online:
-		if(FireAuth.is_online):
-			print("Puzzle complete, deleting state")
-			FireAuth.write_complete_server()
+	# # If in online mode, leave the puzzle on the server
+	# if NetworkManager.is_online:
+	# 	if(FireAuth.is_online):
+	# 		print("Puzzle complete, deleting state")
+	# 		FireAuth.write_complete_server()
 		
-	elif !NetworkManager.is_online and FireAuth.is_online:
-		FireAuth.write_complete(PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]))
+	# elif !NetworkManager.is_online and FireAuth.is_online:
+	# 	FireAuth.write_complete(PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]))
 	
 	
 	
@@ -750,7 +751,7 @@ func _on_back_pressed() -> void:
 				PuzzleVar.global_num_pieces
 			)
 	elif complete and FireAuth.is_online:
-		if NetworkManager.is_online:
+		if NetworkManager.is_online and NetworkManager.connected_players.is_empty():
 			print("Puzzle complete, deleting state")
 			FireAuth.write_complete_server()
 

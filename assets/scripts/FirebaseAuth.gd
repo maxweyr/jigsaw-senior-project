@@ -529,17 +529,23 @@ func get_puzzle_state_server():
 	var state = await lobby_puzzle.get_doc("state")
 	if(!state):
 		print("FB Could not find state for lobby", PuzzleVar.lobby_number)
+		print("ERROR: get_puzzle_state_server")
 		lobby_puzzle.add("state", {"progress": 0})
 		return []
+
+	print("PROGRESS: ", state.get_value("progress"))
 	# set puzzle choice
 	var choice = state.get_value("puzzle_choice")
-	if !choice:
+	if choice == null:
 		print("ERROR: Lobby", PuzzleVar.lobby_number, " has no puzzle choice")
 		return []
 	# get location
 	var loc = state.get_value("piece_locations2")
-	if(!loc):
-		print("FB: LOC NOT FOUND")
+	if loc == null:
+		print("FB: LOC FIELD MISSING")
+		return []
+	if loc is Array and loc.size() == 0:
+		print("FB: LOC IS EMPTY ARRAY")
 		return []
 	print("FB COMPLETE: ", loc)
 	return parse_firestore_puzzle_data(loc)
