@@ -417,6 +417,16 @@ func _on_chat_send_button_pressed():
 	NetworkManager.send_chat_message(text)
 	chat_input.clear()
 
+func _on_chat_text_submitted(text: String):
+	chat_input.text = text
+	_on_chat_send_button_pressed()
+
+func append_chat_message(sender: String, message: String):
+	if not is_instance_valid(chat_messages_label):
+		return
+	chat_messages_label.append_text("[%s] %s\n" % [sender, message])
+	chat_messages_label.scroll_to_line(chat_messages_label.get_line_count())
+
 func _on_chat_toggle_button_pressed():
 	chat_minimized = !chat_minimized
 	if not is_instance_valid(chat_panel):
@@ -428,16 +438,6 @@ func _on_chat_toggle_button_pressed():
 	var new_height := 48.0 if chat_minimized else chat_expanded_height
 	chat_panel.offset_top = chat_bottom_offset - new_height
 	chat_panel.custom_minimum_size = Vector2(chat_panel.custom_minimum_size.x, new_height)
-
-func _on_chat_text_submitted(text: String):
-	chat_input.text = text
-	_on_chat_send_button_pressed()
-
-func append_chat_message(sender: String, message: String):
-	if not is_instance_valid(chat_messages_label):
-		return
-	chat_messages_label.append_text("[%s] %s\n" % [sender, message])
-	chat_messages_label.scroll_to_line(chat_messages_label.get_line_count())
 
 # Network event handlers
 func _on_player_joined(_client_id, client_name):
