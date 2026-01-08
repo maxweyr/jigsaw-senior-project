@@ -98,7 +98,7 @@ func _ready():
 	if NetworkManager.is_online:
 		update_online_status_label()
 
-# Load state from Firebase (for offline mode)
+# Load state from Firebase 
 func load_firebase_state(p_name):
 	print("LOADING STATE")
 	var saved_piece_data: Array
@@ -112,50 +112,43 @@ func load_firebase_state(p_name):
 	else: 
 		await FireAuth.update_active_puzzle(p_name)
 		saved_piece_data = await FireAuth.get_puzzle_state(p_name)
-	var notComplete	 = 0
-	var groupArray = []
+	if saved_piece_data.is_empty():
+		complete = false
+		return
+
+	# Always apply saved positions (including fully-completed puzzles).
 	for idx in range(len(saved_piece_data)):
 		var data = saved_piece_data[idx]
-		var groupId = data["GroupID"]
-		if groupId not in groupArray:
-			groupArray.append(groupId)
-	
-		if len(groupArray) > 1:
-			notComplete = 1
-			break
-		
-	if(notComplete):
-		# Adjust pieces to their saved positions and assign groups
-		for idx in range(len(saved_piece_data)):
-			var data = saved_piece_data[idx]
-			var piece = PuzzleVar.ordered_pieces_array[idx]
+		var piece = PuzzleVar.ordered_pieces_array[idx]
 
-			# Set the position from the saved data
-			var center_location = data["CenterLocation"]
-			piece.position = Vector2(center_location["x"], center_location["y"])
+		# Set the position from the saved data
+		var center_location = data["CenterLocation"]
+		piece.position = Vector2(center_location["x"], center_location["y"])
 
-			# Assign the group number
-			piece.group_number = data["GroupID"]
+		# Assign the group number
+		piece.group_number = data["GroupID"]
 
-		# Collect all unique group IDs from the saved data
-		var unique_group_ids = []
-		for data in saved_piece_data:
-			if data["GroupID"] not in unique_group_ids:
-				unique_group_ids.append(data["GroupID"])
+	# Collect all unique group IDs from the saved data
+	var unique_group_ids = []
+	for data in saved_piece_data:
+		if data["GroupID"] not in unique_group_ids:
+			unique_group_ids.append(data["GroupID"])
 
-		# Re-group all pieces based on their group number
-		for group_id in unique_group_ids:
-			var group_pieces = []
-			for piece in PuzzleVar.ordered_pieces_array:
-				if piece.group_number == group_id:
-					group_pieces.append(piece)
+	# Re-group all pieces based on their group number
+	for group_id in unique_group_ids:
+		var group_pieces = []
+		for piece in PuzzleVar.ordered_pieces_array:
+			if piece.group_number == group_id:
+				group_pieces.append(piece)
 
-			if group_pieces.size() > 1:
-				# Snap and connect all pieces in this group
-				var reference_piece = group_pieces[0]
-				for other_piece in group_pieces.slice(1, group_pieces.size()):
-					reference_piece.snap_and_connect(other_piece.ID, 1)
-	complete = false
+		if group_pieces.size() > 1:
+			# Snap and connect all pieces in this group
+			var reference_piece = group_pieces[0]
+			for other_piece in group_pieces.slice(1, group_pieces.size()):
+				reference_piece.snap_and_connect(other_piece.ID, 1)
+
+	complete = unique_group_ids.size() <= 1
+	update_piece_count_display()
 
 #-----------------------------------------------------------------------------
 # UI CREATION AND MANAGEMENT
