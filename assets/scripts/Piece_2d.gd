@@ -211,7 +211,6 @@ func snap_and_connect(adjacent_piece_id: int, loadFlag = 0, is_network = false):
 	for node in all_pieces:
 		if node.group_number != group_number:
 			finished = false
-			print("not finished yet, piece " + str(node.ID) + " in group " + str(node.group_number))
 			break
 	
 	# If we successfully connected the pieces and we're not in a network operation,
@@ -230,7 +229,7 @@ func snap_and_connect(adjacent_piece_id: int, loadFlag = 0, is_network = false):
 		if NetworkManager.is_online:
 			NetworkManager.rpc_id(1, "sync_connected_pieces", ID, adjacent_piece_id, new_group_number, piece_positions)
 			FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
-			
+
 
 # This is the function that actually moves the piece (in the current group)
 # to connect it

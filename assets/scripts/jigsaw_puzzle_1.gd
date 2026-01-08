@@ -106,7 +106,6 @@ func load_firebase_state(p_name):
 		print("FB: Update")
 		update_online_status_label("Syncing puzzle state...")
 		saved_piece_data = await FireAuth.get_puzzle_state_server()
-		print("saved_piece_data: ", saved_piece_data)
 		print("FB: SYNC")
 		
 	else: 

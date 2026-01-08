@@ -529,11 +529,9 @@ func get_puzzle_state_server():
 	var state = await lobby_puzzle.get_doc("state")
 	if(!state):
 		print("FB Could not find state for lobby", PuzzleVar.lobby_number)
-		print("ERROR: get_puzzle_state_server")
 		lobby_puzzle.add("state", {"progress": 0})
 		return []
 
-	print("PROGRESS: ", state.get_value("progress"))
 	# set puzzle choice
 	var choice = state.get_value("puzzle_choice")
 	if choice == null:
