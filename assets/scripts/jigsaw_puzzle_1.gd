@@ -30,7 +30,7 @@ var chat_minimized := false
 var chat_expanded_height := 200.0
 var chat_bottom_offset := -120.0
 
-# --- Network Data ---you
+# --- Network Data	---
 var connected_players = [] # Array to store connected player names (excluding self)
 
 # --- Constants for Styling ---
@@ -334,10 +334,11 @@ func create_chat_window():
 	chat_panel.offset_left = -270
 	chat_panel.offset_right = -20
 	chat_panel.offset_top = -320
-	chat_panel.offset_bottom = -120
+	chat_panel.offset_bottom = chat_bottom_offset
 	chat_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	chat_panel.grow_vertical = Control.GROW_DIRECTION_END
-	chat_panel.custom_minimum_size = Vector2(300, 220)
+	chat_expanded_height = chat_panel.offset_bottom - chat_panel.offset_top
+	chat_panel.custom_minimum_size = Vector2(300, chat_expanded_height)
 
 	var ui_layer = $UI_Button
 	ui_layer.add_child(chat_panel)
@@ -349,11 +350,29 @@ func create_chat_window():
 	layout.add_theme_constant_override("separation", 6)
 	chat_panel.add_child(layout)
 
+	var header_row = HBoxContainer.new()
+	header_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header_row.add_theme_constant_override("separation", 6)
+	layout.add_child(header_row)
+
 	var title_label = Label.new()
 	title_label.text = "Chat"
 	title_label.add_theme_font_size_override("font_size", 18)
 	title_label.add_theme_color_override("font_color", BOX_FONT_COLOR)
-	layout.add_child(title_label)
+	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header_row.add_child(title_label)
+
+	chat_toggle_button = Button.new()
+	chat_toggle_button.text = "Minimize"
+	chat_toggle_button.focus_mode = Control.FOCUS_NONE
+	chat_toggle_button.pressed.connect(_on_chat_toggle_button_pressed)
+	header_row.add_child(chat_toggle_button)
+
+	chat_content_container = VBoxContainer.new()
+	chat_content_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chat_content_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	chat_content_container.add_theme_constant_override("separation", 6)
+	layout.add_child(chat_content_container)
 
 	chat_messages_label = RichTextLabel.new()
 	chat_messages_label.name = "ChatMessages"
@@ -365,7 +384,11 @@ func create_chat_window():
 	chat_messages_label.bbcode_enabled = false
 	chat_messages_label.add_theme_color_override("default_color", BOX_FONT_COLOR)
 	chat_messages_label.text = ""
-	layout.add_child(chat_messages_label)
+	chat_content_container.add_child(chat_messages_label)
+
+	chat_input_row = HBoxContainer.new()
+	chat_input_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chat_content_container.add_child(chat_input_row)
 
 	var input_row = HBoxContainer.new()
 	input_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -376,13 +399,13 @@ func create_chat_window():
 	chat_input.placeholder_text = "Type a message..."
 	chat_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	chat_input.text_submitted.connect(_on_chat_text_submitted)
-	input_row.add_child(chat_input)
+	chat_input_row.add_child(chat_input)
 
 	chat_send_button = Button.new()
 	chat_send_button.name = "ChatSendButton"
 	chat_send_button.text = "Send"
 	chat_send_button.pressed.connect(_on_chat_send_button_pressed)
-	input_row.add_child(chat_send_button)
+	chat_input_row.add_child(chat_send_button)
 
 func _on_chat_send_button_pressed():
 	if not is_instance_valid(chat_input):
@@ -393,6 +416,18 @@ func _on_chat_send_button_pressed():
 	append_chat_message("You", text)
 	NetworkManager.send_chat_message(text)
 	chat_input.clear()
+
+func _on_chat_toggle_button_pressed():
+	chat_minimized = !chat_minimized
+	if not is_instance_valid(chat_panel):
+		return
+
+	chat_content_container.visible = not chat_minimized
+	chat_toggle_button.text = "Expand" if chat_minimized else "Minimize"
+
+	var new_height := 48.0 if chat_minimized else chat_expanded_height
+	chat_panel.offset_top = chat_bottom_offset - new_height
+	chat_panel.custom_minimum_size = Vector2(chat_panel.custom_minimum_size.x, new_height)
 
 func _on_chat_text_submitted(text: String):
 	chat_input.text = text
@@ -406,7 +441,7 @@ func append_chat_message(sender: String, message: String):
 
 # Network event handlers
 func _on_player_joined(_client_id, client_name):
-	update_online_status_label() 
+	update_online_status_label()
 
 func _on_player_left(_client_id, client_name):
 	update_online_status_label()
@@ -683,11 +718,6 @@ func show_win_screen():
 	label.add_theme_font_size_override("font_size", 60) 
 	label.add_theme_color_override("font_color", Color(0, 204, 0))
 	
-	# label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	# var dy := -200
-	# label.offset_top += dy
-	# label.offset_bottom += dy
-	
 	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var dy := -200
 	label.offset_top += dy
@@ -709,19 +739,7 @@ func show_win_screen():
 	# wait for user to leave the puzzle
 	await main_menu
 	overlay.queue_free()
-	
-	# # If in online mode, leave the puzzle on the server
-	# if NetworkManager.is_online:
-	# 	if(FireAuth.is_online):
-	# 		print("Puzzle complete, deleting state")
-	# 		FireAuth.write_complete_server()
 		
-	# elif !NetworkManager.is_online and FireAuth.is_online:
-	# 	FireAuth.write_complete(PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]))
-	
-	
-	
-	
 	
 # Handles leaving the puzzle scene, saving state, and disconnecting if online client
 func _on_back_pressed() -> void:
