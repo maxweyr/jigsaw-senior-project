@@ -243,7 +243,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_fonts/normal_font = ExtResource("9_3rueg")
 theme_override_font_sizes/normal_font_size = 40
-text = "10 0 0
+text = "50 0
 "
 
 [node name="grid3" type="Button" parent="HBoxContainer/GridContainer"]
@@ -330,7 +330,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_fonts/normal_font = ExtResource("9_3rueg")
 theme_override_font_sizes/normal_font_size = 40
-text = "10 0 0
+text = "50 0
 "
 
 [node name="grid6" type="Button" parent="HBoxContainer/GridContainer"]
@@ -420,7 +420,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_fonts/normal_font = ExtResource("9_3rueg")
 theme_override_font_sizes/normal_font_size = 40
-text = "10 0 0
+text = "50 0
 "
 
 [node name="right button" type="Button" parent="HBoxContainer"]

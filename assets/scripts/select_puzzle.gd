@@ -139,7 +139,7 @@ func button_pressed(button):
 	var button_name = String(button.name)
 	var chosen = index + int(button_name[-1])
 	var row_selected = ceil((chosen % 9)/ 3)
-	var sizes = [10, 100, 1000]
+	var sizes = [10, 100, 500]
 	var size_selected = sizes[chosen % 3]
 			
 	#print(row_selected, " from page ", page_num)

@@ -37,6 +37,8 @@ var connected_players = [] # Array to store connected player names (excluding se
 const BOX_BACKGROUND_COLOR = Color(0.15, 0.15, 0.2, 0.85) # Dark semi-transparent
 const BOX_BORDER_COLOR = Color(0.4, 0.4, 0.45, 0.9)
 const BOX_FONT_COLOR = Color(0.95, 0.95, 0.95)
+const CHAT_TEXT_SIZE = 22
+const CHAT_BUTTON_TEXT_SIZE = 20
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -356,7 +358,7 @@ func create_chat_window():
 
 	var title_label = Label.new()
 	title_label.text = "Chat"
-	title_label.add_theme_font_size_override("font_size", 18)
+	title_label.add_theme_font_size_override("font_size", CHAT_TEXT_SIZE)  # Increased also
 	title_label.add_theme_color_override("font_color", BOX_FONT_COLOR)
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header_row.add_child(title_label)
@@ -364,8 +366,11 @@ func create_chat_window():
 	chat_toggle_button = Button.new()
 	chat_toggle_button.text = "Minimize"
 	chat_toggle_button.focus_mode = Control.FOCUS_NONE
+	# Set Toggle Button Text Size
+	chat_toggle_button.add_theme_font_size_override("font_size", CHAT_BUTTON_TEXT_SIZE)
 	chat_toggle_button.pressed.connect(_on_chat_toggle_button_pressed)
 	header_row.add_child(chat_toggle_button)
+	
 
 	chat_content_container = VBoxContainer.new()
 	chat_content_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -382,8 +387,11 @@ func create_chat_window():
 	chat_messages_label.scroll_following = true
 	chat_messages_label.bbcode_enabled = false
 	chat_messages_label.add_theme_color_override("default_color", BOX_FONT_COLOR)
+	# Set the chat text size large enough
+	chat_messages_label.add_theme_font_size_override("normal_font_size", CHAT_TEXT_SIZE)
 	chat_messages_label.text = ""
 	chat_content_container.add_child(chat_messages_label)
+	
 
 	chat_input_row = HBoxContainer.new()
 	chat_input_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -397,14 +405,20 @@ func create_chat_window():
 	chat_input.name = "ChatInput"
 	chat_input.placeholder_text = "Type a message..."
 	chat_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Set chat "Type a message" size
+	chat_input.add_theme_font_size_override("font_size", CHAT_BUTTON_TEXT_SIZE)
 	chat_input.text_submitted.connect(_on_chat_text_submitted)
 	chat_input_row.add_child(chat_input)
 
 	chat_send_button = Button.new()
 	chat_send_button.name = "ChatSendButton"
 	chat_send_button.text = "Send"
+	# Set the send button large enough
+	chat_send_button.add_theme_font_size_override("font_size", CHAT_BUTTON_TEXT_SIZE)
 	chat_send_button.pressed.connect(_on_chat_send_button_pressed)
 	chat_input_row.add_child(chat_send_button)
+	
+	
 
 func _on_chat_send_button_pressed():
 	if not is_instance_valid(chat_input):
