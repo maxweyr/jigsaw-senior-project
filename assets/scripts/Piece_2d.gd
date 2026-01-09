@@ -229,14 +229,6 @@ func snap_and_connect(adjacent_piece_id: int, loadFlag = 0, is_network = false):
 		if NetworkManager.is_online:
 			NetworkManager.rpc_id(1, "sync_connected_pieces", ID, adjacent_piece_id, new_group_number, piece_positions)
 			FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
-	
-	if (finished):
-		if main_scene:
-			main_scene.show_win_screen()
-		
-		# If we're in online mode, notify the server we completed the puzzle
-		if NetworkManager.is_online:
-			NetworkManager.leave_puzzle()
 
 
 # This is the function that actually moves the piece (in the current group)

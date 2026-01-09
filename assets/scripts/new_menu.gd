@@ -99,6 +99,7 @@ func _on_play_online_pressed():
 		connecting_label.position = Vector2(get_viewport_rect().size.x / 2 - 100, get_viewport_rect().size.y / 2)
 		add_child(connecting_label)
 		await FireAuth.update_my_player_entry(1)
+		FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
 	else:
 		print("Failed to initiate connection")
 		# Show error message
@@ -226,6 +227,16 @@ func _save_nickname(new_nickname: String):
 		file.close()
 	else:
 		printerr("Failed to save nickname to ", file_path)
+
+func _on_sign_out_pressed() -> void:
+	var file_path = "user://user_data.txt" 
+	var file = FileAccess.open(file_path, FileAccess.WRITE)
+	if file:
+		file.close()
+	else:
+		printerr("Failed to clear user data in ", file_path)
+	get_tree().change_scene_to_file("res://assets/scenes/login.tscn")	# Go back to login screen
+	# _on_quit_pressed() # Quit the game to ensure all data is cleared
 
 func _show_simple_popup(title: String, message: String):
 	var popup = AcceptDialog.new()

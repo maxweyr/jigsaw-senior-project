@@ -154,7 +154,12 @@ func handle_username_login(username: String) -> bool:
 func get_user_lobby(username: String) -> void:
 	var user_lobbies: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION)
 	var lobby = await user_lobbies.get_doc(username)
-	var num = (lobby.get_value("lobby"))
+	var num
+	if lobby != null:
+		num = (lobby.get_value("lobby"))
+	else:
+		num = 0
+		print("ERROR: lobby number returned null")
 	if num != null:
 		num = int(num)
 	if num:
@@ -526,15 +531,19 @@ func get_puzzle_state_server():
 		print("FB Could not find state for lobby", PuzzleVar.lobby_number)
 		lobby_puzzle.add("state", {"progress": 0})
 		return []
+
 	# set puzzle choice
 	var choice = state.get_value("puzzle_choice")
-	if !choice:
+	if choice == null:
 		print("ERROR: Lobby", PuzzleVar.lobby_number, " has no puzzle choice")
 		return []
 	# get location
 	var loc = state.get_value("piece_locations2")
-	if(!loc):
-		print("FB: LOC NOT FOUND")
+	if loc == null:
+		print("FB: LOC FIELD MISSING")
+		return []
+	if loc is Array and loc.size() == 0:
+		print("FB: LOC IS EMPTY ARRAY")
 		return []
 	print("FB COMPLETE: ", loc)
 	return parse_firestore_puzzle_data(loc)

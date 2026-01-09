@@ -9,6 +9,7 @@ var offline_button: Button
 var complete = false;
 @onready var back_button = $UI_Button/Back
 @onready var loading = $LoadingScreen
+signal main_menu
 
 # --- Network-related variables ---
 var selected_puzzle_dir = ""
@@ -29,7 +30,7 @@ var chat_minimized := false
 var chat_expanded_height := 200.0
 var chat_bottom_offset := -120.0
 
-# --- Network Data ---
+# --- Network Data	---
 var connected_players = [] # Array to store connected player names (excluding self)
 
 # --- Constants for Styling ---
@@ -90,12 +91,14 @@ func _ready():
 	# Connect the back button signal
 	#var back_button = $UI_Button/Back
 	#back_button.connect("pressed", Callable(self, "_on_back_button_pressed"))
+	main_menu.connect(show_win_screen)
+
 	loading.hide()
 	
 	if NetworkManager.is_online:
 		update_online_status_label()
 
-# Load state from Firebase (for offline mode)
+# Load state from Firebase 
 func load_firebase_state(p_name):
 	print("LOADING STATE")
 	var saved_piece_data: Array
@@ -108,50 +111,43 @@ func load_firebase_state(p_name):
 	else: 
 		await FireAuth.update_active_puzzle(p_name)
 		saved_piece_data = await FireAuth.get_puzzle_state(p_name)
-	var notComplete	 = 0
-	var groupArray = []
+	if saved_piece_data.is_empty():
+		complete = false
+		return
+
+	# Always apply saved positions (including fully-completed puzzles).
 	for idx in range(len(saved_piece_data)):
 		var data = saved_piece_data[idx]
-		var groupId = data["GroupID"]
-		if groupId not in groupArray:
-			groupArray.append(groupId)
-	
-		if len(groupArray) > 1:
-			notComplete = 1
-			break
-		
-	if(notComplete):
-		# Adjust pieces to their saved positions and assign groups
-		for idx in range(len(saved_piece_data)):
-			var data = saved_piece_data[idx]
-			var piece = PuzzleVar.ordered_pieces_array[idx]
+		var piece = PuzzleVar.ordered_pieces_array[idx]
 
-			# Set the position from the saved data
-			var center_location = data["CenterLocation"]
-			piece.position = Vector2(center_location["x"], center_location["y"])
+		# Set the position from the saved data
+		var center_location = data["CenterLocation"]
+		piece.position = Vector2(center_location["x"], center_location["y"])
 
-			# Assign the group number
-			piece.group_number = data["GroupID"]
+		# Assign the group number
+		piece.group_number = data["GroupID"]
 
-		# Collect all unique group IDs from the saved data
-		var unique_group_ids = []
-		for data in saved_piece_data:
-			if data["GroupID"] not in unique_group_ids:
-				unique_group_ids.append(data["GroupID"])
+	# Collect all unique group IDs from the saved data
+	var unique_group_ids = []
+	for data in saved_piece_data:
+		if data["GroupID"] not in unique_group_ids:
+			unique_group_ids.append(data["GroupID"])
 
-		# Re-group all pieces based on their group number
-		for group_id in unique_group_ids:
-			var group_pieces = []
-			for piece in PuzzleVar.ordered_pieces_array:
-				if piece.group_number == group_id:
-					group_pieces.append(piece)
+	# Re-group all pieces based on their group number
+	for group_id in unique_group_ids:
+		var group_pieces = []
+		for piece in PuzzleVar.ordered_pieces_array:
+			if piece.group_number == group_id:
+				group_pieces.append(piece)
 
-			if group_pieces.size() > 1:
-				# Snap and connect all pieces in this group
-				var reference_piece = group_pieces[0]
-				for other_piece in group_pieces.slice(1, group_pieces.size()):
-					reference_piece.snap_and_connect(other_piece.ID, 1)
-	complete = false
+		if group_pieces.size() > 1:
+			# Snap and connect all pieces in this group
+			var reference_piece = group_pieces[0]
+			for other_piece in group_pieces.slice(1, group_pieces.size()):
+				reference_piece.snap_and_connect(other_piece.ID, 1)
+
+	complete = unique_group_ids.size() <= 1
+	update_piece_count_display()
 
 #-----------------------------------------------------------------------------
 # UI CREATION AND MANAGEMENT
@@ -236,6 +232,9 @@ func update_piece_count_display():
 
 	if remaining == -1:
 		remaining = PuzzleVar.global_num_pieces
+
+	if remaining == 0:
+		show_win_screen()
 
 	var completed = PuzzleVar.global_num_pieces - remaining
 
@@ -389,6 +388,10 @@ func create_chat_window():
 	chat_input_row = HBoxContainer.new()
 	chat_input_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	chat_content_container.add_child(chat_input_row)
+
+	var input_row = HBoxContainer.new()
+	input_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	layout.add_child(input_row)
 
 	chat_input = LineEdit.new()
 	chat_input.name = "ChatInput"
@@ -697,61 +700,49 @@ func on_unmute_button_press():
 
 #Logic for showing the winning labels and buttons
 func show_win_screen():
+	complete = true
 	#-------------------------LABEL LOGIC------------------------#
 	# Load the font file 
 	var font = load("res://assets/fonts/KiriFont.ttf") as FontFile
 	
-	var canvas_layer = CanvasLayer.new()
-	canvas_layer.layer = 100
+	var overlay := Control.new()
+	overlay.name = "WinOverlay"
+	overlay.set_as_top_level(true) 
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	
-	var label = Label.new()
-	label.text = "You've Finished the Puzzle!"
+	var label := Label.new()
 	
-	# Label size settings
-	label.add_theme_font_override("font", font)
-	label.add_theme_font_size_override("font_size", 60)  
+	label.add_theme_font_override("font", font) 
+	label.add_theme_font_size_override("font_size", 60) 
 	label.add_theme_color_override("font_color", Color(0, 204, 0))
-
-	# Align label to center
+	
+	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var dy := -200
+	label.offset_top += dy
+	label.offset_bottom += dy
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	label.text = "You Have Finished the Puzzle!"
+	overlay.add_child(label)
 	
-	label.custom_minimum_size = get_viewport().size
+	var ui := get_tree().current_scene.get_node_or_null("UI")
+	if ui == null:
+		ui = CanvasLayer.new()
+		ui.name = "UI"
+		ui.layer = 0
+		ui.follow_viewport_enabled = false
+		get_tree().current_scene.add_child(ui)
+	ui.add_child(overlay)
 	
-	# Position label to correct location
-	label.position = Vector2(get_viewport().size) / 2 + Vector2(-1000, -700)
-
-	canvas_layer.add_child(label)
-	get_tree().current_scene.add_child(canvas_layer)
-	
-	#-------------------------BUTTON LOGIC-----------------------#
-	var button = $MainMenu
-	button.visible = false # we dont want this @TODO remove this
-	# Change the font size
-	button.add_theme_font_override("font", font)
-	button.add_theme_font_size_override("font_size", 120)
-	# Change the text color to white
-	var font_color = Color(1, 1, 1)  # RGB (1, 1, 1) = white
-	button.add_theme_color_override("font_color", font_color)
-	button.connect("pressed", Callable(self, "on_main_menu_button_pressed")) 
-	
-	# If in online mode, leave the puzzle on the server
-	if NetworkManager.is_online:
-		if(FireAuth.is_online):
-			print("Puzzle complete, deleting state")
-			FireAuth.write_complete_server()
-		NetworkManager.leave_puzzle()
+	# wait for user to leave the puzzle
+	await main_menu
+	overlay.queue_free()
 		
-	elif !NetworkManager.is_online and FireAuth.is_online:
-		FireAuth.write_complete(PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]))
 	
-	complete = true
-		
 # Handles leaving the puzzle scene, saving state, and disconnecting if online client
 func _on_back_pressed() -> void:
-	loading.show()
+	loading.show()	
 	# 1. Save puzzle state BEFORE clearing any data or freeing nodes
 	if !complete and FireAuth.is_online:
 		if NetworkManager.is_online:
@@ -763,7 +754,10 @@ func _on_back_pressed() -> void:
 				PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]),
 				PuzzleVar.global_num_pieces
 			)
-
+	elif complete and FireAuth.is_online:
+		if NetworkManager.is_online and NetworkManager.connected_players.is_empty():
+			print("Puzzle complete, deleting state")
+			FireAuth.write_complete_server()
 
 	# 2. Handle multiplayer disconnection if this is an online client
 	if NetworkManager.is_online and not NetworkManager.is_server:
