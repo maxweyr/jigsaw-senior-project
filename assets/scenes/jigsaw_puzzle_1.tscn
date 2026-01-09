@@ -8,12 +8,12 @@
 [ext_resource type="Theme" uid="uid://0xk2aimn5x6r" path="res://assets/themes/main_menu_buttons.tres" id="6_nllai"]
 [ext_resource type="Script" uid="uid://cbetb0m2r8wmu" path="res://assets/scenes/ui_button.gd" id="6_xhu8f"]
 [ext_resource type="Texture2D" uid="uid://1gto0cal0d8t" path="res://assets/images/throbber1.png" id="7_yauer"]
-[ext_resource type="Texture2D" uid="uid://cmipwq7bjr206" path="res://assets/images/zoom_in.png" id="8_355s3"]
+[ext_resource type="Texture2D" uid="uid://dkufm8goxvjc8" path="res://assets/images/zoom_in.png" id="8_355s3"]
 [ext_resource type="Script" uid="uid://b7kl13vp3afn1" path="res://assets/scripts/throbber.gd" id="8_l353k"]
-[ext_resource type="Texture2D" uid="uid://4h10fwkwe8lp" path="res://assets/images/zoom_out.png" id="8_sh5u1"]
+[ext_resource type="Texture2D" uid="uid://d2dp0hws3g4f1" path="res://assets/images/zoom_out.png" id="8_sh5u1"]
 [ext_resource type="Texture2D" uid="uid://coulp8ui4qvb" path="res://assets/images/wood_button_pressed.png" id="8_vb4a4"]
 [ext_resource type="Theme" uid="uid://cfxebjeqy3ke7" path="res://assets/themes/bold_text.tres" id="9_l353k"]
-[ext_resource type="Texture2D" uid="uid://b2lh81eqc65yt" path="res://assets/images/hide_image.png" id="9_sh5u1"]
+[ext_resource type="Texture2D" uid="uid://ri3m54okakbg" path="res://assets/images/hide_image.png" id="9_sh5u1"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_355s3"]
 texture = ExtResource("8_vb4a4")
@@ -134,6 +134,7 @@ size_flags_vertical = 4
 theme_override_styles/normal = SubResource("StyleBoxTexture_355s3")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_usqnr")
 theme_override_styles/hover = SubResource("StyleBoxTexture_vlbav")
+action_mode = 0
 icon = ExtResource("9_sh5u1")
 expand_icon = true
 
@@ -145,6 +146,7 @@ size_flags_vertical = 4
 theme_override_styles/normal = SubResource("StyleBoxTexture_355s3")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_usqnr")
 theme_override_styles/hover = SubResource("StyleBoxTexture_vlbav")
+action_mode = 0
 icon = ExtResource("8_sh5u1")
 expand_icon = true
 
@@ -156,6 +158,7 @@ size_flags_vertical = 4
 theme_override_styles/normal = SubResource("StyleBoxTexture_355s3")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_usqnr")
 theme_override_styles/hover = SubResource("StyleBoxTexture_vlbav")
+action_mode = 0
 icon = ExtResource("8_355s3")
 expand_icon = true
 

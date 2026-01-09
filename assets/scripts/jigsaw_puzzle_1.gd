@@ -9,6 +9,8 @@ var offline_button: Button
 var complete = false;
 @onready var back_button = $UI_Button/Back
 @onready var loading = $LoadingScreen
+@onready var zoom_box: Control = $UI_Button/ZoomBox
+
 signal main_menu
 
 # --- Network-related variables ---
@@ -489,6 +491,13 @@ func _input(event):
 	if is_instance_valid(chat_panel) and event is InputEventMouseButton and event.pressed:
 		var chat_rect := chat_panel.get_global_rect()
 		if chat_rect.has_point(event.position):
+			return
+	
+	# --- Block background toggle when clicking on the zoom buttons area ---
+	if is_instance_valid(zoom_box) and event is InputEventMouseButton and event.pressed:
+		var zoom_rect := zoom_box.get_global_rect()
+		zoom_rect = zoom_rect.grow(20) # extra padding so clicks near the buttons also don't toggle
+		if zoom_rect.has_point(event.position):
 			return
 
 	# Check if the event is a key press event
