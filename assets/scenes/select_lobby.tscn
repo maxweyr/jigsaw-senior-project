@@ -1,10 +1,10 @@
 [gd_scene load_steps=6 format=3 uid="uid://d3q3u3b0ad0au"]
 
 [ext_resource type="Texture2D" uid="uid://cjejvll72xhdf" path="res://assets/puzzles/new_background.jpg" id="1_oqbou"]
-[ext_resource type="FontFile" uid="uid://kspgvi10aw1x" path="res://assets/fonts/ArchitectsDaughter.ttf" id="2_ypnid"]
 [ext_resource type="Texture2D" uid="uid://rsjeptyovi0j" path="res://assets/puzzles/jigsawpuzzleimages/fpeacock.jpg" id="3_oseos"]
 [ext_resource type="Theme" uid="uid://cfxebjeqy3ke7" path="res://assets/themes/bold_text.tres" id="4_hduis"]
 [ext_resource type="Theme" uid="uid://0xk2aimn5x6r" path="res://assets/themes/main_menu_buttons.tres" id="5_tsqta"]
+[ext_resource type="LabelSettings" uid="uid://b4vxt0nhf3rda" path="res://assets/themes/architects_title_50.tres" id="6_title"]
 
 [node name="SelectLobby" type="Control"]
 layout_mode = 3
@@ -34,12 +34,8 @@ theme_override_constants/separation = 30
 [node name="Title" type="Label" parent="VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
-theme_override_colors/font_color = Color(1, 0.741176, 0.34902, 1)
-theme_override_colors/font_shadow_color = Color(0.478431, 0.215686, 0.0588235, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_fonts/font = ExtResource("2_ypnid")
-theme_override_font_sizes/font_size = 50
 text = "Select Lobby To Join"
+label_settings = ExtResource("6_title")
 
 [node name="GridContainer" type="GridContainer" parent="VBoxContainer"]
 layout_mode = 2

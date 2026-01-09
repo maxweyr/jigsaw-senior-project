@@ -1,0 +1,9 @@
+[gd_resource type="LabelSettings" load_steps=2 format=3 uid="uid://cx1c1m1i0n5c6"]
+
+[ext_resource type="FontFile" uid="uid://kspgvi10aw1x" path="res://assets/fonts/ArchitectsDaughter.ttf" id="1_arch"]
+
+[resource]
+font = ExtResource("1_arch")
+font_size = 36
+font_color = Color(1, 0.741176, 0.34902, 1)
+shadow_color = Color(0.533333, 0.294118, 0.12549, 1)

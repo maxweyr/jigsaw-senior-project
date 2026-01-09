@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://doax16vbups3k"]
+[gd_scene load_steps=17 format=3 uid="uid://doax16vbups3k"]
 
 [ext_resource type="Script" uid="uid://bedcaaqrsuucb" path="res://assets/scripts/select_puzzle.gd" id="1_lx4o5"]
 [ext_resource type="Texture2D" uid="uid://djl2guwkgu775" path="res://assets/puzzles/AdobeStock_104619688.jpeg" id="2_xyg5e"]
@@ -7,10 +7,12 @@
 [ext_resource type="Theme" uid="uid://0xk2aimn5x6r" path="res://assets/themes/main_menu_buttons.tres" id="4_05g7m"]
 [ext_resource type="Theme" uid="uid://bkvtkuva05g1w" path="res://assets/themes/display_puzzles_buttons.tres" id="4_ctan7"]
 [ext_resource type="Theme" uid="uid://cfxebjeqy3ke7" path="res://assets/themes/bold_text.tres" id="4_nyl1e"]
+[ext_resource type="LabelSettings" uid="uid://b4vxt0nhf3rda" path="res://assets/themes/architects_title_50.tres" id="4_title"]
 [ext_resource type="Texture2D" uid="uid://chxeyv42e71ho" path="res://assets/images/left_arrow.png" id="5_2ca8n"]
 [ext_resource type="AudioStream" uid="uid://dbjdeh7acychu" path="res://assets/sounds/finger-snap-179180.mp3" id="5_7prs1"]
 [ext_resource type="Texture2D" uid="uid://fup4ssxc0htk" path="res://assets/images/Left_Arrow_Light copy.png" id="7_http0"]
 [ext_resource type="FontFile" uid="uid://eiuxkjsrskgd" path="res://assets/fonts/KiriFont.ttf" id="9_3rueg"]
+[ext_resource type="LabelSettings" uid="uid://cx1c1m1i0n5c6" path="res://assets/themes/architects_page_indicator_36.tres" id="10_page"]
 [ext_resource type="Texture2D" uid="uid://uibcjjsvjae7" path="res://assets/images/Right_Arrow_Light.png" id="9_i8mdc"]
 
 [sub_resource type="FontVariation" id="FontVariation_05g7m"]
@@ -116,12 +118,8 @@ offset_left = 795.0
 offset_top = 31.0
 offset_right = 1181.0
 offset_bottom = 118.0
-theme_override_colors/font_color = Color(1, 0.741176, 0.34902, 1)
-theme_override_colors/font_shadow_color = Color(0.478431, 0.215686, 0.0588235, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_fonts/font = ExtResource("4_3hl4u")
-theme_override_font_sizes/font_size = 50
 text = "Select Puzzle"
+label_settings = ExtResource("4_title")
 
 [node name="PageIndicator" type="Label" parent="."]
 layout_mode = 0
@@ -129,11 +127,8 @@ offset_left = 866.0
 offset_top = 935.0
 offset_right = 1070.0
 offset_bottom = 998.0
-theme_override_colors/font_color = Color(1, 0.741176, 0.34902, 1)
-theme_override_colors/font_shadow_color = Color(0.533333, 0.294118, 0.12549, 1)
-theme_override_fonts/font = ExtResource("4_3hl4u")
-theme_override_font_sizes/font_size = 36
 text = "1 out of 2"
+label_settings = ExtResource("10_page")
 
 [node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("5_7prs1")

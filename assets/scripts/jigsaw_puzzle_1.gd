@@ -37,6 +37,7 @@ var connected_players = [] # Array to store connected player names (excluding se
 const BOX_BACKGROUND_COLOR = Color(0.15, 0.15, 0.2, 0.85) # Dark semi-transparent
 const BOX_BORDER_COLOR = Color(0.4, 0.4, 0.45, 0.9)
 const BOX_FONT_COLOR = Color(0.95, 0.95, 0.95)
+const WIN_COUNTDOWN_SECONDS := 10
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -725,6 +726,21 @@ func show_win_screen():
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.text = "You Have Finished the Puzzle!"
 	overlay.add_child(label)
+
+	var countdown_label := Label.new()
+	var countdown_settings = load("res://assets/themes/menu_label_settings_15.tres") as LabelSettings
+	if countdown_settings:
+		countdown_label.label_settings = countdown_settings
+	else:
+		countdown_label.add_theme_font_override("font", font)
+		countdown_label.add_theme_font_size_override("font_size", 40)
+	countdown_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var countdown_dy := -120
+	countdown_label.offset_top += countdown_dy
+	countdown_label.offset_bottom += countdown_dy
+	countdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	countdown_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	overlay.add_child(countdown_label)
 	
 	var ui := get_tree().current_scene.get_node_or_null("UI")
 	if ui == null:
@@ -735,8 +751,17 @@ func show_win_screen():
 		get_tree().current_scene.add_child(ui)
 	ui.add_child(overlay)
 	
-	# wait for user to leave the puzzle
-	await main_menu
+	var remaining := WIN_COUNTDOWN_SECONDS
+	while remaining > 0:
+		if not is_inside_tree():
+			return
+		countdown_label.text = "Returning to lobby in %d..." % remaining
+		await get_tree().create_timer(1.0).timeout
+		remaining -= 1
+	countdown_label.text = "Returning to lobby..."
+	await get_tree().process_frame
+	if is_inside_tree():
+		_on_back_pressed()
 	overlay.queue_free()
 		
 	

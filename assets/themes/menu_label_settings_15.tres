@@ -1,0 +1,13 @@
+[gd_resource type="LabelSettings" load_steps=2 format=3 uid="uid://b1d0g0p7eu7k4"]
+
+[ext_resource type="FontFile" uid="uid://eiuxkjsrskgd" path="res://assets/fonts/KiriFont.ttf" id="1_f0f0e"]
+
+[resource]
+font = ExtResource("1_f0f0e")
+font_size = 30
+font_color = Color(0.941176, 0.67451, 0.0431373, 1)
+outline_size = 5
+outline_color = Color(0.305882, 0.176471, 0.109804, 1)
+shadow_size = 10
+shadow_color = Color(0.419608, 0.294118, 0.196078, 1)
+shadow_offset = Vector2(5, 5)

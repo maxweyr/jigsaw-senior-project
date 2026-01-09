@@ -1,31 +1,12 @@
-[gd_scene load_steps=10 format=3 uid="uid://dye8ygfcvmig0"]
+[gd_scene load_steps=9 format=3 uid="uid://dye8ygfcvmig0"]
 
 [ext_resource type="Script" uid="uid://clejxby4nxls2" path="res://assets/scripts/new_menu.gd" id="1_0jmf4"]
 [ext_resource type="Texture2D" uid="uid://cjejvll72xhdf" path="res://assets/puzzles/new_background.jpg" id="2_1empl"]
 [ext_resource type="Texture2D" uid="uid://djl2guwkgu775" path="res://assets/puzzles/AdobeStock_104619688.jpeg" id="2_ae42l"]
 [ext_resource type="Theme" uid="uid://0xk2aimn5x6r" path="res://assets/themes/main_menu_buttons.tres" id="3_ro0bn"]
-[ext_resource type="FontFile" uid="uid://eiuxkjsrskgd" path="res://assets/fonts/KiriFont.ttf" id="4_6yxl4"]
+[ext_resource type="LabelSettings" uid="uid://b1d0g0p7eu7k4" path="res://assets/themes/menu_label_settings_15.tres" id="5_15luh"]
+[ext_resource type="LabelSettings" uid="uid://e3n7t5p3w8h1f" path="res://assets/themes/menu_label_settings_75.tres" id="5_75luh"]
 [ext_resource type="AudioStream" uid="uid://dbjdeh7acychu" path="res://assets/sounds/finger-snap-179180.mp3" id="6_7rt3t"]
-
-[sub_resource type="LabelSettings" id="LabelSettings_75luh"]
-font = ExtResource("4_6yxl4")
-font_size = 100
-font_color = Color(0.941176, 0.67451, 0.0431373, 1)
-outline_size = 15
-outline_color = Color(0.305882, 0.176471, 0.109804, 1)
-shadow_size = 30
-shadow_color = Color(0.419608, 0.294118, 0.196078, 1)
-shadow_offset = Vector2(5, 5)
-
-[sub_resource type="LabelSettings" id="LabelSettings_15luh"]
-font = ExtResource("4_6yxl4")
-font_size = 30
-font_color = Color(0.941176, 0.67451, 0.0431373, 1)
-outline_size = 5
-outline_color = Color(0.305882, 0.176471, 0.109804, 1)
-shadow_size = 10
-shadow_color = Color(0.419608, 0.294118, 0.196078, 1)
-shadow_offset = Vector2(5, 5)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxRenamePopup"]
 content_margin_left = 16.0
@@ -80,7 +61,7 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 100
 text = "Jigsaw
 Puzzle"
-label_settings = SubResource("LabelSettings_75luh")
+label_settings = ExtResource("5_75luh")
 horizontal_alignment = 1
 
 [node name="NicknameLabel" type="Label" parent="VBoxContainer"]
@@ -88,7 +69,7 @@ custom_minimum_size = Vector2(0, 5)
 layout_mode = 2
 theme_override_font_sizes/font_size = 25
 text = "Welcome,  "
-label_settings = SubResource("LabelSettings_15luh")
+label_settings = ExtResource("5_15luh")
 horizontal_alignment = 1
 
 [node name="select puzzle" type="Button" parent="VBoxContainer"]

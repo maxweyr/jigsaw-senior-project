@@ -356,8 +356,8 @@ func write_puzzle_time_spent(puzzle_name):
 	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/active_puzzles")
 	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
 	if not current_puzzle:
-		print("ERROR: ACCESSING PUZZLE FB")
-		get_tree().quit(-1)
+		print("WARN: Active puzzle missing when updating time_spent; likely completed.")
+		return
 	else:
 		var time = current_puzzle.get_value("time_spent")
 		if(!time):
