@@ -272,8 +272,6 @@ func create_initial_user(id: String) -> FirestoreDocument:
 func get_user_doc(id: String) -> FirestoreDocument:
 	var users = get_user_collection()
 	var user = await users.get_doc(id)
-	if !user: # if first encounter w/ this user => add them to collection w/ basic field info
-		user = await create_initial_user(id)
 	return user
 
 ##==============================
