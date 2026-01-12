@@ -226,19 +226,38 @@ func create_piece_count_display():
 func update_piece_count_display():
 	if not is_instance_valid(_cur_count_label):
 		return
+	if PuzzleVar.global_num_pieces <= 0:
+		_cur_count_label.text = "0"
+		_total_label.text = "0"
+		return
+	if PuzzleVar.ordered_pieces_array.size() < PuzzleVar.global_num_pieces:
+		_cur_count_label.text = "0"
+		_total_label.text = str(PuzzleVar.global_num_pieces)
+		return
+	for piece in PuzzleVar.ordered_pieces_array:
+		if piece.group_number == null:
+			_cur_count_label.text = "0"
+			_total_label.text = str(PuzzleVar.global_num_pieces)
+			return
 
-	var remaining = -1
+	# Count groups to avoid showing N/N when two large groups remain.
+	var group_sizes := {}
 	for x in range(PuzzleVar.global_num_pieces):
-		if PuzzleVar.ordered_pieces_array[x].group_number == PuzzleVar.ordered_pieces_array[x].ID:
-			remaining += 1
+		var group_id = PuzzleVar.ordered_pieces_array[x].group_number
+		if not group_sizes.has(group_id):
+			group_sizes[group_id] = 1
+		else:
+			group_sizes[group_id] += 1
 
-	if remaining == -1:
-		remaining = PuzzleVar.global_num_pieces
-
-	if remaining == 0:
+	var groups = group_sizes.size()
+	var completed = 0
+	if groups == 1:
+		completed = PuzzleVar.global_num_pieces
 		show_win_screen()
-
-	var completed = PuzzleVar.global_num_pieces - remaining
+	elif groups == PuzzleVar.global_num_pieces:
+		completed = 0
+	else:
+		completed = PuzzleVar.global_num_pieces - groups + 1
 
 	# No layout adjustments needed anymore
 	_cur_count_label.text = str(completed)
@@ -767,7 +786,10 @@ func _on_back_pressed() -> void:
 		if NetworkManager.is_online and NetworkManager.connected_players.is_empty():
 			print("Puzzle complete, deleting state")
 			FireAuth.write_complete_server()
-
+		else:
+			print("Puzzle complete, deleting state")
+			FireAuth.write_complete(PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]))
+	
 	# 2. Handle multiplayer disconnection if this is an online client
 	if NetworkManager.is_online and not NetworkManager.is_server:
 		print("Client leaving online session. Closing connection...")
