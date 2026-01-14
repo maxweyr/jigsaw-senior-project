@@ -27,6 +27,7 @@ var current_puzzle_id: String = ""
 var connected_players = {}
 var should_load_game = false
 var ready_to_load = false
+var kicked_for_new_puzzle: bool = false
 const MAX_PLAYERS = 8
 
 # --- server-side lobby maps (server only) ---
@@ -118,6 +119,9 @@ func set_offline_mode():
 	is_online = false
 	is_server = false # Client instance is never the "server"
 	is_offline_authority = true # It IS the authority locally for offline play
+	kicked_for_new_puzzle = false
+	should_load_game = false
+	ready_to_load = false
 	current_puzzle_id = ""
 	connected_players.clear()
 
@@ -186,6 +190,12 @@ func send_chat_message(message: String):
 		return
 	# Client only: send chat message to server	
 	rpc_id(1, "_receive_chat_message", FireAuth.get_nickname(), message)
+
+func kick_other_clients_in_lobby():
+	if not is_online or is_server:
+		return
+	rpc_id(1, "request_kick_lobby_clients")
+
 # Disconnect from the current session
 func disconnect_from_server():
 	if is_server: return # Dedicated server doesn't disconnect this way
@@ -302,6 +312,29 @@ func _send_puzzle_info(puzzle_id: String):
 	print("NetworkManager (Client): Received puzzle ID '", puzzle_id, "'")
 	puzzle_info_received.emit(puzzle_id) # Emit signal for main_menu
 
+@rpc("any_peer", "call_remote", "reliable")
+func request_kick_lobby_clients():
+	if not is_server:
+		return
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	var lobby = client_lobby.get(sender_id, null)
+	if lobby == null:
+		return
+	var peers: Array = lobby_players.get(lobby, {}).keys()
+	for pid in peers:
+		if pid == sender_id:
+			continue
+		rpc_id(pid, "_kick_for_new_puzzle")
+		if multiplayer.multiplayer_peer:
+			multiplayer.multiplayer_peer.disconnect_peer(pid)
+
+@rpc("authority", "call_remote", "reliable")
+func _kick_for_new_puzzle():
+	if is_server:
+		return
+	kicked_for_new_puzzle = true
+	PuzzleVar.auto_rejoin_online = true
+
 ##==============================
 ## Multiplayer Callback Methods
 ##==============================
@@ -351,4 +384,16 @@ func _on_connection_failed():
 
 func _on_server_disconnected():
 	print("NetworkManager: Server disconnected (callback)")
+	var was_kicked := kicked_for_new_puzzle
+	kicked_for_new_puzzle = false
 	disconnect_from_server()
+	if was_kicked and not is_server:
+		print("NetworkManager: Returning to menu to rejoin with new puzzle")
+		if PuzzleVar:
+			PuzzleVar.is_online_selector = false
+			PuzzleVar.auto_rejoin_online = true
+		var tree = get_tree()
+		if tree and tree.current_scene:
+			var target_path = "res://assets/scenes/new_menu.tscn"
+			if tree.current_scene.scene_file_path != target_path:
+				tree.change_scene_to_file(target_path)

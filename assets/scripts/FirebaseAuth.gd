@@ -440,19 +440,93 @@ func write_puzzle_state(state_arr, puzzle_name, size):
 	current_puzzle.add_or_update_field("progress", int(percentage_done))
 	await active_puzzles.update(current_puzzle)
 
+func ensure_lobby_state(lobby_num: int):
+	''' Ensure lobby state doc exists and has default fields '''
+	var lobby_path := "sp_servers/lobbies/lobby" + str(lobby_num)
+	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection(lobby_path)
+	var state = await lobby_puzzle.get_doc("state")
+	if not state:
+		return await lobby_puzzle.add("state", {
+			"isActive": false,
+			"puzzle_choice": {},
+			"piece_locations": [],
+			"piece_locations2": [],
+			"progress": 0,
+		})
+
+	var dirty := false
+	if state.get_value("isActive") == null:
+		state.add_or_update_field("isActive", false)
+		dirty = true
+	if state.get_value("puzzle_choice") == null:
+		state.add_or_update_field("puzzle_choice", {})
+		dirty = true
+	if state.get_value("piece_locations") == null:
+		state.add_or_update_field("piece_locations", [])
+		dirty = true
+	if state.get_value("piece_locations2") == null:
+		state.add_or_update_field("piece_locations2", [])
+		dirty = true
+	if state.get_value("progress") == null:
+		state.add_or_update_field("progress", 0)
+		dirty = true
+
+	if dirty:
+		await lobby_puzzle.update(state)
+	return state
+
+func try_claim_lobby_selector(lobby_num: int) -> bool:
+	''' Attempt to set isActive=true to claim puzzle selection lock '''
+	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(lobby_num))
+	var state = await ensure_lobby_state(lobby_num)
+	var active_flag = state.get_value("isActive")
+	if active_flag == null or active_flag == false:
+		state.add_or_update_field("isActive", true)
+		await lobby_puzzle.update(state)
+		return true
+	return false
+
+func set_lobby_puzzle_choice(choice: Dictionary, lobby_num: int) -> void:
+	''' Persist the chosen puzzle for the lobby and reset progress '''
+	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(lobby_num))
+	var state = await ensure_lobby_state(lobby_num)
+	state.add_or_update_field("puzzle_choice", choice)
+	state.add_or_update_field("piece_locations", [])
+	state.add_or_update_field("piece_locations2", [])
+	state.add_or_update_field("progress", 0)
+	state.add_or_update_field("isActive", true)
+	await lobby_puzzle.update(state)
+
+func release_lobby_selector(lobby_num: int) -> void:
+	''' Release selection lock only if no puzzle has been chosen yet '''
+	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(lobby_num))
+	var state = await ensure_lobby_state(lobby_num)
+	var choice = state.get_value("puzzle_choice")
+	if choice is Dictionary and not choice.is_empty():
+		return
+	if choice != null and not (choice is Dictionary):
+		return
+	state.add_or_update_field("isActive", false)
+	await lobby_puzzle.update(state)
+
+func get_lobby_choice(lobby_num: int) -> Dictionary:
+	var state = await ensure_lobby_state(lobby_num)
+	var choice = state.get_value("puzzle_choice")
+	if choice == null:
+		return {}
+	return choice
+
 func check_lobby_choice(lobby_num):
 	''' Senior Project
 	Checks the lobby number for a valid choice
 	
 	returns {} if no choice or state
 	'''
-	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(lobby_num))
-	var state = await lobby_puzzle.get_doc("state")
-	if not state:
-		print("FB: Checked lobby", lobby_num, " for state but did not find one (looking for choice)")
-		return {}
+	var state = await ensure_lobby_state(lobby_num)
 	var choice = state.get_value("puzzle_choice")
-	if(!choice):
+	if choice == null:
+		return {}
+	if choice is Dictionary and choice.is_empty():
 		return {}
 	return choice
 
@@ -460,11 +534,7 @@ func check_lobby_puzzle_state_server(lobby_num):
 	''' Senior Project
 	Checks the lobby number for a valid position array
 	'''
-	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(lobby_num))
-	var state = await lobby_puzzle.get_doc("state")
-	if not state:
-		print("FB: Server State Not Found in Lobby", PuzzleVar.lobby_number)
-		return []
+	var state = await ensure_lobby_state(lobby_num)
 	var pos = state.get_value("piece_locations")
 	if(!pos):
 		return false
@@ -477,11 +547,7 @@ func write_puzzle_state_server(lobby_num):
 	if(NetworkManager.is_server):
 		return
 	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(lobby_num))
-	var state = await lobby_puzzle.get_doc("state")
-	if not state:
-		print("ERROR: Server State Not Found in Lobby", lobby_num)
-		get_tree().quit(-1)
-		return
+	var state = await ensure_lobby_state(lobby_num)
 	if(PuzzleVar.ordered_pieces_array.is_empty()):
 		print("Trying to update puzzle state to empty????")
 		return
@@ -505,6 +571,7 @@ func write_puzzle_state_server(lobby_num):
 	state.add_or_update_field("piece_locations", puzzle_data)
 	state.add_or_update_field("piece_locations2", puzzle_data)
 	state.add_or_update_field("progress", int(percentage_done))
+	state.add_or_update_field("isActive", true)
 	await lobby_puzzle.update(state)
 	print("updated state on server")
 
@@ -524,13 +591,7 @@ func get_puzzle_state_server():
 	Returns the puzzle state for the user's selected lobby
 	'''
 	
-	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(PuzzleVar.lobby_number))
-	#print(lobby_puzzle)
-	var state = await lobby_puzzle.get_doc("state")
-	if(!state):
-		print("FB Could not find state for lobby", PuzzleVar.lobby_number)
-		lobby_puzzle.add("state", {"progress": 0})
-		return []
+	var state = await ensure_lobby_state(PuzzleVar.lobby_number)
 
 	# set puzzle choice
 	var choice = state.get_value("puzzle_choice")
@@ -579,8 +640,10 @@ func write_complete_server():
 	on next time joining multiplayer, a new puzzle will be loaded in
 	'''
 	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(PuzzleVar.lobby_number))
-	var state = await lobby_puzzle.get_doc("state")
+	var state = await ensure_lobby_state(PuzzleVar.lobby_number)
+	state.add_or_update_field("piece_locations", [])
 	state.add_or_update_field("piece_locations2", [])
 	state.add_or_update_field("progress", 0)
 	state.add_or_update_field("puzzle_choice", {})
+	state.add_or_update_field("isActive", false)
 	await lobby_puzzle.update(state)

@@ -5,6 +5,9 @@ var overlay
 @onready var nickname_label: Label = $VBoxContainer/NicknameLabel
 var rename_popup: PopupPanel
 var nickname_line_edit: LineEdit
+var joining_online := false
+const STATUS_FONT = preload("res://assets/fonts/KiriFont.ttf")
+const STATUS_TEXT_COLOR = Color(0.941176, 0.67451, 0.0431373, 1)
 
 func _ready():
 	rename_popup = get_node_or_null("RenamePopup")
@@ -42,6 +45,10 @@ func _ready():
 		FireAuth.login_failed.connect(_on_login)
 	_refresh_nickname_display()
 
+	if PuzzleVar.auto_rejoin_online:
+		PuzzleVar.auto_rejoin_online = false
+		await _auto_rejoin_after_kick()
+
 func _process(_delta):
 	pass
 
@@ -75,48 +82,42 @@ func _on_select_puzzle_pressed():
 	get_tree().change_scene_to_file("res://assets/scenes/select_puzzle.tscn")
 
 func _on_play_online_pressed():
+	if joining_online:
+		return
 	$AudioStreamPlayer.play()
-	PuzzleVar.choice = await PuzzleVar.get_online_choice()
-	print("ONLINE CHOICE = ", PuzzleVar.choice)
-	# Check if we have network connectivity
 	if !FireAuth.is_online:
-		# Show a message about being offline
 		var popup = AcceptDialog.new()
 		popup.title = "Offline Mode"
 		popup.dialog_text = "Cannot play online while in offline mode. Please check your internet connection."
 		add_child(popup)
 		popup.popup_centered()
+		joining_online = false
 		return
-		# Attempt to connect to the hard-coded server
 
-	print("Attempting to connect to server...")
-	if NetworkManager.join_server():
-		# Show simple connecting message
-		var connecting_label = Label.new()
-		connecting_label.name = "ConnectingLabel"
-		connecting_label.text = "Connecting to server..."
-		connecting_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		connecting_label.position = Vector2(get_viewport_rect().size.x / 2 - 100, get_viewport_rect().size.y / 2)
-		add_child(connecting_label)
-		await FireAuth.update_my_player_entry(1)
-		FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
-	else:
-		print("Failed to initiate connection")
-		# Show error message
-		var error_popup = AcceptDialog.new()
-		error_popup.title = "Connection Error"
-		error_popup.dialog_text = "Failed to connect to server."
-		add_child(error_popup)
-		error_popup.popup_centered()
+	joining_online = true
+	PuzzleVar.choice = {}
+	PuzzleVar.is_online_selector = false
+
+	var lobby_choice := await FireAuth.get_lobby_choice(PuzzleVar.lobby_number)
+	if not lobby_choice.is_empty():
+		PuzzleVar.choice = lobby_choice
+		_join_online_with_choice()
+		return
+
+	var claimed := await FireAuth.try_claim_lobby_selector(PuzzleVar.lobby_number)
+	if claimed:
+		PuzzleVar.is_online_selector = true
+		joining_online = false
+		get_tree().change_scene_to_file("res://assets/scenes/select_puzzle.tscn")
+		return
+
+	await _wait_for_lobby_choice_and_join()
 
 # Network signal handlers
 func _on_client_connected():
 	print("Connected to server successfully")
-	
-	# Remove connecting label if it exists
-	var connecting_label = get_node_or_null("ConnectingLabel")
-	if connecting_label:
-		connecting_label.queue_free()
+	_clear_status_label("ConnectingLabel")
+	await FireAuth.update_my_player_entry(PuzzleVar.lobby_number)
 	
 	# Update the puzzle choice to match server's choice
 	if NetworkManager:
@@ -137,10 +138,8 @@ func _on_client_connected():
 		print("ERROR: network_manager is null!")
 
 func _on_connection_failed():
-	# Remove connecting label if it exists
-	var connecting_label = get_node_or_null("ConnectingLabel")
-	if connecting_label:
-		connecting_label.queue_free()
+	_clear_status_label("ConnectingLabel")
+	joining_online = false
 	
 	print("Connection to server failed")
 	
@@ -150,6 +149,47 @@ func _on_connection_failed():
 	error_popup.dialog_text = "Connection to server failed."
 	add_child(error_popup)
 	error_popup.popup_centered()
+
+func _join_online_with_choice():
+	if PuzzleVar.choice.is_empty():
+		joining_online = false
+		_show_simple_popup("No Puzzle Selected", "Please wait for a puzzle selection before joining.")
+		return
+	_show_status_label("Connecting to server...", "ConnectingLabel")
+	print("Attempting to connect to server...")
+	if NetworkManager.join_server():
+		return
+	_clear_status_label("ConnectingLabel")
+	joining_online = false
+	_show_simple_popup("Connection Error", "Failed to connect to server.")
+
+func _wait_for_lobby_choice_and_join():
+	_show_status_label("Waiting for lobby host to pick a puzzle...", "ConnectingLabel")
+	var attempts := 0
+	var choice: Dictionary = {}
+	while choice.is_empty() and attempts < 20:
+		await get_tree().create_timer(1.0).timeout
+		choice = await FireAuth.get_lobby_choice(PuzzleVar.lobby_number)
+		attempts += 1
+	_clear_status_label("ConnectingLabel")
+	if choice.is_empty():
+		joining_online = false
+		_show_simple_popup("Lobby Waiting", "No puzzle selected yet. Please try again in a moment.")
+		return
+	PuzzleVar.choice = choice
+	_join_online_with_choice()
+
+func _auto_rejoin_after_kick():
+	joining_online = true
+	_show_status_label("Rejoining lobby with new puzzle...", "ConnectingLabel")
+	var choice := await FireAuth.get_lobby_choice(PuzzleVar.lobby_number)
+	if choice.is_empty():
+		joining_online = false
+		_clear_status_label("ConnectingLabel")
+		_show_simple_popup("Reconnect", "Host selected a new puzzle. Please press Play Online to rejoin.")
+		return
+	PuzzleVar.choice = choice
+	_join_online_with_choice()
 
 func _on_quit_pressed():
 	# quit the game
@@ -237,6 +277,57 @@ func _on_sign_out_pressed() -> void:
 		printerr("Failed to clear user data in ", file_path)
 	get_tree().change_scene_to_file("res://assets/scenes/login.tscn")	# Go back to login screen
 	# _on_quit_pressed() # Quit the game to ensure all data is cleared
+
+func _show_status_label(text: String, node_name: String = "ConnectingLabel"):
+	var container = get_node_or_null(node_name)
+	var label: Label = null
+	if container == null:
+		container = PanelContainer.new()
+		container.name = node_name
+		container.custom_minimum_size = Vector2(720, 120)
+		container.anchor_left = 0.5
+		container.anchor_top = 0.5
+		container.anchor_right = 0.5
+		container.anchor_bottom = 0.5
+		container.offset_left = -345
+		container.offset_top = -60
+		container.offset_right = 380
+		container.offset_bottom = 60
+		add_child(container)
+
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color(0.07, 0.07, 0.08, 0.92)
+		style.border_width_left = 1
+		style.border_width_top = 1
+		style.border_width_right = 1
+		style.border_width_bottom = 1
+		style.border_color = Color(0.44, 0.39, 0.37, 1)
+		style.corner_radius_top_left = 8
+		style.corner_radius_top_right = 8
+		style.corner_radius_bottom_right = 8
+		style.corner_radius_bottom_left = 8
+		container.add_theme_stylebox_override("panel", style)
+
+		label = Label.new()
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		container.add_child(label)
+	else:
+		label = container.get_child(0) as Label
+	if label and text == "Waiting for lobby host to pick a puzzle...":
+		label.add_theme_font_override("font", STATUS_FONT)
+		label.add_theme_font_size_override("font_size", 42)
+		label.add_theme_color_override("font_color", STATUS_TEXT_COLOR)
+	if label:
+		label.text = text
+
+func _clear_status_label(node_name: String = "ConnectingLabel"):
+	var label = get_node_or_null(node_name)
+	if label:
+		label.queue_free()
 
 func _show_simple_popup(title: String, message: String):
 	var popup = AcceptDialog.new()

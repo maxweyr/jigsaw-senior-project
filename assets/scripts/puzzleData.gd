@@ -48,6 +48,8 @@ var background_clicked = false
 # New variables for online mode
 var is_online_mode = false
 var lobby_number
+var is_online_selector = false
+var auto_rejoin_online = false
 
 func get_random_puzzles_w_size(size):
 	randomize() # initialize a random seed for the random number generator
@@ -77,16 +79,15 @@ func get_random_puzzles():
 func get_online_choice():
 	'''
 		Checks database for if the lobby has a choice already,
-		if it doesnt, it will create a new random choice
+		if it doesnt, it will return {}
 		
 		returns {} to be used for choice
 	'''
 	# First, check if database has choice saved
-	var choice = await FireAuth.check_lobby_choice(PuzzleVar.lobby_number)
-	if(choice):
+	var choice = await FireAuth.get_lobby_choice(PuzzleVar.lobby_number)
+	if not choice.is_empty():
 		return choice
-	else:
-		return get_random_puzzles_w_size(100)
+	return {}
 		
 func load_and_or_add_puzzle_random_loc(parent_node: Node, sprite_scene: PackedScene, selected_puzzle_dir: String, add: bool) -> void:
 	PuzzleVar.ordered_pieces_array.clear()
