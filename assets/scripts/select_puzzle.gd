@@ -41,6 +41,11 @@ func _ready():
 	# and will link them so that they all carry out the same function
 	# that function being button_pressed
 	print("SELECT_PUZZLE")
+	if get_tree():
+		get_tree().set_auto_accept_quit(false)
+	if NetworkManager:
+		NetworkManager.client_connected.connect(_on_online_client_connected)
+		NetworkManager.connection_failed.connect(_on_online_connection_failed)
 	# populate local_puzzle_list with puzzles and size
 	local_puzzle_list = PuzzleVar.get_avail_puzzles()
 	print(local_puzzle_list)
@@ -68,6 +73,22 @@ func _ready():
 	# populates the buttons in the grid with actual images so that you can
 	# preview which puzzle you want to select
 	self.populate_grid_2()
+
+func _exit_tree():
+	if get_tree():
+		get_tree().set_auto_accept_quit(true)
+
+func _notification(what):
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		if PuzzleVar.is_online_selector:
+			await _release_online_selector_lock()
+		get_tree().quit()
+
+func _release_online_selector_lock():
+	if not PuzzleVar.is_online_selector:
+		return
+	await FireAuth.release_lobby_selector(PuzzleVar.lobby_number)
+	PuzzleVar.is_online_selector = false
 
 		
 	
@@ -278,7 +299,42 @@ func add_custom_label(button, percentage):
 func _on_start_puzzle_pressed() -> void:
 	loading.show()  # show loading screen immediately
 	await get_tree().process_frame  # pause
+	if PuzzleVar.is_online_selector:
+		await FireAuth.set_lobby_puzzle_choice(PuzzleVar.choice, PuzzleVar.lobby_number)
+		PuzzleVar.is_online_selector = false
+		if NetworkManager.join_server():
+			return
+		loading.hide()
+		var error_popup = AcceptDialog.new()
+		error_popup.title = "Connection Error"
+		error_popup.dialog_text = "Failed to connect to server."
+		add_child(error_popup)
+		error_popup.popup_centered()
+		return
 	get_tree().change_scene_to_file("res://assets/scenes/jigsaw_puzzle_1.tscn")
+
+func _on_online_client_connected():
+	print("Connected to server from select_puzzle")
+	await FireAuth.update_my_player_entry(PuzzleVar.lobby_number)
+	if NetworkManager:
+		NetworkManager.should_load_game = true
+		var timer = Timer.new()
+		add_child(timer)
+		timer.wait_time = 0.5
+		timer.one_shot = true
+		timer.timeout.connect(func():
+			NetworkManager.ready_to_load = true
+			NetworkManager.kick_other_clients_in_lobby()
+		)
+		timer.start()
+
+func _on_online_connection_failed():
+	loading.hide()
+	var error_popup = AcceptDialog.new()
+	error_popup.title = "Connection Error"
+	error_popup.dialog_text = "Failed to connect to server."
+	add_child(error_popup)
+	error_popup.popup_centered()
 
 
 func _on_go_back_pressed() -> void:
@@ -288,4 +344,7 @@ func _on_go_back_pressed() -> void:
 
 
 func _on_go_back_to_menu_pressed() -> void:
+	if PuzzleVar.is_online_selector:
+		loading.show()
+		await _release_online_selector_lock()
 	get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn")
