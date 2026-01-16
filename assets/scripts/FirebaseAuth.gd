@@ -364,6 +364,24 @@ func write_puzzle_time_spent(puzzle_name):
 			current_puzzle.add_or_update_field("time_spent", int(time) + 1)
 		await active_puzzles.update(current_puzzle)
 
+func mp_write_puzzle_time_spent(puzzle_name):
+	''' Senior Project
+	Updates the amount spent on a specific puzzle
+	'''
+	var users: FirestoreCollection = Firebase.Firestore.collection("sp_users")
+	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/mp_active_puzzles")
+	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
+	if not current_puzzle:
+		print("ERROR: ACCESSING PUZZLE FB")
+		get_tree().quit(-1)
+	else:
+		var time = current_puzzle.get_value("time_spent")
+		if(!time):
+			current_puzzle.set("time_spent", 1)
+		else:
+			current_puzzle.add_or_update_field("time_spent", int(time) + 1)
+		await active_puzzles.update(current_puzzle)
+
 func write_completed_puzzle(puzzle_name):
 	''' Senior project
 	Gets the user's info about puzzle and stores it in completed puzzles DB
@@ -400,6 +418,24 @@ func update_active_puzzle(puzzle_name):
 	'''
 	var users: FirestoreCollection = Firebase.Firestore.collection("sp_users")
 	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/active_puzzles")
+	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
+	
+	if not current_puzzle:
+		await active_puzzles.add(puzzle_name, {
+			"start_time": Time.get_datetime_string_from_system(),
+			"last_opened": Time.get_datetime_string_from_system(),
+			"time_spent": 0,
+		})
+	else:
+		current_puzzle.add_or_update_field("last_opened", Time.get_datetime_string_from_system())
+		await active_puzzles.update(current_puzzle)	
+
+func mp_update_active_puzzle(puzzle_name):
+	''' Senior Project
+	On multiplayer puzzle select, adds active_puzzle
+	'''
+	var users: FirestoreCollection = Firebase.Firestore.collection("sp_users")
+	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/mp_active_puzzles")
 	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
 	
 	if not current_puzzle:
@@ -634,14 +670,46 @@ func write_complete(puzzle_name):
 func write_complete_server():
 	''' Senior Project
 	
+	For Multiplayer, we simply remove all of the fields in state, write data to Firebase,
+	on next time joining multiplayer, a new puzzle will be loaded in
+	'''
+	var puzzle_name = PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"])
+	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/mp_active_puzzles")
+	var completed_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/mp_completed_puzzles")
+	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
+	if(!current_puzzle):
+		print("ERROR: could not send puzzle to complete bc it does not exist in active puzzles")
+		return 
+	var st = current_puzzle.get_value("start_time")
+	var ts = current_puzzle.get_value("time_spent")
+	# save stats
+	await completed_puzzles.add(Time.get_datetime_string_from_system(), {
+		"puzzle_name" : puzzle_name,
+		"start_time" : st,
+		"time_spent" : ts, 
+	})
+	# now delete from active and state
+	await active_puzzles.delete(current_puzzle)
+	await mp_delete_state()
+	
+func mp_delete_state():
+	''' 
+	
 	For Multiplayer, we simply remove all of the fields in state,
 	on next time joining multiplayer, a new puzzle will be loaded in
 	'''
+	var puzzle_name = PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"])
+	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/mp_active_puzzles")
 	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(PuzzleVar.lobby_number))
-	var state = await ensure_lobby_state(PuzzleVar.lobby_number)
-	state.add_or_update_field("piece_locations", [])
+	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
+	var state = await lobby_puzzle.get_doc("state")
+	if !state:
+		print("FB: state missing for lobby", PuzzleVar.lobby_number, "skipping mp_delete_state")
+		return
 	state.add_or_update_field("piece_locations2", [])
 	state.add_or_update_field("progress", 0)
 	state.add_or_update_field("puzzle_choice", {})
 	state.add_or_update_field("isActive", false)
 	await lobby_puzzle.update(state)
+	if current_puzzle:
+		await active_puzzles.delete(current_puzzle)
