@@ -104,10 +104,11 @@ func _on_left_button_pressed():
 	if page_num > 1:
 		page_num -= 1
 	
-	# disables left button if you switch to page 1 and enables the right button
-	if page_num == 1:
-		left_button.disabled = true
-		right_button.disabled = false
+	# left button should only be disabled on page 1
+	left_button.disabled = (page_num == 1)
+
+	# IMPORTANT: if we moved left off the last page, re-enable the right button
+	right_button.disabled = false
 	
 	# repopulates the grid with a new selection of images
 	self.populate_grid_2()

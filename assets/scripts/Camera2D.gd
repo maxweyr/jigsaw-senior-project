@@ -1,10 +1,10 @@
 extends Camera2D
 
 # -------- Zoom settings --------
-var zoom_speed: float = 8.0
+var zoom_speed: float = 1.5 
 var zoom_min: float = 0.2
 var zoom_max: float = 2.0
-var zoom_factor: float = 1.0
+var zoom_factor: float = 0.9
 
 # -------- Panning state --------
 var is_panning: bool = false
@@ -63,17 +63,17 @@ func _input(event: InputEvent) -> void:
 
 		if mb.button_index == MOUSE_BUTTON_WHEEL_UP:
 			# zoom in -> smaller zoom_factor
-			zoom_factor *= 0.9
+			zoom_factor *= 0.96
 		elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			# zoom out -> larger zoom_factor
-			zoom_factor *= 1.1
+			zoom_factor *= 1.04
 
 		zoom_factor = clamp(zoom_factor, zoom_min, zoom_max)
 
 	# ---------- Trackpad pinch zoom (Magnify gesture) ----------
 	if event is InputEventMagnifyGesture:
 		var mg := event as InputEventMagnifyGesture
-		var sensitivity: float = 0.4
+		var sensitivity: float = 0.2
 		var f: float = mg.factor
 
 		# On mac: your current behavior is correct:
