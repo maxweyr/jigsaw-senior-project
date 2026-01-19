@@ -17,3 +17,4 @@ func update_user_playing_time() -> void:
 					FireAuth.write_puzzle_time_spent(PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]))
 				elif NetworkManager.is_online: # update the total multiplayer time in the user document
 					FireAuth.write_mult_playing_time()
+					FireAuth.mp_write_puzzle_time_spent(PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]))

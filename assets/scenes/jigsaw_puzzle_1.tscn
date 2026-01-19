@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3 uid="uid://dr6qnsfg5v8bf"]
+[gd_scene load_steps=19 format=3 uid="uid://dr6qnsfg5v8bf"]
 
 [ext_resource type="Script" uid="uid://cn0v4jk621ejf" path="res://assets/scripts/jigsaw_puzzle_1.gd" id="1_p57kp"]
 [ext_resource type="Texture2D" uid="uid://d3gwq3driuajh" path="res://assets/images/puzzle_background.jpg" id="2_1s5nt"]
@@ -13,7 +13,7 @@
 [ext_resource type="Texture2D" uid="uid://b744slcubj5pm" path="res://assets/images/zoom_out.png" id="8_sh5u1"]
 [ext_resource type="Texture2D" uid="uid://bpbh8qecjw4xt" path="res://assets/images/wood_button_pressed.png" id="8_vb4a4"]
 [ext_resource type="Theme" uid="uid://cfxebjeqy3ke7" path="res://assets/themes/bold_text.tres" id="9_l353k"]
-[ext_resource type="Texture2D" uid="uid://dtg1bnqve3p5i" path="res://assets/images/hide_image.png" id="9_sh5u1"]
+[ext_resource type="Texture2D" uid="uid://fpd37ulorvdt" path="res://assets/images/hide_image.png" id="9_sh5u1"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_355s3"]
 texture = ExtResource("8_vb4a4")
@@ -38,6 +38,22 @@ expand_margin_top = 8.0
 expand_margin_right = 8.0
 expand_margin_bottom = 8.0
 region_rect = Rect2(29, 115, 302, 130)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_355s3"]
+content_margin_left = 16.0
+content_margin_top = 16.0
+content_margin_right = 16.0
+content_margin_bottom = 16.0
+bg_color = Color(0.07, 0.07, 0.08, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.44, 0.39, 0.37, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
 [node name="Node2D" type="Node2D"]
 script = ExtResource("1_p57kp")
@@ -225,8 +241,48 @@ texture = ExtResource("3_p7ub0")
 [node name="PieceSpawner" type="MultiplayerSpawner" parent="."]
 spawn_path = NodePath("..")
 
+[node name="SavePopup" type="PopupPanel" parent="."]
+oversampling_override = 1.0
+size = Vector2i(716, 180)
+theme_override_styles/panel = SubResource("StyleBoxFlat_355s3")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SavePopup"]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 700.0
+offset_bottom = 164.0
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="SavePopup/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+text = "Would you like to save your puzzle?"
+horizontal_alignment = 1
+
+[node name="ButtonRow" type="HBoxContainer" parent="SavePopup/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="YesButton" type="Button" parent="SavePopup/VBoxContainer/ButtonRow"]
+custom_minimum_size = Vector2(130, 52)
+layout_mode = 2
+theme = ExtResource("6_nllai")
+theme_override_font_sizes/font_size = 40
+text = "Yes"
+
+[node name="NoButton" type="Button" parent="SavePopup/VBoxContainer/ButtonRow"]
+custom_minimum_size = Vector2(130, 52)
+layout_mode = 2
+theme = ExtResource("6_nllai")
+theme_override_font_sizes/font_size = 40
+text = "No"
+
 [connection signal="pressed" from="UI_Button/Back" to="." method="_on_back_pressed"]
 [connection signal="pressed" from="UI_Button/ZoomBox/HideImageButton" to="UI_Button" method="_on_HideImageButton_pressed"]
 [connection signal="pressed" from="UI_Button/ZoomBox/ZoomInButton" to="UI_Button" method="_on_ZoomInButton_pressed"]
 [connection signal="pressed" from="UI_Button/ZoomBox/ZoomOutButton" to="UI_Button" method="_on_ZoomOutButton_pressed"]
 [connection signal="spawned" from="PieceSpawner" to="." method="_piece_spawned"]
+[connection signal="pressed" from="SavePopup/VBoxContainer/ButtonRow/YesButton" to="." method="_on_yes_pressed"]
+[connection signal="pressed" from="SavePopup/VBoxContainer/ButtonRow/NoButton" to="." method="_on_no_pressed"]
