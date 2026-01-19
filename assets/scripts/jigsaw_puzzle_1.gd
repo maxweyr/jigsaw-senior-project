@@ -83,10 +83,6 @@ func _ready():
 	# create puzzle pieces and place in scene
 	PuzzleVar.load_and_or_add_puzzle_random_loc(self, sprite_scene, selected_puzzle_dir, true)
 
-	await get_tree().process_frame
-	_center_camera_on_pieces()
-	$Camera2D.zoom = Vector2(0.8, 0.8)
-
 	# create piece count display
 	create_piece_count_display()
 
@@ -777,29 +773,6 @@ func show_win_screen():
 	await main_menu
 	overlay.queue_free()
 		
-func _center_camera_on_pieces() -> void:
-	var cam := $Camera2D
-	if cam == null:
-		return
-
-	var pieces: Array = PuzzleVar.ordered_pieces_array
-	if pieces.is_empty():
-		return
-
-	var sum := Vector2.ZERO
-	var count := 0
-
-	for p in pieces:
-		if is_instance_valid(p):
-			sum += p.global_position
-			count += 1
-
-	if count == 0:
-		return
-
-	cam.global_position = sum / count
-
-	
 # Handles leaving the puzzle scene, saving state, and disconnecting if online client
 func _on_back_pressed() -> void:
 	# 1. Save puzzle state BEFORE clearing any data or freeing nodes
@@ -820,11 +793,15 @@ func _on_back_pressed() -> void:
 				
 	elif complete and FireAuth.is_online:
 		print("Puzzle is complete. Checking if we need to delete saved state...")
-		FireAuth.write_complete_server()
-
-		if NetworkManager.is_online and NetworkManager.connected_players.is_empty():
+		
+		if NetworkManager.is_online:
+			FireAuth.write_complete_server()
+			if NetworkManager.connected_players.is_empty():
+				print("Puzzle complete, deleting state")
+				FireAuth.mp_delete_state()
+		else:
 			print("Puzzle complete, deleting state")
-			FireAuth.mp_delete_state()
+			FireAuth.write_complete(PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]))
 
 	# 2. Handle multiplayer disconnection if this is an online client
 	if NetworkManager.is_online and not NetworkManager.is_server:
