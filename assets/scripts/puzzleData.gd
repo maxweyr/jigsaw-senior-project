@@ -66,7 +66,7 @@ func get_random_puzzles():
 	var local_puzzle_list = PuzzleVar.get_avail_puzzles()
 	var selected = local_puzzle_list[randi_range(0,local_puzzle_list.size()-1)]
 	# choose a random size for the puzzle ranging from 2x2 to 10x10
-	var sizes = [10, 100, 1000]
+	var sizes = [10, 100, 500]
 	var random_size = sizes[randi_range(0, 2)]
 	
 	print("Selected type: ", typeof(selected)) # Should be TYPE_DICTIONARY == 19
@@ -153,8 +153,8 @@ func get_avail_puzzles():
 	for puzzle in PuzzleImageData.PUZZLE_DATA:
 		var size10 = puzzle.base_file_path + "_10"
 		var size100 = puzzle.base_file_path + "_100"
-		var size1000 = puzzle.base_file_path + "_1000"
-		if DirAccess.dir_exists_absolute(size10) and DirAccess.dir_exists_absolute(size100) and DirAccess.dir_exists_absolute(size1000):
+		var size500 = puzzle.base_file_path + "_500"
+		if DirAccess.dir_exists_absolute(size10) and DirAccess.dir_exists_absolute(size100) and DirAccess.dir_exists_absolute(size500):
 			ret_arr.append(puzzle.duplicate())
 	print(ret_arr)
 	return ret_arr
