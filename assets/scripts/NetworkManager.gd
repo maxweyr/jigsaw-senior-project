@@ -15,6 +15,8 @@ signal pieces_connected(piece_id, connected_piece_id, new_group_number, piece_po
 signal pieces_moved(piece_positions)
 signal puzzle_info_received(puzzle_id: String)
 signal chat_message_received(sender_name: String, message: String)
+signal lock_granted(piece_id: int, group_id: int)
+signal lock_denied(piece_id: int, group_id: int, owner_id: int)
 
 # Variables
 var DEFAULT_PORT = 8080
@@ -29,11 +31,14 @@ var should_load_game = false
 var ready_to_load = false
 var kicked_for_new_puzzle: bool = false
 const MAX_PLAYERS = 8
+const LOCK_TTL_SEC = 10.0
 
 # --- server-side lobby maps (server only) ---
 var client_lobby: Dictionary = {}        # { peer_id: lobby_number }
 var lobby_players: Dictionary = {}       # { lobby_number: { peer_id: player_name } }
 var lobby_puzzle: Dictionary = {}        # { lobby_number: puzzle_id }  # optional; falls back to current_puzzle_id
+var lobby_group_locks: Dictionary = {}   # { lobby_number: { group_id: { owner, expires_at } } }
+var lobby_piece_groups: Dictionary = {}  # { lobby_number: { piece_id: group_id } }
 
 func _ready():
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -217,6 +222,76 @@ func leave_puzzle():
 	if is_online:
 		disconnect_from_server()
 
+func _now_sec() -> float:
+	return float(Time.get_ticks_msec()) / 1000.0
+
+func _get_lobby_lock_map(lobby_number: int) -> Dictionary:
+	if not lobby_group_locks.has(lobby_number):
+		lobby_group_locks[lobby_number] = {}
+	return lobby_group_locks[lobby_number]
+
+func _get_lobby_piece_map(lobby_number: int) -> Dictionary:
+	if not lobby_piece_groups.has(lobby_number):
+		lobby_piece_groups[lobby_number] = {}
+	return lobby_piece_groups[lobby_number]
+
+func _resolve_group_id(lobby_number: int, piece_id: int, group_id_hint: int) -> int:
+	var piece_map = _get_lobby_piece_map(lobby_number)
+	if piece_map.has(piece_id):
+		return int(piece_map[piece_id])
+	var resolved = group_id_hint if group_id_hint >= 0 else piece_id
+	piece_map[piece_id] = resolved
+	return int(resolved)
+
+func _sync_piece_groups_from_positions(lobby_number: int, group_id: int, piece_positions: Array) -> void:
+	var piece_map = _get_lobby_piece_map(lobby_number)
+	for info in piece_positions:
+		var pid = info.get("id", null)
+		if pid == null:
+			continue
+		piece_map[int(pid)] = group_id
+
+func _get_lock_owner(lobby_number: int, group_id: int) -> int:
+	var locks = _get_lobby_lock_map(lobby_number)
+	if not locks.has(group_id):
+		return -1
+	var lock = locks[group_id]
+	var now = _now_sec()
+	if float(lock.get("expires_at", 0.0)) <= now:
+		locks.erase(group_id)
+		return -1
+	return int(lock.get("owner", -1))
+
+func _try_acquire_lock(lobby_number: int, group_id: int, peer_id: int) -> bool:
+	var owner = _get_lock_owner(lobby_number, group_id)
+	if owner != -1 and owner != peer_id:
+		return false
+	var locks = _get_lobby_lock_map(lobby_number)
+	locks[group_id] = {"owner": peer_id, "expires_at": _now_sec() + LOCK_TTL_SEC}
+	return true
+
+func _refresh_lock(lobby_number: int, group_id: int, peer_id: int) -> void:
+	var locks = _get_lobby_lock_map(lobby_number)
+	if locks.has(group_id) and int(locks[group_id].get("owner", -1)) == peer_id:
+		locks[group_id].expires_at = _now_sec() + LOCK_TTL_SEC
+
+func _release_lock(lobby_number: int, group_id: int, peer_id: int) -> void:
+	var locks = _get_lobby_lock_map(lobby_number)
+	if locks.has(group_id) and int(locks[group_id].get("owner", -1)) == peer_id:
+		locks.erase(group_id)
+
+func _release_peer_locks(peer_id: int) -> void:
+	var lobby = client_lobby.get(peer_id, null)
+	if lobby == null:
+		return
+	var locks = _get_lobby_lock_map(int(lobby))
+	var to_remove: Array = []
+	for group_id in locks.keys():
+		if int(locks[group_id].get("owner", -1)) == peer_id:
+			to_remove.append(group_id)
+	for group_id in to_remove:
+		locks.erase(group_id)
+
 ##=============
 ## RPC Methods
 ##=============
@@ -256,17 +331,79 @@ func hello(player_name: String, lobby_number: int):
 
 	player_joined.emit(id, player_name)
 
+# Client -> server: request lock on a group (by piece id + hint)
+@rpc("any_peer", "call_remote", "reliable")
+func request_group_lock(piece_id: int, group_id_hint: int = -1):
+	if not is_server:
+		return
+	var from_id: int = multiplayer.get_remote_sender_id()
+	if not client_lobby.has(from_id):
+		return
+	var lobby: int = int(client_lobby[from_id])
+	var group_id := _resolve_group_id(lobby, piece_id, group_id_hint)
+	if _try_acquire_lock(lobby, group_id, from_id):
+		rpc_id(from_id, "_lock_granted", piece_id, group_id)
+	else:
+		var owner := _get_lock_owner(lobby, group_id)
+		rpc_id(from_id, "_lock_denied", piece_id, group_id, owner)
+
+# Client -> server: release lock on a group (by piece id + hint)
+@rpc("any_peer", "call_remote", "reliable")
+func release_group_lock(piece_id: int, group_id_hint: int = -1):
+	if not is_server:
+		return
+	var from_id: int = multiplayer.get_remote_sender_id()
+	if not client_lobby.has(from_id):
+		return
+	var lobby: int = int(client_lobby[from_id])
+	var group_id := _resolve_group_id(lobby, piece_id, group_id_hint)
+	_release_lock(lobby, group_id, from_id)
+
+# Server -> client: lock granted
+@rpc("authority", "call_remote", "reliable")
+func _lock_granted(piece_id: int, group_id: int):
+	if is_server:
+		return
+	lock_granted.emit(piece_id, group_id)
+
+# Server -> client: lock denied
+@rpc("authority", "call_remote", "reliable")
+func _lock_denied(piece_id: int, group_id: int, owner_id: int):
+	if is_server:
+		return
+	lock_denied.emit(piece_id, group_id, owner_id)
+
 # Send piece connection info FROM client -> server -> other clients (scoped to lobby)
 @rpc("any_peer", "call_remote", "reliable")
-func sync_connected_pieces(piece_id: int, connected_piece_id: int, new_group_number: int, piece_positions: Array):
+func sync_connected_pieces(piece_id: int, connected_piece_id: int, source_group_id: int, target_group_id: int, new_group_number: int, piece_positions: Array):
 	if not is_online: return
 	if is_server:
 		var from_id: int = multiplayer.get_remote_sender_id()
-		if not client_lobby.has(from_id): return
+		if not client_lobby.has(from_id):
+			return
 		var lobby: int = int(client_lobby[from_id])
+		var resolved_source := _resolve_group_id(lobby, piece_id, source_group_id)
+		var resolved_target := _resolve_group_id(lobby, connected_piece_id, target_group_id)
+		if resolved_source == resolved_target:
+			return
+		var owner := _get_lock_owner(lobby, resolved_source)
+		if owner != from_id:
+			return
+		var target_owner := _get_lock_owner(lobby, resolved_target)
+		if target_owner != -1 and target_owner != from_id:
+			return
+		var final_group := new_group_number
+		if final_group != resolved_source and final_group != resolved_target:
+			final_group = resolved_source
+		_sync_piece_groups_from_positions(lobby, final_group, piece_positions)
+		if final_group == resolved_source:
+			_refresh_lock(lobby, final_group, from_id)
+			_release_lock(lobby, resolved_target, from_id)
+		else:
+			_release_lock(lobby, resolved_source, from_id)
+			_try_acquire_lock(lobby, final_group, from_id)
 		for pid in lobby_players.get(lobby, {}).keys():
-			if pid != from_id:
-				rpc_id(pid, "_receive_piece_connection", piece_id, connected_piece_id, new_group_number, piece_positions)
+			rpc_id(pid, "_receive_piece_connection", piece_id, connected_piece_id, final_group, piece_positions)
 	else:
 		# clients call this on the server; server re-broadcasts
 		pass
@@ -280,12 +417,24 @@ func _receive_piece_connection(piece_id: int, connected_piece_id: int, new_group
 
 # Client -> server -> clients: moved pieces (scoped to lobby)
 @rpc("any_peer", "call_remote", "reliable")
-func _receive_piece_move(piece_positions: Array):
+func _receive_piece_move(group_id: int, piece_positions: Array):
 	if not is_online: return
 	if is_server:
 		var from_id: int = multiplayer.get_remote_sender_id()
 		if not client_lobby.has(from_id): return
 		var lobby: int = int(client_lobby[from_id])
+		var resolved_group := group_id
+		if resolved_group < 0 and piece_positions.size() > 0:
+			var first_id = piece_positions[0].get("id", -1)
+			if first_id >= 0:
+				resolved_group = _resolve_group_id(lobby, int(first_id), -1)
+		if resolved_group < 0:
+			return
+		var owner := _get_lock_owner(lobby, resolved_group)
+		if owner != from_id:
+			return
+		_sync_piece_groups_from_positions(lobby, resolved_group, piece_positions)
+		_refresh_lock(lobby, resolved_group, from_id)
 		for pid in lobby_players.get(lobby, {}).keys():
 			if pid != from_id:
 				rpc_id(pid, "_receive_piece_move_client", piece_positions)
@@ -363,6 +512,7 @@ func _on_peer_disconnected(id):
 			for pid in peers:
 				rpc_id(pid, "_update_player_list", lobby_players[lobby])
 		connected_players.erase(id)
+		_release_peer_locks(id)
 		client_lobby.erase(id)
 		player_left.emit(id, player_name)
 
