@@ -82,6 +82,10 @@ func _ready():
 	
 	# create puzzle pieces and place in scene
 	PuzzleVar.load_and_or_add_puzzle_random_loc(self, sprite_scene, selected_puzzle_dir, true)
+	
+	await get_tree().process_frame
+	_center_camera_on_pieces()
+	$Camera2D.zoom = Vector2(0.8, 0.8)
 
 	# create piece count display
 	create_piece_count_display()
@@ -772,6 +776,28 @@ func show_win_screen():
 	# wait for user to leave the puzzle
 	await main_menu
 	overlay.queue_free()
+
+func _center_camera_on_pieces() -> void:
+	var cam := $Camera2D
+	if cam == null:
+		return
+
+	var pieces: Array = PuzzleVar.ordered_pieces_array
+	if pieces.is_empty():
+		return
+
+	var sum := Vector2.ZERO
+	var count := 0
+
+	for p in pieces:
+		if is_instance_valid(p):
+			sum += p.global_position
+			count += 1
+
+	if count == 0:
+		return
+
+	cam.global_position = sum / count
 		
 # Handles leaving the puzzle scene, saving state, and disconnecting if online client
 func _on_back_pressed() -> void:

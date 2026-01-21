@@ -1,7 +1,7 @@
 extends Camera2D
 
 # -------- Zoom settings --------
-var zoom_speed: float = 1.5 
+var zoom_speed: float = 3.0 
 var zoom_min: float = 0.2
 var zoom_max: float = 2.0
 var zoom_factor: float = 0.9
@@ -73,7 +73,7 @@ func _input(event: InputEvent) -> void:
 	# ---------- Trackpad pinch zoom (Magnify gesture) ----------
 	if event is InputEventMagnifyGesture:
 		var mg := event as InputEventMagnifyGesture
-		var sensitivity: float = 0.2
+		var sensitivity: float = 0.08
 		var f: float = mg.factor
 
 		# On mac: your current behavior is correct:
