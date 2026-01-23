@@ -4,6 +4,7 @@ addons/godot-firebase/firebase.env
 *.pem
 
 
+
 # Build files
 dist/
 build/
@@ -27,4 +28,3 @@ tmp/
 *.jpg
 *.json
 *.html
-
