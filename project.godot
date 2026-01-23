@@ -11,6 +11,7 @@ config_version=5
 [application]
 
 config/name="jigsaw"
+config/version="1.5.0"
 run/main_scene="uid://o6vf4guhfib1"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 config/icon="res://icon.svg"
@@ -23,6 +24,7 @@ FireAuth="*res://assets/scripts/FirebaseAuth.gd"
 GlobalTimer="*res://assets/scripts/Timer.gd"
 GlobalProgress="*res://assets/scripts/new_menu.gd"
 NetworkManager="*res://assets/scripts/NetworkManager.gd"
+VersionGate="*res://autoload/VersionGate.gd"
 
 [display]
 
