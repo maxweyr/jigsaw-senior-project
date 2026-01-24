@@ -1,0 +1,870 @@
+[33mcommit 923dce20879c1c184b68eb7411c90375524de297[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Merge: def08120 9280608a
+Author: audrey-h04 <67392232+audrey-h04@users.noreply.github.com>
+Date:   Mon Jan 19 14:48:27 2026 -0800
+
+    Merge pull request #39 from maxweyr/QuitSave
+    
+    Quit and save
+
+[33mcommit 9280608aad32700c7bb503c0ed5d9f14b45bf9e6[m[33m ([m[1;31morigin/QuitSave[m[33m)[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Mon Jan 19 12:10:11 2026 -0800
+
+    Fixed singleplayer tracking
+
+[33mcommit 0a454e634f0ae359d350adb3bc7da84614a5492d[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Fri Jan 16 09:50:24 2026 -0800
+
+    Save and dont save option, multiplayer tracking
+
+[33mcommit def0812039e4e80470cf6fd804b5d9295d418fae[m
+Merge: 7df4d48b eaacf251
+Author: audrey-h04 <67392232+audrey-h04@users.noreply.github.com>
+Date:   Mon Jan 19 07:41:05 2026 -0800
+
+    Merge pull request #37 from maxweyr/util_scripts
+    
+    Remove unused images and add utility scripts for working with Piecemaker
+
+[33mcommit 7df4d48b0b331383a3c6e81cf4e5152992ad37d7[m
+Author: srinityad <125533803+srinityad@users.noreply.github.com>
+Date:   Sat Jan 17 10:48:17 2026 -0800
+
+    Change zoom features (#38)
+    
+    - trackpad zoom slowdown
+    -centred on pieces
+    -zoom release background
+    -increase go back to menu button size
+    -fixed the right arrow on puzzle select
+    
+    Co-authored-by: Srinitya Doppalapudi <srinityad@gmail.com>
+
+[33mcommit eaacf251f727a0c53bacd2f6940f3957097058ea[m[33m ([m[1;31morigin/util_scripts[m[33m)[m
+Author: a-hansell <auhansel@calpoly.edu>
+Date:   Thu Jan 15 10:35:59 2026 -0800
+
+    Remove unused images and add utility scripts for working with Piecemaker
+
+[33mcommit e6f918c81ce7773bb2894fcd28d1914ae4a37db4[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Mon Jan 12 08:23:09 2026 -0800
+
+    Fixed login process and puzzle count bug
+
+[33mcommit 020073c2607d2833a4c4aca3ffb85537fe963493[m
+Author: naterjacob <jnater@salmon.net>
+Date:   Wed Jan 14 08:15:44 2026 -0800
+
+    Add Multiplaye Puzzle Select
+    
+    Uses an `isActive` flag in Firestore to track who gets to select
+    puzzles.
+
+[33mcommit 63e5c38ae78bccccec63c7ce86a24225c752d085[m
+Merge: 67e3c136 84037d6c
+Author: audrey-h04 <67392232+audrey-h04@users.noreply.github.com>
+Date:   Fri Jan 9 09:42:43 2026 -0800
+
+    Merge pull request #34 from maxweyr/zoom_background
+    
+    Fix buttons to not disturb background
+
+[33mcommit 84037d6cc59b9328ab1bbd93f941ffc9fcc5f70a[m[33m ([m[1;32mzoom_background[m[33m)[m
+Author: Srinitya Doppalapudi <srinityad@gmail.com>
+Date:   Fri Jan 9 09:33:55 2026 -0800
+
+    Fix buttons to not disturb background
+
+[33mcommit 67e3c136b98c3aa725ee2cd1e4ee96d1db7b5133[m
+Merge: 23adeecb c7756be1
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Fri Jan 9 08:13:38 2026 -0800
+
+    Main menu changes and fixed the win screen
+    
+    Sign out button added, win screen now working for all players
+
+[33mcommit c7756be1175a0a7cb7873f37cbb0a84bff7bbdba[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Thu Jan 8 10:56:09 2026 -0800
+
+    cleaning up prints
+
+[33mcommit 345f0e1519cb34e2beac760b188ed2baf0d34bd4[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Thu Jan 8 10:52:17 2026 -0800
+
+    fixing rebase
+
+[33mcommit 83d1b05e6ecfe7396fe94cecc4a7f214c1353228[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Thu Jan 8 10:46:36 2026 -0800
+
+    fixed rebase
+
+[33mcommit 2ca9717447a474acd0a05d7368b0e4ed462eda6e[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Thu Jan 8 10:24:53 2026 -0800
+
+    Puzzle will show complete state on rejoin
+
+[33mcommit 3c0767ca49c34dbdc9af6069fa7d0450a341209a[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Wed Jan 7 10:15:05 2026 -0800
+
+    Added a signout button
+
+[33mcommit bfc509b625054adbc62c158d2b0d59e503354592[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Wed Jan 7 08:36:53 2026 -0800
+
+    Removed random puzzle
+
+[33mcommit a0311b58fabd25dbb814b6d75052a13949e1d934[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Tue Dec 2 17:45:35 2025 -0800
+
+    Fixed multiplayer win screen
+
+[33mcommit 34eda526ad3f67e583865250a37d9e085ca77ba4[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Fri Nov 21 10:20:37 2025 -0800
+
+    Switched to wait for user to leave
+
+[33mcommit 07b912f23f44f2f69bd4fb5a246073c6d0242162[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Wed Nov 19 14:30:37 2025 -0800
+
+    Wait for user to leave game
+
+[33mcommit 9d8b3e534b3af70beff792acdf336647bcd8e48c[m
+Author: naterjacob <145790678+naterjacob@users.noreply.github.com>
+Date:   Fri Nov 21 08:55:06 2025 -0800
+
+    Chat Feature (#27)
+    
+    Added a chat feature (scoped to lobby) in
+    the multiplayer mode. Also added the needed
+    front-end chat window.
+    
+    Co-authored-by: a-hansell <auhansel@calpoly.edu>
+
+[33mcommit d5776406d0ea6ac807efa2121426db2b467160ef[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Tue Dec 2 17:45:35 2025 -0800
+
+    Fixed multiplayer win screen
+
+[33mcommit fc6e2d00c7ab064e7e787a0f9ca3a5b6e0467669[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Fri Nov 21 10:20:37 2025 -0800
+
+    Switched to wait for user to leave
+
+[33mcommit b5134000dd8b1b2a58a1656c07d8606c06f019b4[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Wed Nov 19 14:30:37 2025 -0800
+
+    Wait for user to leave game
+
+[33mcommit 23adeecb7d83ec9736d24309ae587906e39dfb3b[m
+Merge: 709d19a6 f8b74059
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Wed Jan 7 10:11:30 2026 -0800
+
+    Merge pull request #32 from maxweyr/loading_screen_fix
+    
+    Make loading screen appear faster
+
+[33mcommit f8b7405903ad91298ee8eed85ec07c6334fb6f29[m
+Author: a-hansell <auhansel@calpoly.edu>
+Date:   Wed Jan 7 08:39:15 2026 -0800
+
+    Make loading screen appear faster
+
+[33mcommit 709d19a6b12d878c1daf315000e7bd244146b898[m
+Author: naterjacob <jnater@salmon.net>
+Date:   Mon Jan 5 08:23:51 2026 -0800
+
+    README
+
+[33mcommit 837170a78fd18d1545b0c0b884aff424b87afb09[m
+Author: naterjacob <jnater@salmon.net>
+Date:   Tue Dec 2 21:06:47 2025 -0800
+
+    Add Nickname Styling
+
+[33mcommit e30a5a8e5127c7436573c5109d0f087a4fcfc9db[m[33m ([m[1;32mtemp_fix[m[33m)[m
+Author: srinityad <125533803+srinityad@users.noreply.github.com>
+Date:   Thu Dec 4 20:00:40 2025 -0800
+
+    Fix buttons (#31)
+    
+    Fixes zoom buttons by adding .import files.
+    ---------
+    
+    Edit after the fact:
+    Changed implementation to not rely on the .import files which
+    should not be messed with. Used `expand_icon` property to
+    automatically scale the images.
+    
+    ---------
+    
+    Co-authored-by: Srinitya Doppalapudi <srinityad@gmail.com>
+
+[33mcommit 9021cff1df1771fb1e1f62d7f63a5ba7008780b5[m
+Author: a-hansell <auhansel@calpoly.edu>
+Date:   Tue Dec 2 20:29:52 2025 -0800
+
+    Update Puzzle Image List
+
+[33mcommit 2168f4fe02765243b91479484047f342fe07d59b[m
+Author: naterjacob <145790678+naterjacob@users.noreply.github.com>
+Date:   Tue Dec 2 20:06:24 2025 -0800
+
+    Zoom hide buttons branch (#30)
+    
+    Multi commit to avoid size limit
+    
+    
+    Co-authored-by: Srinitya Doppalapudi <srinityad@gmail.com>
+
+[33mcommit 15b9082a3572a29740d37fab41b36313783938da[m
+Author: naterjacob <145790678+naterjacob@users.noreply.github.com>
+Date:   Tue Dec 2 19:50:38 2025 -0800
+
+    Rename Self (#29)
+
+[33mcommit b2f6bdf133d0a56c092ce5a36a5ae9dd323678ff[m
+Author: naterjacob <145790678+naterjacob@users.noreply.github.com>
+Date:   Mon Dec 1 20:03:44 2025 -0800
+
+    Chat (#28)
+    
+    Chat feature!
+    ---------
+    
+    Co-authored-by: a-hansell <auhansel@calpoly.edu>
+
+[33mcommit 16ff150580eaa39f32dc9e5a513f304ddac3ba46[m
+Author: naterjacob <145790678+naterjacob@users.noreply.github.com>
+Date:   Fri Nov 21 08:55:06 2025 -0800
+
+    Chat Feature (#27)
+    
+    Added a chat feature (scoped to lobby) in
+    the multiplayer mode. Also added the needed
+    front-end chat window.
+    
+    Co-authored-by: a-hansell <auhansel@calpoly.edu>
+
+[33mcommit c56b4b9855173d2557fc21d88c8c1c06765f372a[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Fri Nov 14 09:43:23 2025 -0800
+
+    Combined email and nickname to one scene
+
+[33mcommit 6cd6292b1a675bf3b2dd78ade361c68309614a55[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Wed Nov 12 09:00:07 2025 -0800
+
+    Combined email and nickname screens
+
+[33mcommit 3862eda18fc34ea2bd20c558899451bd35c6b7e8[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Fri Nov 7 09:46:03 2025 -0800
+
+    Made the quit button useable on Windows
+
+[33mcommit 7891e26a092f06642bed78f4ca9cdbe8a991e9b7[m
+Author: naterjacob <145790678+naterjacob@users.noreply.github.com>
+Date:   Wed Nov 12 08:34:05 2025 -0800
+
+    Player list fix (#24)
+    
+    * Player Sync
+    
+    * Player Label Fix
+    
+    Fixed player label by using the same logic for player
+    joins and player leaves. All changes are now routed
+    through `update_online_status_label` and stored in
+    network manager.
+
+[33mcommit a4abd961cc0508517fcf4802391252785e42e9e8[m
+Merge: 786795e4 dbd5287f
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Fri Nov 7 09:18:55 2025 -0800
+
+    Merge pull request #23 from maxweyr/nickname
+    
+    Nickname
+
+[33mcommit dbd5287fdb3b36cb947c9362011961db2085d6a3[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Wed Nov 5 09:57:51 2025 -0800
+
+    Added back box_id setting in login.gd
+
+[33mcommit 54dce76950b9e38524ad9b650b77ec87a8e14277[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Wed Nov 5 09:48:23 2025 -0800
+
+    Added a nickname arg to send to server to display
+
+[33mcommit 786795e402a4c34f15765100a20866c7a593bf97[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Mon Nov 3 09:07:53 2025 -0800
+
+    Default User (#22)
+    
+    * Username login and assigned lobby numbers
+    
+    * Took out --user arg, added a default user
+    
+    * deleted the comments
+
+[33mcommit 456b4be138c5e7ed40672356a61509896b8e93f9[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Wed Oct 29 08:27:49 2025 -0700
+
+    Username login and assigned lobby numbers (#21)
+
+[33mcommit 2252b0a8da894bffaa4f094e45904ba9165ec208[m
+Author: naterjacob <145790678+naterjacob@users.noreply.github.com>
+Date:   Fri Oct 24 08:28:36 2025 -0700
+
+    Enable Multi-Lobby Gameplay (#20)
+    
+    Uses in-memory maps to track client->lobby and
+    lobby->clients relationships. This is the
+    foundation for future multiplayer features like
+    lobby chat and client-side multi-lobby support.
+
+[33mcommit b2945d7e323a32bbcf5463f152a8a1e55e9dd5c3[m
+Author: audrey-h04 <67392232+audrey-h04@users.noreply.github.com>
+Date:   Mon Oct 20 09:55:26 2025 -0700
+
+    Puzzle Piece Count Feature (#19)
+    
+    * Delete old firebase.env and move current players box to bottom right
+    
+    - Removed addons/godot-firebase/firebase.env
+    - Updated jigsaw_puzzle_1.tscn and scripts
+    - Centered the select puzzles text on the selection menu
+    
+    * Add puzzle piece counter in top right
+    
+    - Need to modify to look prettier
+    
+    * Add puzzle piece counter and Montserrat fonts
+    
+    - Added new Montserrat Bold and SemiBold fonts
+    - Updated puzzle piece counter design
+    
+    * Remove vscode settings
+    
+    - Add .vscode/ to gitignore
+    
+    ---------
+    
+    Co-authored-by: a-hansell <auhansel@calpoly.edu>
+
+[33mcommit f987bae2792ceb45ab0215e93b09b3c133455e55[m
+Author: srinityad <125533803+srinityad@users.noreply.github.com>
+Date:   Fri Oct 17 09:52:49 2025 -0700
+
+    Add new zoom trackpad feature (#18)
+    
+    * Add new zoom trackpad feature
+    
+    * Add back firebase.env
+    
+    ---------
+    
+    Co-authored-by: Srinitya Doppalapudi <srinityad@gmail.com>
+
+[33mcommit bbc8e23afe00798150c00b8858a804bd116f5fe7[m[33m ([m[1;32mGodotVersionChange[m[33m)[m
+Merge: c269e35b d4e1b2c3
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Wed Oct 8 09:55:15 2025 -0700
+
+    Merge pull request #17 from maxweyr/firebase_env
+    
+    Added Proper Env File For Firebase
+
+[33mcommit d4e1b2c33e7ba4e906ea3e22c7e4f2c213771efc[m
+Author: ntintran <147439814+ntintran@users.noreply.github.com>
+Date:   Wed Oct 8 09:50:49 2025 -0700
+
+    Added Proper Env File For Firebase
+
+[33mcommit c269e35be9b0f9976e609c1f853f0a5b458f592c[m
+Merge: 4b59c28d f9d75b60
+Author: naterjacob <145790678+naterjacob@users.noreply.github.com>
+Date:   Wed Oct 8 09:36:52 2025 -0700
+
+    Merge pull request #16 from maxweyr/GodotVersionChange
+    
+    Update Godot Minor Version
+
+[33mcommit f9d75b60c618291ea62683e85b99dba880bc9b5e[m
+Author: naterjacob <jnater@salmon.net>
+Date:   Wed Oct 8 09:29:48 2025 -0700
+
+    Update Godot Minor Version
+    
+    Updates godot minor version to 4.5, also a test
+    for how to push branches and approve PR's on git.
+
+[33mcommit 4b59c28d3de7befabbef43b2d6e92c5e59cc57b1[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Fri Jun 27 18:14:54 2025 -0700
+
+    Updated user argument
+    
+    no longer need user argument in .env! User is now set as a command line argument. --user=username or --user username will both work
+
+[33mcommit 892cbfc66e3d7385a6fc8bbf0b85bde6b33f5395[m
+Merge: ac881dea db9f6f30
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Wed Jun 11 09:30:24 2025 -0700
+
+    Merge pull request #15 from maxweyr/cat-puzzle-addition
+    
+    Cat puzzle addition
+
+[33mcommit db9f6f30d50a7a2a8c97e4bc46a330d92ce332d5[m
+Author: ShaShaSharma <92539743+ShaShaSharma@users.noreply.github.com>
+Date:   Wed Jun 11 07:12:43 2025 -0700
+
+    Updated puzzle finished message logic
+
+[33mcommit 90a156355765724b906222876bd8177197c0cbf3[m
+Author: ShaShaSharma <shsharma@calpoly.edu>
+Date:   Wed Jun 4 06:50:11 2025 -0700
+
+    added cat puzzle for 10,100,1000. done preliminary testing.
+
+[33mcommit ac881dea70c367912f7453af67914abea80c2b96[m
+Author: fabu11 <abullarade.franco@gmail.com>
+Date:   Mon May 26 15:05:15 2025 -0700
+
+    turn off machine on quit
+
+[33mcommit a6ebd349afe5ff14156338fa7a44b688157ef280[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Wed May 21 14:43:46 2025 -0700
+
+    Removed quit button
+    
+    Quit button is no longer visible, but can be accessed via 'ESC' on the keyboard
+
+[33mcommit a3e9bb801cfd461f126311f0ee94b5266eb2f98f[m
+Merge: 81e0cae8 7d931765
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Sun May 18 22:58:17 2025 -0700
+
+    Merge pull request #14 from maxweyr/piece-spawn-random-menu
+    
+    Piece spawn random menu
+
+[33mcommit 7d9317657c8778c7c9208386a9a181a5ec889bea[m
+Merge: 25228155 81e0cae8
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Sun May 18 22:55:05 2025 -0700
+
+    Resolve merge conflict
+
+[33mcommit 25228155e3830824427237255302a1e6a8c2ce88[m
+Author: ShaShaSharma <shsharma@calpoly.edu>
+Date:   Sun May 18 20:42:44 2025 -0700
+
+    spawn point fixes and reimported assets
+    
+    small bug with shift-"p" on dog-1000. does not align all pieces properly.
+
+[33mcommit 81e0cae8b73a9de318953d6b560df383b3c242d0[m
+Merge: 5692d62d a3f2e3ab
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Sun May 18 18:10:55 2025 -0700
+
+    Merge pull request #13 from maxweyr/lobby-player-status
+    
+    Lobby player status
+
+[33mcommit a3f2e3ab43359a9b12bb26f84c99c51f638c3993[m
+Merge: de291a80 5692d62d
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Sun May 18 18:10:45 2025 -0700
+
+    Merge branch 'main' into lobby-player-status
+
+[33mcommit de291a80658f94024f160dd1c1cc495a5dd287d6[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Sun May 18 18:09:32 2025 -0700
+
+    lobby and firebase
+    
+    fixed up the lobby menu and added some missing firebase calls. Might still need favorite puzzle? Not sure how we want to do that?
+
+[33mcommit 5e4d1de450eb8d0eb02d47a6449c9a47a9cee86d[m
+Author: ShaShaSharma <shsharma@calpoly.edu>
+Date:   Sun May 18 10:46:27 2025 -0700
+
+    added random menu
+    
+    random menu added no changes to spawn location yet
+
+[33mcommit 9660d543f26cdc4748ca80c3787adda279fe2885[m[33m ([m[1;31morigin/file-path-fix[m[33m)[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Tue May 13 22:16:12 2025 -0700
+
+    Fixed image path loading
+    
+    Images are now loaded via a script in the editor. This means any future puzzle editions cannot be directly thrown on a box and must come from one of us updating the build. Last issues on our side, for tmrw, are the puzzle background, lobby list, and placement bunching
+
+[33mcommit d9c868cd7360db8e41daae64fe025adbc99cd2a8[m[33m ([m[1;31morigin/mp-debug[m[33m)[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Tue May 13 19:42:56 2025 -0700
+
+    updated export settings
+    
+    Need to make a new branch and debug the missing resources further, I believe its because of the direct file path access. Should be fixed soon, fingers crossed!
+
+[33mcommit 1a40b7968cfc66b7a9ab28f73bc1f9845b9c6299[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Tue May 13 12:58:10 2025 -0700
+
+    updated shift p
+    
+    no longer can reorientate puzzle and break groups without pressing shift p
+
+[33mcommit a95d094844df0901c86d202cfc0b548d75b7242c[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Tue May 13 12:21:19 2025 -0700
+
+    Updates
+    
+    Updated zoom level, lobby players are now a static box in the top right. Need to eliminate zoom from player display
+
+[33mcommit 3cd675ea3b4fd309dc13765ae6864f09dee748d5[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Fri May 2 20:45:17 2025 -0700
+
+    Update export_presets.cfg
+
+[33mcommit 2af6145fd289e1101d7e4ced1afe4dcd3f28d2b6[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Fri May 2 20:45:14 2025 -0700
+
+    fixed timer issue
+    
+    was getting a crash after every min
+
+[33mcommit 5692d62d7f698050cf552bad1b559bed62cf459b[m
+Merge: ffc8a9ef 4b292f2b
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Fri May 2 13:33:34 2025 -0700
+
+    Merge branch 'main' into firebase_rewrite
+
+[33mcommit 0082f31a9197df1bee605088beaea8f5addafa32[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Fri May 2 13:27:22 2025 -0700
+
+    Init
+    
+    debugging the working mp
+
+[33mcommit ffc8a9eff51d3bf19d6baecf7a89605eecd4bb89[m[33m ([m[1;31morigin/firebase_rewrite[m[33m)[m
+Author: fabu11 <abullarade.franco@gmail.com>
+Date:   Fri May 2 13:25:16 2025 -0700
+
+    fixed timer bug
+
+[33mcommit 7594bc74d6d08ef31444497e31c3c3db4999d686[m
+Author: fabu11 <abullarade.franco@gmail.com>
+Date:   Thu May 1 16:35:11 2025 -0700
+
+    ready for internal testing
+
+[33mcommit 4b292f2b7b3569c8f454808a6e6b916c282dac27[m
+Merge: 83fbd54c d5e3f3a1
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Wed Apr 30 20:43:30 2025 -0700
+
+    Merge pull request #12 from maxweyr/firebase_rewrite
+    
+    fixing restart state on completion
+
+[33mcommit 83fbd54c985a747a625a35e3627abcc35c93bacc[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Wed Apr 30 20:40:57 2025 -0700
+
+    Update online conditionals
+
+[33mcommit d5e3f3a1e3bcaeba4f5a0570a2b399bb01ccd4a4[m
+Author: fabu11 <abullarade.franco@gmail.com>
+Date:   Wed Apr 30 20:22:39 2025 -0700
+
+    fixing restart state on completion
+
+[33mcommit 0f250346c8b54d711b0c28f79e5eae81f6a36b11[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Wed Apr 30 17:02:10 2025 -0700
+
+    updated
+    
+    fireauth.write puzzle state for server
+
+[33mcommit 75e91b49483fa40bfa6c169e873ae7896a63b658[m
+Merge: 508ef34e ca651844
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Wed Apr 30 16:04:14 2025 -0700
+
+    Merge pull request #10 from maxweyr/fixing-piece-sync
+    
+    Updated & Fixed Sync
+
+[33mcommit ca651844da8e8644652306ddbe15d0202047f591[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Wed Apr 30 16:03:21 2025 -0700
+
+    Updated & Fixed Sync
+    
+    Sync now occurs on player movement (when put down) and when a connection is made
+
+[33mcommit 508ef34e253d6c2e116c424b88c9de6151e64bde[m
+Merge: 5638f120 48084704
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Tue Apr 29 20:51:59 2025 -0700
+
+    Merge pull request #9 from maxweyr/fixing-piece-sync
+    
+    Updated NetworkManager
+
+[33mcommit 480847049ae228f7a85786c09a3231bce0f76c6a[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Tue Apr 29 14:50:09 2025 -0700
+
+    Updated NetworkManager
+    
+    Next is main_menu buttons, then piece2D rpc functions, finally puzzle_board
+
+[33mcommit 5638f120cd8778d6f8968adf407f23a69db06d77[m
+Merge: 64be920e 9029bd82
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Tue Apr 29 14:24:03 2025 -0700
+
+    Merge pull request #8 from maxweyr/firebase_rewrite
+    
+    server loading state (no saving yet)
+
+[33mcommit 9029bd82b952055b62fe029eb98eedca6c6a2f73[m
+Author: fabu11 <abullarade.franco@gmail.com>
+Date:   Tue Apr 29 14:23:31 2025 -0700
+
+    server loading state (no saving yet)
+
+[33mcommit 64be920e90114471fc331399573d511fe790eafd[m
+Merge: 3c71d6c1 ab55445a
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Tue Apr 29 11:17:43 2025 -0700
+
+    Merge pull request #7 from maxweyr/firebase_rewrite
+    
+    server fb
+
+[33mcommit ab55445a47e5434828d6c7754c870b349dffd325[m
+Author: fabu11 <abullarade.franco@gmail.com>
+Date:   Tue Apr 29 11:16:25 2025 -0700
+
+    server fb
+
+[33mcommit 3c71d6c1a17436661263d625c55b54a4067adbb9[m
+Merge: f41164c6 8defeff4
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Mon Apr 28 22:16:29 2025 -0700
+
+    Merge pull request #6 from maxweyr/back-button-signaling
+    
+    Fixed peer disconnect on back pressed
+
+[33mcommit 8defeff44bbe17fa07acab5c904f2a04275d8466[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Mon Apr 28 22:16:07 2025 -0700
+
+    Fixed peer disconnect on back pressed
+    
+    When pressing the back button the appropriate server disconnection method is started from NetworkManager
+
+[33mcommit f41164c623892de128f1657eb270408038f35196[m
+Merge: bc67ec1c fb7c8cb9
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Mon Apr 28 20:49:56 2025 -0700
+
+    Merge pull request #5 from maxweyr/fixin-an-movin-login
+    
+    Small formatting changes
+
+[33mcommit fb7c8cb99bc56e308b16b8ac73e76614e2115929[m
+Merge: 4031df45 bc67ec1c
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Mon Apr 28 20:49:45 2025 -0700
+
+    Merge branch 'main' into fixin-an-movin-login
+
+[33mcommit bc67ec1c92a77791733d803133da0625c9a005f5[m
+Merge: 8d3bce90 6b2751d8
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Mon Apr 28 20:48:17 2025 -0700
+
+    Merge pull request #4 from maxweyr/firebase_rewrite
+    
+    added loading and saving states for singleplayer + db
+
+[33mcommit 6b2751d8a8fe8b174e461f656e968078abec0981[m
+Merge: f5a44d0e 8d3bce90
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Mon Apr 28 20:48:09 2025 -0700
+
+    Merge branch 'main' into firebase_rewrite
+
+[33mcommit 4031df45de0954a398bbe952c6209e787410f0c1[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Mon Apr 28 20:46:54 2025 -0700
+
+    Small formatting changes
+    
+    removed and updated several comments and line spacing
+
+[33mcommit f5a44d0e87604373ec02f1cff4377c4bb86861df[m
+Author: fabu11 <abullarade.franco@gmail.com>
+Date:   Mon Apr 28 20:46:45 2025 -0700
+
+    added loading and saving states for singleplayer + db
+
+[33mcommit 8d3bce9070ef7978a291f17fa9338749286e426e[m
+Merge: 74645681 c7a1620c
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Mon Apr 28 20:00:25 2025 -0700
+
+    Merge pull request #3 from maxweyr/fixin-an-movin-login
+    
+    Fixed Login and Network Checks
+
+[33mcommit c7a1620c7ed83cde7fdc9eac0a365a32c2ada17e[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Mon Apr 28 19:59:34 2025 -0700
+
+    Fixed Login and Network Checks
+    
+    Login is only attempted once and network status is only configured once. Removes duplicate login attempts and configures network status bools properly
+
+[33mcommit 74645681bfb6584040bdf565b4aebe838be51440[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Mon Apr 28 17:18:52 2025 -0700
+
+    Update FirebaseAuth.gd
+    
+    fixed error
+
+[33mcommit d5bbde997dd2aa4384b0a26dc3c970c5761bff2a[m
+Merge: 5dc0e2f6 023d71c8
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Mon Apr 28 17:16:47 2025 -0700
+
+    Merge pull request #2 from maxweyr/firebase_rewrite
+    
+    Started working on sp_users in firebase store, rewriting to fit our o…
+
+[33mcommit 023d71c8d64428b9ba76d0399be83adaea846b97[m
+Merge: e581c15a 5dc0e2f6
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Mon Apr 28 17:16:41 2025 -0700
+
+    Merge branch 'main' into firebase_rewrite
+
+[33mcommit e581c15a311d94b76280abe231258d6f9012b058[m
+Author: fabu11 <abullarade.franco@gmail.com>
+Date:   Mon Apr 28 17:06:31 2025 -0700
+
+    Started working on sp_users in firebase store, rewriting to fit our own doc spec
+
+[33mcommit 5dc0e2f63234c929b83b80e491f60a811390d120[m
+Merge: afb3cdaa f183beb6
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Mon Apr 28 16:59:55 2025 -0700
+
+    Merge pull request #1 from maxweyr/fixingMP
+    
+    Fixing mp
+
+[33mcommit f183beb634604dd42059a9741a1274911dda4366[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Mon Apr 28 16:57:42 2025 -0700
+
+    Updated FirebaseAuth and updated global network vars
+
+[33mcommit 34edeb03ab0908dbf5395843fe7f1cd23aaa7a85[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Mon Apr 28 16:35:14 2025 -0700
+
+    Updated gitignore
+
+[33mcommit 204e5c052aedf13a8c764ff9128ba5df059df9e1[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Mon Apr 28 16:07:37 2025 -0700
+
+    Update .gitignore
+    
+    removed .tmp and .imports from git
+
+[33mcommit 8228731232f3a9c16c43fc02c4129351a59cd2db[m
+Author: fabu11 <abullarade.franco@gmail.com>
+Date:   Sun Apr 27 21:15:18 2025 -0700
+
+    started updating firebase control
+
+[33mcommit 7a81ed186b5060fd4dc2f5695d721dc16eb4fab6[m
+Author: fabu11 <abullarade.franco@gmail.com>
+Date:   Sun Apr 27 20:39:37 2025 -0700
+
+    added select_lobby scene
+
+[33mcommit 57e15c7d598ce65e9d02448668571d1fc5bf627b[m
+Author: fabu11 <abullarade.franco@gmail.com>
+Date:   Sun Apr 27 18:49:33 2025 -0700
+
+    fixed bug with on_client_connect selecting puzzle
+
+[33mcommit 4a5d0945ed5e3cd6b50e9c727b957a7c38dfd374[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Sun Apr 27 18:06:26 2025 -0700
+
+    Update .gitignore
+
+[33mcommit afb3cdaa2a94f898574883cd690ea0062b91ac65[m
+Author: fabu11 <abullarade.franco@gmail.com>
+Date:   Sun Apr 20 20:16:49 2025 -0700
+
+    no firebase saving. fixed basic solo+random
+
+[33mcommit ee71c5f103d8b200ca75a9a28fa776edbbb32783[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Sun Apr 20 10:45:15 2025 -0700
+
+    initial-commit
+    
+    includes sw for basic multiplayer
+
+[33mcommit 5dccc8000504808897541f1cbbb2895b2459c6d2[m
+Author: maxweyr <maxeyrich@proton.me>
+Date:   Sun Apr 20 10:36:59 2025 -0700
+
+    Initial commit
