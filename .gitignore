@@ -2,7 +2,7 @@
 addons/godot-firebase/firebase.env
 .env
 *.pem
-.gitignore
+
 
 # Build files
 dist/
@@ -27,6 +27,4 @@ tmp/
 *.jpg
 *.json
 *.html
-.gitignore
-.gitignore
-.gitignore
+
