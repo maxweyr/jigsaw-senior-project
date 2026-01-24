@@ -17,6 +17,7 @@ signal puzzle_info_received(puzzle_id: String)
 signal chat_message_received(sender_name: String, message: String)
 signal lock_granted(piece_id: int, group_id: int)
 signal lock_denied(piece_id: int, group_id: int, owner_id: int)
+signal lock_status(piece_id: int, group_id: int, owner_id: int)
 
 # Variables
 var DEFAULT_PORT = 8080
@@ -359,6 +360,31 @@ func release_group_lock(piece_id: int, group_id_hint: int = -1):
 	var group_id := _resolve_group_id(lobby, piece_id, group_id_hint)
 	_release_lock(lobby, group_id, from_id)
 
+# Client -> server: refresh an existing lock (keepalive)
+@rpc("any_peer", "call_remote", "reliable")
+func refresh_group_lock(piece_id: int, group_id_hint: int = -1):
+	if not is_server:
+		return
+	var from_id: int = multiplayer.get_remote_sender_id()
+	if not client_lobby.has(from_id):
+		return
+	var lobby: int = int(client_lobby[from_id])
+	var group_id := _resolve_group_id(lobby, piece_id, group_id_hint)
+	_refresh_lock(lobby, group_id, from_id)
+
+# Client -> server: query lock owner for a piece/group
+@rpc("any_peer", "call_remote", "reliable")
+func request_lock_status(piece_id: int, group_id_hint: int = -1):
+	if not is_server:
+		return
+	var from_id: int = multiplayer.get_remote_sender_id()
+	if not client_lobby.has(from_id):
+		return
+	var lobby: int = int(client_lobby[from_id])
+	var group_id := _resolve_group_id(lobby, piece_id, group_id_hint)
+	var owner := _get_lock_owner(lobby, group_id)
+	rpc_id(from_id, "_lock_status", piece_id, group_id, owner)
+
 # Server -> client: lock granted
 @rpc("authority", "call_remote", "reliable")
 func _lock_granted(piece_id: int, group_id: int):
@@ -372,6 +398,13 @@ func _lock_denied(piece_id: int, group_id: int, owner_id: int):
 	if is_server:
 		return
 	lock_denied.emit(piece_id, group_id, owner_id)
+
+# Server -> client: lock status response
+@rpc("authority", "call_remote", "reliable")
+func _lock_status(piece_id: int, group_id: int, owner_id: int):
+	if is_server:
+		return
+	lock_status.emit(piece_id, group_id, owner_id)
 
 # Send piece connection info FROM client -> server -> other clients (scoped to lobby)
 @rpc("any_peer", "call_remote", "reliable")
