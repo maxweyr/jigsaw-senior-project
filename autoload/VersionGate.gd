@@ -1,20 +1,15 @@
 extends Node
 
-# =========================
+
 # Firestore location
-# =========================
 const CONFIG_COLLECTION := "config"
 const CONFIG_DOC := "version_gate"
 
-# =========================
 # Local build version
-# =========================
 var local_version: String
 
 
-# =========================
 # Entry point (runs at app start)
-# =========================
 func _ready() -> void:
 	local_version = ProjectSettings.get_setting("application/config/version")
 	print("VersionGate: Local version =", local_version)
@@ -23,9 +18,7 @@ func _ready() -> void:
 	await _check_version_gate()
 
 
-# =========================
 # Ensure Firebase Auth is ready
-# =========================
 func _wait_for_firebase_auth() -> void:
 	if not Firebase.Auth.needs_login():
 		return
@@ -35,9 +28,7 @@ func _wait_for_firebase_auth() -> void:
 		await get_tree().process_frame
 
 
-# =========================
 # Fetch version rules from Firestore
-# =========================
 func _check_version_gate() -> void:
 	var config_collection: FirestoreCollection = Firebase.Firestore.collection(CONFIG_COLLECTION)
 	var doc = await config_collection.get_doc(CONFIG_DOC)
@@ -70,9 +61,7 @@ func _check_version_gate() -> void:
 		block_and_exit()
 
 
-# =========================
 # Decision logic
-# =========================
 func should_block(version: String, blocked_versions: Array, minimum_allowed: String) -> bool:
 	if version in blocked_versions:
 		print("VersionGate: Version explicitly blocked")
@@ -85,9 +74,8 @@ func should_block(version: String, blocked_versions: Array, minimum_allowed: Str
 	return false
 
 
-# =========================
+
 # Semantic version compare
-# =========================
 func is_version_less(a: String, b: String) -> bool:
 	var A = a.split(".")
 	var B = b.split(".")
@@ -104,9 +92,7 @@ func is_version_less(a: String, b: String) -> bool:
 	return false
 
 
-# =========================
 # Block screen
-# =========================
 func block_and_exit() -> void:
 	print("VersionGate: Blocking execution")
 	get_tree().change_scene_to_file(
