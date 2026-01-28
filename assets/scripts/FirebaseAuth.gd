@@ -690,7 +690,6 @@ func write_complete_server():
 	})
 	# now delete from active and state
 	await active_puzzles.delete(current_puzzle)
-	await mp_delete_state()
 	
 func mp_delete_state():
 	''' 
@@ -711,5 +710,15 @@ func mp_delete_state():
 	state.add_or_update_field("puzzle_choice", {})
 	state.add_or_update_field("isActive", false)
 	await lobby_puzzle.update(state)
+	if current_puzzle:
+		await active_puzzles.delete(current_puzzle)
+
+func mp_delete_active_puzzle():
+	''' 
+	Deletes the active multiplayer puzzle for the user
+	'''
+	var puzzle_name = PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"])
+	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/mp_active_puzzles")
+	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
 	if current_puzzle:
 		await active_puzzles.delete(current_puzzle)
