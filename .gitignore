@@ -8,6 +8,8 @@ addons/godot-firebase/firebase.env
 # Build files
 dist/
 build/
+*.exe
+*.zip
 
 # OS / Editor junk
 .DS_Store
@@ -23,8 +25,9 @@ tmp/
 .godot/
 .vscode/
 *.png
-*.svg
 *.bmp
 *.jpg
 *.json
+*.svg
 *.html
+*.Identifier

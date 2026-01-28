@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://cii6psrhuor2h"]
+[gd_scene load_steps=0 format=3 uid="uid://cii6psrhuor2h"]
 
 [node name="VersionBlocked" type="Node2D"]
 position = Vector2(49, 408)
