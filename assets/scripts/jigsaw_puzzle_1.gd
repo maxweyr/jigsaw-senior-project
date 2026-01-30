@@ -7,7 +7,9 @@ var mute_button: Button
 var unmute_button: Button
 var offline_button: Button
 var complete = false;
+var completed_on_join = false;
 var save_popup: PopupPanel
+var help_popup: PopupMenu
 @onready var back_button = $UI_Button/Back
 @onready var loading = $LoadingScreen
 @onready var zoom_box: Control = $UI_Button/ZoomBox
@@ -50,6 +52,10 @@ func _ready():
 	save_popup = get_node_or_null("SavePopup")
 	if save_popup:
 		save_popup.hide()
+		
+	help_popup = get_node_or_null("HelpPopup")
+	if help_popup:
+		help_popup.hide()
 		
 	name = "JigsawPuzzleNode"
 	selected_puzzle_dir = PuzzleVar.choice["base_file_path"] + "_" + str(PuzzleVar.choice["size"])
@@ -159,6 +165,8 @@ func load_firebase_state(p_name):
 				reference_piece.snap_and_connect(other_piece.ID, 1)
 
 	complete = unique_group_ids.size() <= 1
+	if(complete):
+		completed_on_join = true
 	update_piece_count_display()
 
 #-----------------------------------------------------------------------------
@@ -561,11 +569,12 @@ func _input(event):
 		print("snap found")
 		PuzzleVar.snap_found = false
 		
+
+func _unhandled_input(event):
 	if event is InputEventMouseButton and event.pressed:
-		if PuzzleVar.background_clicked == false:
-			PuzzleVar.background_clicked = true
-		else:
-			PuzzleVar.background_clicked = false
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT:
+			PuzzleVar.background_clicked = not PuzzleVar.background_clicked
 		
 # This function parses pieces.json which contains the bounding boxes around each piece.  The
 # bounding box coordinates are given as pixel coordinates in the global image.
@@ -821,10 +830,15 @@ func _on_back_pressed() -> void:
 		print("Puzzle is complete. Checking if we need to delete saved state...")
 		
 		if NetworkManager.is_online:
-			FireAuth.write_complete_server()
 			if NetworkManager.connected_players.is_empty():
 				print("Puzzle complete, deleting state")
+				FireAuth.write_complete_server()
 				FireAuth.mp_delete_state()
+			elif completed_on_join:
+				print("Puzzle was already complete on join. Skipping deletion of saved state.")
+				FireAuth.mp_delete_active_puzzle()
+			else:
+				FireAuth.write_complete_server()
 		else:
 			print("Puzzle complete, deleting state")
 			FireAuth.write_complete(PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]))
@@ -903,3 +917,14 @@ func _on_yes_pressed() -> void:
 	print("Returning to puzzle selection screen.")
 	loading.hide()
 	get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn")
+
+
+func _on_help_button_pressed() -> void:
+	if help_popup.visible == true:
+		help_popup.hide()
+	else:
+		help_popup.popup_centered()
+	
+
+func _on_close_button_pressed() -> void:
+	help_popup.hide()
