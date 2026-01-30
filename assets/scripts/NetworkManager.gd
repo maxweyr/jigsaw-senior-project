@@ -293,6 +293,13 @@ func _release_peer_locks(peer_id: int) -> void:
 	for group_id in to_remove:
 		locks.erase(group_id)
 
+func _reset_lobby_state(lobby_number: int) -> void:
+	# Clear per-lobby lock + piece-group tracking when a new puzzle starts.
+	if lobby_group_locks.has(lobby_number):
+		lobby_group_locks[lobby_number] = {}
+	if lobby_piece_groups.has(lobby_number):
+		lobby_piece_groups[lobby_number] = {}
+
 ##=============
 ## RPC Methods
 ##=============
@@ -311,11 +318,16 @@ func _receive_chat_message(sender_name: String, message: String):
 
 # One-time handshake: client tells server name and lobby ONCE
 @rpc("any_peer", "call_remote", "reliable")
-func hello(player_name: String, lobby_number: int):
+func hello(player_name: String, lobby_number: int, puzzle_id_from_client: String):
 	if not is_server:
 		return
 	var id: int = multiplayer.get_remote_sender_id()
 	client_lobby[id] = lobby_number
+
+	var prev_puzzle_id := str(lobby_puzzle.get(lobby_number, ""))
+	if puzzle_id_from_client != "" and puzzle_id_from_client != prev_puzzle_id:
+		lobby_puzzle[lobby_number] = puzzle_id_from_client
+		_reset_lobby_state(lobby_number)
 
 	if not lobby_players.has(lobby_number):
 		lobby_players[lobby_number] = {}
@@ -502,6 +514,7 @@ func request_kick_lobby_clients():
 	var lobby = client_lobby.get(sender_id, null)
 	if lobby == null:
 		return
+	_reset_lobby_state(int(lobby))
 	var peers: Array = lobby_players.get(lobby, {}).keys()
 	for pid in peers:
 		if pid == sender_id:
@@ -544,6 +557,8 @@ func _on_peer_disconnected(id):
 			var peers: Array = lobby_players[lobby].keys() if lobby_players.has(lobby) else Array()
 			for pid in peers:
 				rpc_id(pid, "_update_player_list", lobby_players[lobby])
+			if lobby_players[lobby].is_empty():
+				_reset_lobby_state(lobby)
 		connected_players.erase(id)
 		_release_peer_locks(id)
 		client_lobby.erase(id)
@@ -557,7 +572,10 @@ func _on_connected_to_server():
 	
 	if FireAuth.is_online and FireAuth.get_nickname() != "":
 		print("NetworkManager: Sending hello for '", FireAuth.get_nickname(), "'")
-		rpc_id(1, "hello", FireAuth.get_nickname(), PuzzleVar.lobby_number)
+		var puzzle_id := ""
+		if PuzzleVar.choice is Dictionary and PuzzleVar.choice.has("base_file_path") and PuzzleVar.choice.has("size"):
+			puzzle_id = str(PuzzleVar.choice["base_file_path"]) + "_" + str(PuzzleVar.choice["size"])
+		rpc_id(1, "hello", FireAuth.get_nickname(), PuzzleVar.lobby_number, puzzle_id)
 	else:
 		print("ERROR::NetworkManager: Unable to register player, FireAuth is offline or box ID invalid")
 
