@@ -33,7 +33,7 @@ var chat_toggle_button: Button
 var chat_input_row: HBoxContainer
 var chat_minimized := false
 var chat_expanded_height := 200.0
-var chat_bottom_offset := -120.0
+var chat_bottom_offset := -85.0
 
 # --- Network Data	---
 var connected_players = [] # Array to store connected player names (excluding self)
@@ -371,11 +371,11 @@ func create_chat_window():
 	chat_panel.anchor_bottom = 1.0
 	chat_panel.offset_left = -270
 	chat_panel.offset_right = -20
-	chat_panel.offset_top = -320
 	chat_panel.offset_bottom = chat_bottom_offset
+	chat_expanded_height = 280.0
+	chat_panel.offset_top = chat_bottom_offset - chat_expanded_height
 	chat_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	chat_panel.grow_vertical = Control.GROW_DIRECTION_END
-	chat_expanded_height = chat_panel.offset_bottom - chat_panel.offset_top
+	chat_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	chat_panel.custom_minimum_size = Vector2(300, chat_expanded_height)
 
 	var ui_layer = $UI_Button
@@ -397,11 +397,13 @@ func create_chat_window():
 	title_label.text = "Chat"
 	title_label.add_theme_font_size_override("font_size", 18)
 	title_label.add_theme_color_override("font_color", BOX_FONT_COLOR)
+	title_label.add_theme_font_size_override("font_size", 22)
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header_row.add_child(title_label)
 
 	chat_toggle_button = Button.new()
 	chat_toggle_button.text = "Minimize"
+	chat_toggle_button.add_theme_font_size_override("font_size", 22)
 	chat_toggle_button.focus_mode = Control.FOCUS_NONE
 	chat_toggle_button.pressed.connect(_on_chat_toggle_button_pressed)
 	header_row.add_child(chat_toggle_button)
@@ -421,6 +423,7 @@ func create_chat_window():
 	chat_messages_label.scroll_following = true
 	chat_messages_label.bbcode_enabled = false
 	chat_messages_label.add_theme_color_override("default_color", BOX_FONT_COLOR)
+	chat_messages_label.add_theme_font_size_override("normal_font_size", 24)  
 	chat_messages_label.text = ""
 	chat_content_container.add_child(chat_messages_label)
 
@@ -435,6 +438,7 @@ func create_chat_window():
 	chat_input = LineEdit.new()
 	chat_input.name = "ChatInput"
 	chat_input.placeholder_text = "Type a message..."
+	chat_input.add_theme_font_size_override("font_size", 22)
 	chat_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	chat_input.text_submitted.connect(_on_chat_text_submitted)
 	chat_input_row.add_child(chat_input)
@@ -442,6 +446,7 @@ func create_chat_window():
 	chat_send_button = Button.new()
 	chat_send_button.name = "ChatSendButton"
 	chat_send_button.text = "Send"
+	chat_send_button.add_theme_font_size_override("font_size", 22)
 	chat_send_button.pressed.connect(_on_chat_send_button_pressed)
 	chat_input_row.add_child(chat_send_button)
 
