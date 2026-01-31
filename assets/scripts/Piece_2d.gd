@@ -13,6 +13,14 @@ var piece_height # height of the puzzle piece
 var piece_width # width of the puzzle piece
 var prev_position = Vector2() # helper for calculating velocity
 var velocity = Vector2() # actual velocity
+var lock_pending = false
+var has_lock = false
+var pending_select = false
+var pending_merge_source_id = -1
+var pending_merge_target_id = -1
+var pending_merge_stamp = 0
+var last_lock_refresh_sec = 0.0
+const LOCK_REFRESH_INTERVAL_SEC = 3.0
 
 func _ready():
 	PuzzleVar.active_piece = 0 # 0 is false, any other number is true
@@ -26,11 +34,20 @@ func _ready():
 		NetworkManager.pieces_connected.connect(_on_network_pieces_connected)
 	if not NetworkManager.pieces_moved.is_connected(_on_network_pieces_moved):
 		NetworkManager.pieces_moved.connect(_on_network_pieces_moved)
+	if not NetworkManager.lock_granted.is_connected(_on_lock_granted):
+		NetworkManager.lock_granted.connect(_on_lock_granted)
+	if not NetworkManager.lock_denied.is_connected(_on_lock_denied):
+		NetworkManager.lock_denied.connect(_on_lock_denied)
 
 # Called every frame where 'delta' is the elapsed time since the previous frame
 func _process(delta):
 	velocity = (position - prev_position) / delta # velocity is calculated here
 	prev_position = position
+	if NetworkManager.is_online and selected and has_lock:
+		var now_sec = float(Time.get_ticks_msec()) / 1000.0
+		if now_sec - last_lock_refresh_sec >= LOCK_REFRESH_INTERVAL_SEC:
+			last_lock_refresh_sec = now_sec
+			NetworkManager.rpc_id(1, "refresh_group_lock", ID, group_number)
 
 # this is the actual logic to move a piece when you select it
 func move(distance: Vector2):
@@ -40,6 +57,80 @@ func move(distance: Vector2):
 	for node in all_pieces:
 		if node.group_number == group_number:
 			node.global_position += distance
+
+func _select_piece():
+	if selected:
+		return
+	var all_pieces = get_tree().get_nodes_in_group("puzzle_pieces")
+	for piece in all_pieces:
+		if piece.group_number == group_number:
+			piece.bring_to_front()
+	PuzzleVar.active_piece = self
+	selected = true
+	PuzzleVar.draw_green_check = false
+	apply_transparency()
+
+func _request_lock():
+	if lock_pending or has_lock:
+		return
+	lock_pending = true
+	pending_select = true
+	if NetworkManager.is_online:
+		NetworkManager.rpc_id(1, "request_group_lock", ID, group_number)
+
+func _release_lock():
+	if not has_lock:
+		return
+	if NetworkManager.is_online:
+		NetworkManager.rpc_id(1, "release_group_lock", ID, group_number)
+	has_lock = false
+	last_lock_refresh_sec = 0.0
+
+func _set_pending_merge(source_id: int, target_id: int):
+	pending_merge_source_id = source_id
+	pending_merge_target_id = target_id
+	pending_merge_stamp += 1
+	_clear_pending_merge_after_delay(pending_merge_stamp)
+
+func _clear_pending_merge_after_delay(stamp: int) -> void:
+	await get_tree().create_timer(1.0).timeout
+	if pending_merge_stamp == stamp:
+		pending_merge_source_id = -1
+		pending_merge_target_id = -1
+
+func _on_lock_granted(piece_id: int, group_id: int):
+	if piece_id != ID:
+		return
+	lock_pending = false
+	if not pending_select or (PuzzleVar.active_piece and PuzzleVar.active_piece != self):
+		pending_select = false
+		if NetworkManager.is_online:
+			NetworkManager.rpc_id(1, "release_group_lock", ID, group_id)
+		return
+	pending_select = false
+	has_lock = true
+	last_lock_refresh_sec = float(Time.get_ticks_msec()) / 1000.0
+	_select_piece()
+
+func _on_lock_denied(piece_id: int, _group_id: int, _owner_id: int):
+	if piece_id != ID:
+		return
+	lock_pending = false
+	pending_select = false
+	if selected and PuzzleVar.active_piece == self:
+		selected = false
+		PuzzleVar.active_piece = 0
+		remove_transparency()
+
+func _get_lock_owner_for_piece(piece_id: int, group_id_hint: int) -> int:
+	if not NetworkManager.is_online:
+		return -1
+	NetworkManager.rpc_id(1, "request_lock_status", piece_id, group_id_hint)
+	while true:
+		var data = await NetworkManager.lock_status
+		if data.size() >= 3 and int(data[0]) == piece_id:
+			return int(data[2])
+	return -1
 
 #this is called whenever an event occurs within the area of the piece
 #	Example events include a key press within the area of the piece or
@@ -53,24 +144,17 @@ func _on_area_2d_input_event(_viewport, event, _shape_idx):
 			if not PuzzleVar.active_piece:
 				# if this piece is currently not selected
 				if selected == false:
-					# get all nodes from puzzle pieces
-					var all_pieces = get_tree().get_nodes_in_group("puzzle_pieces")
-					
-					# grab all pieces in the same group number
-					for piece in all_pieces:
-						if piece.group_number == group_number:
-							piece.bring_to_front()
-					# set this piece as the active puzzle piece
-					PuzzleVar.active_piece = self
-					# mark as selected
-					selected = true
-					
-					PuzzleVar.draw_green_check = false
-
-					apply_transparency()
+					if NetworkManager.is_online:
+						_request_lock()
+					else:
+						_select_piece()
 					
 			# if a piece is already selected
 			else:
+				if NetworkManager.is_online and not has_lock:
+					PuzzleVar.background_clicked = false
+					PuzzleVar.piece_clicked = true
+					return
 				if selected == true:
 					# deselect the current piece
 					selected = false
@@ -99,9 +183,9 @@ func _on_area_2d_input_event(_viewport, event, _shape_idx):
 					# Local snap sound and visual already handled in snap_and_connect
 					PuzzleVar.draw_green_check = false
 				else:
-					if NetworkManager.is_online:
+					if NetworkManager.is_online and has_lock:
 						# REMOVED lobby_number (server routes by lobby)
-						NetworkManager.rpc_id(1, "_receive_piece_move", piece_positions)  # send to server 
+						NetworkManager.rpc_id(1, "_receive_piece_move", group_number, piece_positions)  # send to server 
 
 				if FireAuth.is_online and not NetworkManager.is_server and NetworkManager.is_online:
 					FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
@@ -118,6 +202,7 @@ func _on_area_2d_input_event(_viewport, event, _shape_idx):
 				
 				# Set to original color from gray/transparent movement
 				remove_transparency()
+				_release_lock()
 				
 			PuzzleVar.background_clicked = false
 			PuzzleVar.piece_clicked = true
@@ -127,6 +212,8 @@ func _on_area_2d_input_event(_viewport, event, _shape_idx):
 # when the mouse moves
 func _input(event):
 	if event is InputEventMouseMotion and selected == true:
+		if NetworkManager.is_online and not has_lock:
+			return
 		apply_transparency()
 		
 		var distance = get_global_mouse_position() - global_position
@@ -147,6 +234,8 @@ func snap_and_connect(adjacent_piece_id: int, loadFlag = 0, is_network = false):
 	# get the global position of the adjacent node
 	var adjacent_node = PuzzleVar.ordered_pieces_array[adjacent_piece_id]
 	var adjacent_global_pos = adjacent_node.get_global_position() # coordinates centered on the piece
+	var source_group_id = group_number
+	var target_group_id = adjacent_node.group_number
 	
 	var adjacent_ref_coord = PuzzleVar.global_coordinates_list[str(adjacent_piece_id)]
 	
@@ -173,12 +262,12 @@ func snap_and_connect(adjacent_piece_id: int, loadFlag = 0, is_network = false):
 
 	if PuzzleVar.draw_green_check == false and loadFlag == 0 and not is_network:
 		# Calculate the midpoint between the two connecting sides
-		var green_check_midpoint = (current_global_pos + adjacent_global_pos) / 2
-		# Pass the midpoint to show_image_on_snap() so the green checkmark appears
-		show_image_on_snap(green_check_midpoint)
-		if main_scene:
-			main_scene.play_snap_sound()
-
+		if not NetworkManager.is_online:
+			var green_check_midpoint = (current_global_pos + adjacent_global_pos) / 2
+			# Pass the midpoint to show_image_on_snap() so the green checkmark appears
+			show_image_on_snap(green_check_midpoint)
+			if main_scene:
+				main_scene.play_snap_sound()
 		PuzzleVar.draw_green_check = true
 	
 	# here is the code to decide which group to move
@@ -198,13 +287,32 @@ func snap_and_connect(adjacent_piece_id: int, loadFlag = 0, is_network = false):
 		prev_group_number = group_number
 		dist *= -1
 	
-	# The function below is called to physically move the piece and join it to the 
-	# appropriate group
-	move_pieces_to_connect(dist, prev_group_number, new_group_number)
+	if NetworkManager.is_online and not is_network and has_lock:
+		# Server-authoritative merge: send proposed positions, apply on server approval.
+		var piece_positions = []
+		for node in all_pieces:
+			if node.group_number == new_group_number:
+				piece_positions.append({
+					"id": node.ID,
+					"position": node.global_position
+				})
+			elif node.group_number == prev_group_number:
+				piece_positions.append({
+					"id": node.ID,
+					"position": node.global_position + dist
+				})
+		_set_pending_merge(ID, adjacent_piece_id)
+		NetworkManager.rpc_id(1, "sync_connected_pieces", ID, adjacent_piece_id, source_group_id, target_group_id, new_group_number, piece_positions)
+		FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
+		return
+	else:
+		# The function below is called to physically move the piece and join it to the 
+		# appropriate group
+		move_pieces_to_connect(dist, prev_group_number, new_group_number)
 
-	# Update the piece count display
-	if main_scene and main_scene.has_method("update_piece_count_display"):
-		main_scene.update_piece_count_display()
+		# Update the piece count display
+		if main_scene and main_scene.has_method("update_piece_count_display"):
+			main_scene.update_piece_count_display()
 	
 	var finished = true
 	
@@ -213,24 +321,6 @@ func snap_and_connect(adjacent_piece_id: int, loadFlag = 0, is_network = false):
 			finished = false
 			break
 	
-	# If we successfully connected the pieces and we're not in a network operation,
-	# notify other clients if we're in online mode
-	if not is_network and NetworkManager.is_online:
-		# Collect positions of all pieces with the new group number
-		var piece_positions = []
-		for node in all_pieces:
-			if node.group_number == new_group_number:
-				piece_positions.append({
-					"id": node.ID,
-					"position": node.global_position
-				})
-		
-		# Send the connection info to the server to be broadcast to other clients
-		if NetworkManager.is_online:
-			NetworkManager.rpc_id(1, "sync_connected_pieces", ID, adjacent_piece_id, new_group_number, piece_positions)
-			FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
-
-
 # This is the function that actually moves the piece (in the current group)
 # to connect it
 func move_pieces_to_connect(distance: Vector2, prev_group_number: int, new_group_number: int):
@@ -265,6 +355,11 @@ func check_connections(adjacent_piece_ID: int) -> bool:
 	var adjusted_adjacent_left_x = adjacent_global_position[0] - (adjacent_node.piece_width/2)
 	var adjusted_adjacent_left_y = adjacent_global_position[1] - (adjacent_node.piece_height/2)
 	var adjusted_adjacent_upper_left = Vector2(adjusted_adjacent_left_x, adjusted_adjacent_left_y)
+
+	if NetworkManager.is_online and has_lock:
+		var owner_id = await _get_lock_owner_for_piece(adjacent_piece_ID, adjacent_node.group_number)
+		if owner_id != -1 and owner_id != multiplayer.get_unique_id():
+			return false
 	
 	var slope = (adjacent_ref_midpoint[1] - current_ref_midpoint[1]) / (adjacent_ref_midpoint[0] - current_ref_midpoint[0])
 	
@@ -366,6 +461,18 @@ func _on_network_pieces_connected(_source_piece_id, _connected_piece_id, new_gro
 			piece.position = piece_position
 			PuzzleVar.ordered_pieces_array[updated_piece_id] = piece
 	#FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
+
+	if pending_merge_source_id == _source_piece_id and pending_merge_target_id == _connected_piece_id:
+		var source_piece = PuzzleVar.ordered_pieces_array[_source_piece_id]
+		var target_piece = PuzzleVar.ordered_pieces_array[_connected_piece_id]
+		if source_piece and target_piece:
+			var mid = (source_piece.global_position + target_piece.global_position) / 2
+			show_image_on_snap(mid)
+			var main_scene = get_node("/root/JigsawPuzzleNode")
+			if main_scene:
+				main_scene.play_snap_sound()
+		pending_merge_source_id = -1
+		pending_merge_target_id = -1
 
 	# Update the piece counter for network connections
 	var main_scene = get_node("/root/JigsawPuzzleNode")
