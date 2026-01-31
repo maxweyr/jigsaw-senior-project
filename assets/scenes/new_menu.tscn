@@ -68,9 +68,9 @@ texture = ExtResource("2_1empl")
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 0
 offset_left = 600.0
-offset_top = 71.0
+offset_top = 100.0
 offset_right = 1353.0
-offset_bottom = 850.0
+offset_bottom = 985.0
 pivot_offset = Vector2(307, 718)
 theme_override_constants/separation = 50
 alignment = 1
@@ -79,7 +79,6 @@ alignment = 1
 layout_mode = 2
 theme_override_font_sizes/font_size = 100
 text = "Jigsaw
-
 Puzzle"
 label_settings = SubResource("LabelSettings_75luh")
 horizontal_alignment = 1
