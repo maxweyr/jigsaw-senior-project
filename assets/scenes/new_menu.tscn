@@ -78,8 +78,14 @@ alignment = 1
 [node name="title" type="Label" parent="VBoxContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 100
-text = "Jigsaw
-Puzzle"
+text = "Jigsaw"
+label_settings = SubResource("LabelSettings_75luh")
+horizontal_alignment = 1
+
+[node name="title2" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 100
+text = "Puzzle"
 label_settings = SubResource("LabelSettings_75luh")
 horizontal_alignment = 1
 
@@ -152,8 +158,8 @@ theme_override_styles/panel = SubResource("StyleBoxRenamePopup")
 [node name="VBoxContainer" type="VBoxContainer" parent="RenamePopup"]
 offset_left = 16.0
 offset_top = 16.0
-offset_right = 84.0
-offset_bottom = 84.0
+offset_right = 411.0
+offset_bottom = 186.0
 theme_override_constants/separation = 10
 alignment = 1
 
