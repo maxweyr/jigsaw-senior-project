@@ -1,7 +1,6 @@
-[gd_scene load_steps=0 format=3 uid="uid://cii6psrhuor2h"]
+[gd_scene format=3 uid="uid://ccvx0h2oiiehr"]
 
 [node name="VersionBlocked" type="Node2D"]
-position = Vector2(49, 408)
 
 [node name="Control" type="Control" parent="."]
 layout_mode = 3
@@ -11,20 +10,19 @@ offset_bottom = 40.0
 
 [node name="Panel" type="Panel" parent="Control"]
 layout_mode = 0
-offset_right = 1814.0
-offset_bottom = 223.0
+offset_right = 1960.0
+offset_bottom = 1105.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Control/Panel"]
 layout_mode = 0
-offset_right = 580.0
-offset_bottom = 75.0
+offset_right = 1955.0
+offset_bottom = 1091.0
 alignment = 1
 
 [node name="Label" type="Label" parent="Control/Panel/VBoxContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 50
 text = "This version of the software is no longer supported.
-
 Please contact the study coordinator or email cpe350capstone@gmail.com."
 horizontal_alignment = 1
 vertical_alignment = 1

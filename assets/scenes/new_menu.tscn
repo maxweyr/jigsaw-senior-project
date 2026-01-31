@@ -79,6 +79,7 @@ alignment = 1
 layout_mode = 2
 theme_override_font_sizes/font_size = 100
 text = "Jigsaw
+
 Puzzle"
 label_settings = SubResource("LabelSettings_75luh")
 horizontal_alignment = 1
@@ -164,7 +165,9 @@ text = "Enter your new nickname"
 horizontal_alignment = 1
 
 [node name="NicknameLineEdit" type="LineEdit" parent="RenamePopup/VBoxContainer"]
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
+theme_override_font_sizes/font_size = 32
 placeholder_text = "New nickname"
 
 [node name="ButtonRow" type="HBoxContainer" parent="RenamePopup/VBoxContainer"]
@@ -176,12 +179,14 @@ alignment = 1
 custom_minimum_size = Vector2(130, 52)
 layout_mode = 2
 theme = ExtResource("3_ro0bn")
+theme_override_font_sizes/font_size = 25
 text = "Save"
 
 [node name="CancelButton" type="Button" parent="RenamePopup/VBoxContainer/ButtonRow"]
 custom_minimum_size = Vector2(130, 52)
 layout_mode = 2
 theme = ExtResource("3_ro0bn")
+theme_override_font_sizes/font_size = 25
 text = "Cancel"
 
 [connection signal="pressed" from="VBoxContainer/select puzzle" to="." method="_on_select_puzzle_pressed"]

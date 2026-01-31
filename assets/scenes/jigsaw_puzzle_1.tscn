@@ -339,7 +339,7 @@ theme_override_fonts/bold_font = ExtResource("15_ksc0x")
 theme_override_font_sizes/normal_font_size = 35
 theme_override_font_sizes/bold_font_size = 35
 bbcode_enabled = true
-text = "[indent][indent][b]Click once to drop:[/b] Click the trackpad again to release the piece or the background, whether you were holding.
+text = "[indent][indent][b]Click once to drop:[/b] Click the trackpad again to release the piece or the background.
 
 "
 fit_content = true
@@ -391,7 +391,7 @@ theme_override_fonts/bold_font = ExtResource("15_ksc0x")
 theme_override_font_sizes/normal_font_size = 35
 theme_override_font_sizes/bold_font_size = 35
 bbcode_enabled = true
-text = "[indent][indent][b]Progress counter:[/b] The number on the right shows how many puzzle piece connections you’ve completed out of the total.
+text = "[indent][indent][b]Progress counter:[/b] The number on the top right shows how many puzzle piece connections you’ve completed out of the total.
 
 "
 fit_content = true
@@ -417,7 +417,7 @@ theme_override_fonts/bold_font = ExtResource("15_ksc0x")
 theme_override_font_sizes/normal_font_size = 35
 theme_override_font_sizes/bold_font_size = 35
 bbcode_enabled = true
-text = "		[b]Questions:[/b] Email cpe350capstone@gmail.com 
+text = "		[b]Questions:[/b] Email cpe350capstone@gmail.com
 
 "
 fit_content = true
