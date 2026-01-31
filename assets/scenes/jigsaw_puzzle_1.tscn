@@ -280,7 +280,15 @@ scale = Vector2(1.37158, 1.12207)
 [node name="PieceSpawner" type="MultiplayerSpawner" parent="."]
 spawn_path = NodePath("..")
 
-[node name="HelpPopup" type="PopupMenu" parent="."]
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Control" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="HelpPopup" type="PopupMenu" parent="CanvasLayer/Control"]
 oversampling_override = 1.0
 size = Vector2i(1700, 1000)
 theme = SubResource("Theme_vb4a4")
@@ -289,25 +297,28 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_vb4a4")
 hide_on_item_selection = false
 hide_on_checkable_item_selection = false
 
-[node name="PanelContainer" type="PanelContainer" parent="HelpPopup"]
+[node name="PanelContainer" type="PanelContainer" parent="CanvasLayer/Control/HelpPopup"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_top = 0.5
+offset_right = 2.0
+offset_bottom = 24.5
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_ksc0x")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HelpPopup/PanelContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/Control/HelpPopup/PanelContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 10
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="HelpPopup/PanelContainer/VBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="CanvasLayer/Control/HelpPopup/PanelContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="TitleLabel" type="Label" parent="HelpPopup/PanelContainer/VBoxContainer/HBoxContainer2"]
+[node name="TitleLabel" type="Label" parent="CanvasLayer/Control/HelpPopup/PanelContainer/VBoxContainer/HBoxContainer2"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.95, 0.95, 0.95, 1)
@@ -315,114 +326,114 @@ theme_override_fonts/font = ExtResource("15_ksc0x")
 theme_override_font_sizes/font_size = 40
 text = "FAQ, Help"
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HelpPopup/PanelContainer/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/Control/HelpPopup/PanelContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="Label" type="RichTextLabel" parent="HelpPopup/PanelContainer/VBoxContainer/VBoxContainer"]
+[node name="Label" type="RichTextLabel" parent="CanvasLayer/Control/HelpPopup/PanelContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/normal_font = ExtResource("16_vb4a4")
 theme_override_fonts/bold_font = ExtResource("15_ksc0x")
-theme_override_font_sizes/normal_font_size = 35
-theme_override_font_sizes/bold_font_size = 35
+theme_override_font_sizes/normal_font_size = 32
+theme_override_font_sizes/bold_font_size = 32
 bbcode_enabled = true
 text = "[indent][indent][b]Click once to grab:[/b] Clicking the background or a puzzle piece grabs it so no need to press and hold.[/indent]
 
 "
 fit_content = true
 
-[node name="Label2" type="RichTextLabel" parent="HelpPopup/PanelContainer/VBoxContainer/VBoxContainer"]
+[node name="Label2" type="RichTextLabel" parent="CanvasLayer/Control/HelpPopup/PanelContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/normal_font = ExtResource("16_vb4a4")
 theme_override_fonts/bold_font = ExtResource("15_ksc0x")
-theme_override_font_sizes/normal_font_size = 35
-theme_override_font_sizes/bold_font_size = 35
+theme_override_font_sizes/normal_font_size = 32
+theme_override_font_sizes/bold_font_size = 32
 bbcode_enabled = true
 text = "[indent][indent][b]Click once to drop:[/b] Click the trackpad again to release the piece or the background.
 
 "
 fit_content = true
 
-[node name="Label3" type="RichTextLabel" parent="HelpPopup/PanelContainer/VBoxContainer/VBoxContainer"]
+[node name="Label3" type="RichTextLabel" parent="CanvasLayer/Control/HelpPopup/PanelContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/normal_font = ExtResource("16_vb4a4")
 theme_override_fonts/bold_font = ExtResource("15_ksc0x")
-theme_override_font_sizes/normal_font_size = 35
-theme_override_font_sizes/bold_font_size = 35
+theme_override_font_sizes/normal_font_size = 32
+theme_override_font_sizes/bold_font_size = 32
 bbcode_enabled = true
 text = "[indent][indent][b]Move the view or a piece:[/b] Click the background and move your cursor to pan around the puzzle. Click a puzzle piece and move your cursor to drag it. Click again to drop it. 
 
 "
 fit_content = true
 
-[node name="Label4" type="RichTextLabel" parent="HelpPopup/PanelContainer/VBoxContainer/VBoxContainer"]
+[node name="Label4" type="RichTextLabel" parent="CanvasLayer/Control/HelpPopup/PanelContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/normal_font = ExtResource("16_vb4a4")
 theme_override_fonts/bold_font = ExtResource("15_ksc0x")
-theme_override_font_sizes/normal_font_size = 35
-theme_override_font_sizes/bold_font_size = 35
+theme_override_font_sizes/normal_font_size = 32
+theme_override_font_sizes/bold_font_size = 32
 bbcode_enabled = true
 text = "		[b]Top buttons (left to right):[/b] Hide/Show Puzzle Image, Zoom Out, Zoom In
 
 "
 fit_content = true
 
-[node name="Label5" type="RichTextLabel" parent="HelpPopup/PanelContainer/VBoxContainer/VBoxContainer"]
+[node name="Label5" type="RichTextLabel" parent="CanvasLayer/Control/HelpPopup/PanelContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/normal_font = ExtResource("16_vb4a4")
 theme_override_fonts/bold_font = ExtResource("15_ksc0x")
-theme_override_font_sizes/normal_font_size = 35
-theme_override_font_sizes/bold_font_size = 35
+theme_override_font_sizes/normal_font_size = 32
+theme_override_font_sizes/bold_font_size = 32
 bbcode_enabled = true
 text = "[indent][indent][b]Zoom controls:[/b] You can zoom using your laptop trackpad or the zoom buttons at the top center of the screen.
 
 "
 fit_content = true
 
-[node name="Label6" type="RichTextLabel" parent="HelpPopup/PanelContainer/VBoxContainer/VBoxContainer"]
+[node name="Label6" type="RichTextLabel" parent="CanvasLayer/Control/HelpPopup/PanelContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/normal_font = ExtResource("16_vb4a4")
 theme_override_fonts/bold_font = ExtResource("15_ksc0x")
-theme_override_font_sizes/normal_font_size = 35
-theme_override_font_sizes/bold_font_size = 35
+theme_override_font_sizes/normal_font_size = 32
+theme_override_font_sizes/bold_font_size = 32
 bbcode_enabled = true
 text = "[indent][indent][b]Progress counter:[/b] The number on the top right shows how many puzzle piece connections you’ve completed out of the total.
 
 "
 fit_content = true
 
-[node name="Label7" type="RichTextLabel" parent="HelpPopup/PanelContainer/VBoxContainer/VBoxContainer"]
+[node name="Label7" type="RichTextLabel" parent="CanvasLayer/Control/HelpPopup/PanelContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/normal_font = ExtResource("16_vb4a4")
 theme_override_fonts/bold_font = ExtResource("15_ksc0x")
-theme_override_font_sizes/normal_font_size = 35
-theme_override_font_sizes/bold_font_size = 35
+theme_override_font_sizes/normal_font_size = 32
+theme_override_font_sizes/bold_font_size = 32
 bbcode_enabled = true
 text = "[indent][indent][b]Multiplayer Mode:[/b] Puzzle progress can be saved in Multiplayer Mode. The last player to return to the menu chooses whether to save. To start a new multiplayer puzzle, everyone must return to the menu. The last player should select “No” when asked to save, then one player can choose a new puzzle.
 
 "
 fit_content = true
 
-[node name="Label8" type="RichTextLabel" parent="HelpPopup/PanelContainer/VBoxContainer/VBoxContainer"]
+[node name="Label8" type="RichTextLabel" parent="CanvasLayer/Control/HelpPopup/PanelContainer/VBoxContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/normal_font = ExtResource("16_vb4a4")
 theme_override_fonts/bold_font = ExtResource("15_ksc0x")
-theme_override_font_sizes/normal_font_size = 35
-theme_override_font_sizes/bold_font_size = 35
+theme_override_font_sizes/normal_font_size = 32
+theme_override_font_sizes/bold_font_size = 32
 bbcode_enabled = true
 text = "		[b]Questions:[/b] Email cpe350capstone@gmail.com
 
 "
 fit_content = true
 
-[node name="HBoxContainer" type="HBoxContainer" parent="HelpPopup"]
+[node name="HBoxContainer" type="HBoxContainer" parent="CanvasLayer/Control/HelpPopup"]
 anchors_preset = 3
 anchor_left = 1.0
 anchor_top = 1.0
@@ -435,7 +446,7 @@ offset_bottom = -9.0
 grow_horizontal = 0
 grow_vertical = 0
 
-[node name="CloseButton" type="Button" parent="HelpPopup/HBoxContainer"]
+[node name="CloseButton" type="Button" parent="CanvasLayer/Control/HelpPopup/HBoxContainer"]
 custom_minimum_size = Vector2(130, 52)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.95, 0.95, 1)
@@ -486,6 +497,6 @@ text = "No"
 [connection signal="pressed" from="UI_Button/ZoomBox/ZoomOutButton" to="UI_Button" method="_on_ZoomOutButton_pressed"]
 [connection signal="pressed" from="UI_Button/HelpButton" to="." method="_on_help_button_pressed"]
 [connection signal="spawned" from="PieceSpawner" to="." method="_piece_spawned"]
-[connection signal="pressed" from="HelpPopup/HBoxContainer/CloseButton" to="." method="_on_close_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/Control/HelpPopup/HBoxContainer/CloseButton" to="." method="_on_close_button_pressed"]
 [connection signal="pressed" from="SavePopup/VBoxContainer/ButtonRow/YesButton" to="." method="_on_yes_pressed"]
 [connection signal="pressed" from="SavePopup/VBoxContainer/ButtonRow/NoButton" to="." method="_on_no_pressed"]

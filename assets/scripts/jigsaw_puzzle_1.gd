@@ -9,7 +9,7 @@ var offline_button: Button
 var complete = false;
 var completed_on_join = false;
 var save_popup: PopupPanel
-var help_popup: PopupMenu
+@onready var help_popup: PopupMenu = $CanvasLayer/Control/HelpPopup
 @onready var back_button = $UI_Button/Back
 @onready var loading = $LoadingScreen
 @onready var zoom_box: Control = $UI_Button/ZoomBox
@@ -53,8 +53,7 @@ func _ready():
 	if save_popup:
 		save_popup.hide()
 		
-	help_popup = get_node_or_null("HelpPopup")
-	if help_popup:
+	if is_instance_valid(help_popup):
 		help_popup.hide()
 		
 	name = "JigsawPuzzleNode"
@@ -166,6 +165,7 @@ func load_firebase_state(p_name):
 
 	complete = unique_group_ids.size() <= 1
 	if(complete):
+		print("Puzzle was already complete on join.")
 		completed_on_join = true
 	update_piece_count_display()
 
@@ -815,6 +815,7 @@ func _center_camera_on_pieces() -> void:
 		
 # Handles leaving the puzzle scene, saving state, and disconnecting if online client
 func _on_back_pressed() -> void:
+	loading.show()
 	# 1. Save puzzle state BEFORE clearing any data or freeing nodes
 	if !complete and FireAuth.is_online:
 		if NetworkManager.is_online:
@@ -835,12 +836,16 @@ func _on_back_pressed() -> void:
 		print("Puzzle is complete. Checking if we need to delete saved state...")
 		
 		if NetworkManager.is_online:
-			if NetworkManager.connected_players.is_empty():
+			if NetworkManager.connected_players.is_empty() and not completed_on_join:
 				print("Puzzle complete, deleting state")
 				FireAuth.write_complete_server()
 				FireAuth.mp_delete_state()
-			elif completed_on_join:
+			elif completed_on_join and NetworkManager.connected_players.is_empty():
 				print("Puzzle was already complete on join. Skipping deletion of saved state.")
+				FireAuth.mp_delete_active_puzzle()
+				FireAuth.mp_delete_state()
+			elif completed_on_join:
+				print("Other players still connected. Not deleting saved state.")
 				FireAuth.mp_delete_active_puzzle()
 			else:
 				FireAuth.write_complete_server()
@@ -859,6 +864,7 @@ func _on_back_pressed() -> void:
 			printerr("ERROR: NetworkManager.multiplayer is not available to close connection.")
 	# 4. Change back to the puzzle selection scene
 	print("Returning to puzzle selection screen.")
+	await get_tree().create_timer(2.0).timeout 
 	loading.hide()
 	get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn")
 
@@ -925,10 +931,8 @@ func _on_yes_pressed() -> void:
 
 
 func _on_help_button_pressed() -> void:
-	if help_popup.visible == true:
-		help_popup.hide()
-	else:
-		help_popup.popup_centered()
+	#help_popup.position = get_viewport().get_mouse_position()
+	help_popup.popup_centered()
 	
 
 func _on_close_button_pressed() -> void:
