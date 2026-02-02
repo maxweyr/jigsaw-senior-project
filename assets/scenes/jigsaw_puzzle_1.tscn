@@ -427,7 +427,7 @@ theme_override_fonts/bold_font = ExtResource("15_ksc0x")
 theme_override_font_sizes/normal_font_size = 31
 theme_override_font_sizes/bold_font_size = 31
 bbcode_enabled = true
-text = "		[b]Questions:[/b] Email cpe350capstone@gmail.com
+text = "		[b]Questions:[/b] Email calpoly.jigsaw@gmail.com
 
 "
 fit_content = true
