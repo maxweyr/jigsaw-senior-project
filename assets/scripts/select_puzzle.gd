@@ -306,11 +306,7 @@ func _on_start_puzzle_pressed() -> void:
 		if NetworkManager.join_server():
 			return
 		loading.hide()
-		var error_popup = AcceptDialog.new()
-		error_popup.title = "Connection Error"
-		error_popup.dialog_text = "Failed to connect to server."
-		add_child(error_popup)
-		error_popup.popup_centered()
+		_show_simple_popup("Connection Error", "Failed to connect to server.")
 		return
 	get_tree().change_scene_to_file("res://assets/scenes/jigsaw_puzzle_1.tscn")
 
@@ -331,12 +327,7 @@ func _on_online_client_connected():
 
 func _on_online_connection_failed():
 	loading.hide()
-	var error_popup = AcceptDialog.new()
-	error_popup.title = "Connection Error"
-	error_popup.dialog_text = "Failed to connect to server."
-	add_child(error_popup)
-	error_popup.popup_centered()
-
+	_show_simple_popup("Connection Error", "Failed to connect to server.")
 
 func _on_go_back_pressed() -> void:
 	panel.hide()
@@ -349,3 +340,28 @@ func _on_go_back_to_menu_pressed() -> void:
 		loading.show()
 		await _release_online_selector_lock()
 	get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn")
+
+func _show_simple_popup(title: String, message: String, size: Vector2i = Vector2i(620, 260)) -> AcceptDialog:
+	var popup := AcceptDialog.new()
+	popup.title = title
+	popup.dialog_text = message
+	add_child(popup)
+	
+	# font sizing
+	popup.get_label().add_theme_font_size_override("font_size", 42)
+	popup.get_ok_button().add_theme_font_size_override("font_size", 28)
+	popup.add_theme_font_size_override("title_font_size", 28)
+	
+	# text centering
+	var lbl := popup.get_label()
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	
+	# resize popup
+	popup.reset_size()
+	popup.size = size
+	popup.call_deferred("popup_centered")
+	
+	return popup

@@ -815,7 +815,7 @@ func _center_camera_on_pieces() -> void:
 		
 # Handles leaving the puzzle scene, saving state, and disconnecting if online client
 func _on_back_pressed() -> void:
-	loading.show()
+	
 	# 1. Save puzzle state BEFORE clearing any data or freeing nodes
 	if !complete and FireAuth.is_online:
 		if NetworkManager.is_online:
@@ -863,6 +863,7 @@ func _on_back_pressed() -> void:
 		else:
 			printerr("ERROR: NetworkManager.multiplayer is not available to close connection.")
 	# 4. Change back to the puzzle selection scene
+	loading.show()
 	print("Returning to puzzle selection screen.")
 	await get_tree().create_timer(2.0).timeout 
 	loading.hide()
@@ -889,6 +890,7 @@ func _on_no_pressed() -> void:
 			printerr("ERROR: NetworkManager.multiplayer is not available to close connection.")
 	# 4. Change back to the puzzle selection scene
 	print("Returning to puzzle selection screen.")
+	await get_tree().create_timer(2.0).timeout 
 	loading.hide()
 	get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn")
 	
@@ -926,6 +928,7 @@ func _on_yes_pressed() -> void:
 			printerr("ERROR: NetworkManager.multiplayer is not available to close connection.")
 
 	print("Returning to puzzle selection screen.")
+	await get_tree().create_timer(2.0).timeout 
 	loading.hide()
 	get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn")
 
