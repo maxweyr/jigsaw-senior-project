@@ -1,10 +1,13 @@
-[gd_scene load_steps=6 format=3 uid="uid://o6vf4guhfib1"]
+[gd_scene load_steps=7 format=3 uid="uid://o6vf4guhfib1"]
 
 [ext_resource type="Script" uid="uid://nswymt561l4x" path="res://assets/scripts/login.gd" id="1_kj5ca"]
 [ext_resource type="Texture2D" uid="uid://cjejvll72xhdf" path="res://assets/puzzles/new_background.jpg" id="2_kj5ca"]
 [ext_resource type="Texture2D" uid="uid://1gto0cal0d8t" path="res://assets/images/throbber1.png" id="4_4a6nw"]
 [ext_resource type="Script" uid="uid://b7kl13vp3afn1" path="res://assets/scripts/throbber.gd" id="5_hgqic"]
 [ext_resource type="Theme" uid="uid://cfxebjeqy3ke7" path="res://assets/themes/bold_text.tres" id="6_j7moi"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mm4bp"]
+bg_color = Color(0.47983426, 0.47983432, 0.47983426, 1)
 
 [node name="Authentication" type="Control"]
 layout_mode = 3
@@ -43,7 +46,7 @@ theme_override_constants/separation = 20
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 65
-text = "Create an Account or Sign In"
+text = "Sign In To Account"
 horizontal_alignment = 1
 
 [node name="UsernameLineEdit" type="LineEdit" parent="VBoxContainer"]
@@ -61,7 +64,8 @@ placeholder_text = "Pick a Nickname"
 [node name="LoginButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 65
-text = "Sign Up"
+theme_override_styles/normal = SubResource("StyleBoxFlat_mm4bp")
+text = "Sign In"
 
 [node name="LoadingScreen" type="CanvasLayer" parent="."]
 visible = false
