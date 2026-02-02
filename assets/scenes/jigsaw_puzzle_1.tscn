@@ -302,8 +302,7 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_top = 0.5
-offset_right = 2.0
-offset_bottom = 24.5
+offset_bottom = -1.5
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_ksc0x")
@@ -334,8 +333,8 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/normal_font = ExtResource("16_vb4a4")
 theme_override_fonts/bold_font = ExtResource("15_ksc0x")
-theme_override_font_sizes/normal_font_size = 32
-theme_override_font_sizes/bold_font_size = 32
+theme_override_font_sizes/normal_font_size = 31
+theme_override_font_sizes/bold_font_size = 31
 bbcode_enabled = true
 text = "[indent][indent][b]Click once to grab:[/b] Clicking the background or a puzzle piece grabs it so no need to press and hold.[/indent]
 
@@ -347,8 +346,8 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/normal_font = ExtResource("16_vb4a4")
 theme_override_fonts/bold_font = ExtResource("15_ksc0x")
-theme_override_font_sizes/normal_font_size = 32
-theme_override_font_sizes/bold_font_size = 32
+theme_override_font_sizes/normal_font_size = 31
+theme_override_font_sizes/bold_font_size = 31
 bbcode_enabled = true
 text = "[indent][indent][b]Click once to drop:[/b] Click the trackpad again to release the piece or the background.
 
@@ -360,8 +359,8 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/normal_font = ExtResource("16_vb4a4")
 theme_override_fonts/bold_font = ExtResource("15_ksc0x")
-theme_override_font_sizes/normal_font_size = 32
-theme_override_font_sizes/bold_font_size = 32
+theme_override_font_sizes/normal_font_size = 31
+theme_override_font_sizes/bold_font_size = 31
 bbcode_enabled = true
 text = "[indent][indent][b]Move the view or a piece:[/b] Click the background and move your cursor to pan around the puzzle. Click a puzzle piece and move your cursor to drag it. Click again to drop it. 
 
@@ -373,8 +372,8 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/normal_font = ExtResource("16_vb4a4")
 theme_override_fonts/bold_font = ExtResource("15_ksc0x")
-theme_override_font_sizes/normal_font_size = 32
-theme_override_font_sizes/bold_font_size = 32
+theme_override_font_sizes/normal_font_size = 31
+theme_override_font_sizes/bold_font_size = 31
 bbcode_enabled = true
 text = "		[b]Top buttons (left to right):[/b] Hide/Show Puzzle Image, Zoom Out, Zoom In
 
@@ -386,8 +385,8 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/normal_font = ExtResource("16_vb4a4")
 theme_override_fonts/bold_font = ExtResource("15_ksc0x")
-theme_override_font_sizes/normal_font_size = 32
-theme_override_font_sizes/bold_font_size = 32
+theme_override_font_sizes/normal_font_size = 31
+theme_override_font_sizes/bold_font_size = 31
 bbcode_enabled = true
 text = "[indent][indent][b]Zoom controls:[/b] You can zoom using your laptop trackpad or the zoom buttons at the top center of the screen.
 
@@ -399,8 +398,8 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/normal_font = ExtResource("16_vb4a4")
 theme_override_fonts/bold_font = ExtResource("15_ksc0x")
-theme_override_font_sizes/normal_font_size = 32
-theme_override_font_sizes/bold_font_size = 32
+theme_override_font_sizes/normal_font_size = 31
+theme_override_font_sizes/bold_font_size = 31
 bbcode_enabled = true
 text = "[indent][indent][b]Progress counter:[/b] The number on the top right shows how many puzzle piece connections you’ve completed out of the total.
 
@@ -412,8 +411,8 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/normal_font = ExtResource("16_vb4a4")
 theme_override_fonts/bold_font = ExtResource("15_ksc0x")
-theme_override_font_sizes/normal_font_size = 32
-theme_override_font_sizes/bold_font_size = 32
+theme_override_font_sizes/normal_font_size = 31
+theme_override_font_sizes/bold_font_size = 31
 bbcode_enabled = true
 text = "[indent][indent][b]Multiplayer Mode:[/b] Puzzle progress can be saved in Multiplayer Mode. The last player to return to the menu chooses whether to save. To start a new multiplayer puzzle, everyone must return to the menu. The last player should select “No” when asked to save, then one player can choose a new puzzle.
 
@@ -425,8 +424,8 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/normal_font = ExtResource("16_vb4a4")
 theme_override_fonts/bold_font = ExtResource("15_ksc0x")
-theme_override_font_sizes/normal_font_size = 32
-theme_override_font_sizes/bold_font_size = 32
+theme_override_font_sizes/normal_font_size = 31
+theme_override_font_sizes/bold_font_size = 31
 bbcode_enabled = true
 text = "		[b]Questions:[/b] Email cpe350capstone@gmail.com
 
@@ -455,21 +454,21 @@ text = "Close Menu"
 
 [node name="SavePopup" type="PopupPanel" parent="."]
 oversampling_override = 1.0
-size = Vector2i(716, 180)
+size = Vector2i(1050, 222)
 theme_override_styles/panel = SubResource("StyleBoxFlat_355s3")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="SavePopup"]
 offset_left = 16.0
 offset_top = 16.0
-offset_right = 700.0
-offset_bottom = 164.0
+offset_right = 1034.0
+offset_bottom = 206.0
 theme_override_constants/separation = 10
 alignment = 1
 
 [node name="TitleLabel" type="Label" parent="SavePopup/VBoxContainer"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 40
-text = "Would you like to save your puzzle?"
+theme_override_font_sizes/font_size = 55
+text = "Would you like to save your progress?"
 horizontal_alignment = 1
 
 [node name="ButtonRow" type="HBoxContainer" parent="SavePopup/VBoxContainer"]
@@ -481,14 +480,14 @@ alignment = 1
 custom_minimum_size = Vector2(130, 52)
 layout_mode = 2
 theme = ExtResource("6_nllai")
-theme_override_font_sizes/font_size = 40
+theme_override_font_sizes/font_size = 60
 text = "Yes"
 
 [node name="NoButton" type="Button" parent="SavePopup/VBoxContainer/ButtonRow"]
 custom_minimum_size = Vector2(130, 52)
 layout_mode = 2
 theme = ExtResource("6_nllai")
-theme_override_font_sizes/font_size = 40
+theme_override_font_sizes/font_size = 60
 text = "No"
 
 [connection signal="pressed" from="UI_Button/Back" to="." method="_on_back_pressed"]

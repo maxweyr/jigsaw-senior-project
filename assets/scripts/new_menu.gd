@@ -86,11 +86,7 @@ func _on_play_online_pressed():
 		return
 	$AudioStreamPlayer.play()
 	if !FireAuth.is_online:
-		var popup = AcceptDialog.new()
-		popup.title = "Offline Mode"
-		popup.dialog_text = "Cannot play online while in offline mode. Please check your internet connection."
-		add_child(popup)
-		popup.popup_centered()
+		_show_simple_popup("Offline Mode", "Cannot play online while in offline mode. Please check your internet connection.")
 		joining_online = false
 		return
 
@@ -144,11 +140,7 @@ func _on_connection_failed():
 	print("Connection to server failed")
 	
 	# Show error message
-	var error_popup = AcceptDialog.new()
-	error_popup.title = "Connection Error"
-	error_popup.dialog_text = "Connection to server failed."
-	add_child(error_popup)
-	error_popup.popup_centered()
+	_show_simple_popup("Connection Error", "Connection to server failed.")
 
 func _join_online_with_choice():
 	if PuzzleVar.choice.is_empty():
@@ -329,9 +321,27 @@ func _clear_status_label(node_name: String = "ConnectingLabel"):
 	if label:
 		label.queue_free()
 
-func _show_simple_popup(title: String, message: String):
-	var popup = AcceptDialog.new()
+func _show_simple_popup(title: String, message: String, size: Vector2i = Vector2i(620, 260)) -> AcceptDialog:
+	var popup := AcceptDialog.new()
 	popup.title = title
 	popup.dialog_text = message
 	add_child(popup)
-	popup.popup_centered()
+	
+	# font sizing
+	popup.get_label().add_theme_font_size_override("font_size", 42)
+	popup.get_ok_button().add_theme_font_size_override("font_size", 28)
+	popup.add_theme_font_size_override("title_font_size", 28)
+	
+	# text centering
+	var lbl := popup.get_label()
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	
+	# resize popup
+	popup.reset_size()
+	popup.size = size
+	popup.call_deferred("popup_centered")
+	
+	return popup
