@@ -184,13 +184,10 @@ func _auto_rejoin_after_kick():
 	_join_online_with_choice()
 
 func _on_quit_pressed():
-	# quit the game
-	if(OS.get_name() == "Linux"):
-		print("shutting down")
-		OS.execute("shutdown", ["h", "now"])
-	else:
-		get_tree().quit()
-		print("Quitting game")
+	# Quit the game (desktop-safe). Avoid OS shutdown commands, which typically fail without
+	# elevated privileges and will not close the game process on Linux.
+	print("Quitting game")
+	get_tree().quit()
 # commented out for now, type d for any reason will crash the game
 # this is used to check for events such as a key press
 func _input(event):
