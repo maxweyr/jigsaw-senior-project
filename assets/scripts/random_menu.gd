@@ -22,7 +22,7 @@ func _on_select_1000_pressed() -> void:
 	get_tree().change_scene_to_file("res://assets/scenes/jigsaw_puzzle_1.tscn")
 
 
-func _on_suprise_me_pressed() -> void:
+func _on_surprise_me_pressed() -> void:
 	$AudioStreamPlayer.play()
 	PuzzleVar.choice = PuzzleVar.get_random_puzzles()
 	# load the texture and get the size of the puzzle image
