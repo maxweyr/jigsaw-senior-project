@@ -183,8 +183,7 @@ func button_pressed(button):
 	size_label.text = str(size_selected)
 	panel.show()
 	
-
-# Canonical grid population path for the puzzle selector UI.
+# Canonical puzzle population path: each puzzle row displays 3 size options.
 func populate_grid_2():
 	var buttons = grid.get_children()
 	var columns = grid.columns
@@ -213,17 +212,7 @@ func populate_grid_2():
 					tex_node.texture = res
 					tex_node.size = button.size
 
-				## Optional: show different progress info per size
-				#if FireAuth.offlineMode == 0:
-					#var global_index = img_index * columns + col
-					#print(GlobalProgress.progress_arr)
-					#add_custom_label(button, GlobalProgress.progress_arr[global_index])
-				#else:
-					#add_custom_label(button, 0)
-
 			
-			
-
 func _on_start_puzzle_pressed() -> void:
 	loading.show()  # show loading screen immediately
 	await get_tree().process_frame  # pause
