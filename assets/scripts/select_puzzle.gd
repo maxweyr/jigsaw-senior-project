@@ -136,33 +136,21 @@ func _on_right_button_pressed():
 
 # this function selects the image that is previewed on the button for the puzzle
 func button_pressed(button):
-	#need to take val into account
-	#do stuff to pick image
-	
-	#$AudioStreamPlayer.play() #this doesn't currently work because it switches scenes too quickly
-	# index is initially set as the page number subtracted by 1 and then
-	# multiplied by the number of buttons which is 9
-	# ex:
-	#	if you select something from page 2, you will currently
-	#	have an index of 9
-	var index = (page_num-1) * grid.get_child_count()
-	# how this works is by taking the name of the button and taking the
-	# number from the last character as per naming convention: gridx
-	# ex:
-	#	if you select the image in the button that is labeled grid1 then it
-	#	takes the 1 at the end and adds it to the index to get the actual index
-	#	of the image as it would be in the list PuzzleVar.images
-	
-	# ex for total thing:
-	#	if you select an image on page 2 and pick grid1, then the actual index
-	#	of the image is 10 and that will be put into PuzzleVar.choice so that
-	#	the appropriate image can be loaded in
-	
-	var button_name = String(button.name)
-	var chosen = index + int(button_name[-1])
-	var row_selected = ceil((chosen % 9)/ 3)
+	# Resolve index from grid position rather than button naming to avoid fragile coupling.
+	var button_index := grid.get_children().find(button)
+	if button_index == -1:
+		return
+
+	var columns := grid.columns
+	if columns <= 0:
+		return
+
+	var row_selected := int(button_index / columns)
+	var col_selected := button_index % columns
 	var sizes = [10, 100, 500]
-	var size_selected = sizes[chosen % 3]
+	if col_selected >= sizes.size():
+		return
+	var size_selected = sizes[col_selected]
 			
 	#print(row_selected, " from page ", page_num)
 	# now we need to select the row corresponding to the page num
