@@ -78,7 +78,7 @@ theme = ExtResource("5_ftyle")
 theme_override_font_sizes/font_size = 50
 text = "1000 Piece Puzzle"
 
-[node name="suprise me" type="Button" parent="VBoxContainer"]
+[node name="surprise me" type="Button" parent="VBoxContainer"]
 custom_minimum_size = Vector2(0, 90)
 layout_mode = 2
 theme = ExtResource("5_ftyle")
@@ -108,5 +108,5 @@ text = "Debug"
 [connection signal="pressed" from="VBoxContainer/select 10" to="." method="_on_select_10_pressed"]
 [connection signal="pressed" from="VBoxContainer/select 100" to="." method="_on_select_100_pressed"]
 [connection signal="pressed" from="VBoxContainer/select 1000" to="." method="_on_select_1000_pressed"]
-[connection signal="pressed" from="VBoxContainer/suprise me" to="." method="_on_suprise_me_pressed"]
+[connection signal="pressed" from="VBoxContainer/surprise me" to="." method="_on_surprise_me_pressed"]
 [connection signal="pressed" from="VBoxContainer/back" to="." method="_on_back_pressed"]
