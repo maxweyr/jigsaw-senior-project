@@ -69,7 +69,10 @@ func _ready():
 		help_popup.hide()
 		
 	name = "JigsawPuzzleNode"
-	selected_puzzle_dir = PuzzleVar.choice["base_file_path"] + "_" + str(PuzzleVar.choice["size"])
+	if PuzzleVar.choice.has("resolved_dir"):
+		selected_puzzle_dir = str(PuzzleVar.choice["resolved_dir"])
+	else:
+		selected_puzzle_dir = PuzzleVar.choice["base_file_path"] + "_" + str(PuzzleVar.choice["size"])
 	PuzzleVar.selected_puzzle_dir = selected_puzzle_dir
 	selected_puzzle_name = PuzzleVar.choice["base_name"] + str(PuzzleVar.choice["size"])
 	is_muted = false
