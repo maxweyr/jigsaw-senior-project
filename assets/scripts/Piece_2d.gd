@@ -1,5 +1,17 @@
 extends Node2D
 
+# Behavioral invariants (non-negotiable):
+# 1) Authority ownership: in online mode, this node only mutates networked group state after
+#    server approval; local-only authority is allowed solely in offline mode.
+# 2) RPC direction: lock/merge/move intents flow client->server via NetworkManager.rpc_id(1,...),
+#    and remote state application happens only from server-broadcast signals/RPC callbacks.
+# 3) Lock semantics: selecting/dragging in online mode requires a granted group lock; without
+#    lock ownership, this node must not emit movement/merge updates.
+# 4) Scene-change triggers: this piece script must not initiate scene transitions; it delegates
+#    game flow changes to higher-level managers/scenes.
+# 5) Auth fallback behavior: persistence sync calls are best-effort and gated by auth/network
+#    status; gameplay interaction remains functional when auth is unavailable.
+
 ##===============================================
 ## Piece_2d handles each individual puzzle piece
 ##===============================================
