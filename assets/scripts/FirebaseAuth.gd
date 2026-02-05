@@ -1,5 +1,17 @@
 extends Node
 
+# Behavioral invariants (non-negotiable):
+# 1) Authority ownership: auth/session truth is sourced from Firebase SDK/session artifacts;
+#    game systems consume this singleton as a status provider, not as gameplay authority.
+# 2) RPC direction: this auth layer performs backend SDK calls and does not participate directly
+#    in gameplay RPC routing between peers.
+# 3) Lock semantics: puzzle-piece lock ownership is out of scope here and must remain delegated
+#    to network gameplay managers.
+# 4) Scene-change triggers: auth helpers must report status via return values/signals and avoid
+#    forcing scene transitions directly.
+# 5) Auth fallback behavior: failed session restore/login must set is_online false and preserve
+#    deterministic defaults (box_id/nickname/user data) so offline/local flows continue.
+
 # Firebase Data Model Below
 # https://lucid.app/lucidchart/af25e9e6-c77e-4969-81fa-34510e32dcd6/edit?viewport_loc=-1197%2C-1440%2C3604%2C2292%2C0_0&invitationId=inv_20e62aec-9604-4bed-b2af-4882babbe404
 

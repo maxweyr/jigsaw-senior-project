@@ -1,5 +1,17 @@
 extends Node2D
 
+# Behavioral invariants (non-negotiable):
+# 1) Authority ownership: puzzle scene UI/state reflects authoritative multiplayer updates when
+#    online, while offline sessions treat local scene state as authority.
+# 2) RPC direction: this scene consumes NetworkManager events/signals and does not bypass manager
+#    routing with direct peer-to-peer mutation RPCs.
+# 3) Lock semantics: piece-level lock ownership is enforced by Piece_2d/NetworkManager; this
+#    scene must not override lock decisions when presenting or updating gameplay state.
+# 4) Scene-change triggers: win/menu transitions are initiated by explicit lifecycle events
+#    (completion, back flow, disconnect/kick handling) rather than implicit UI redraws.
+# 5) Auth fallback behavior: Firebase load/save paths are conditional; missing auth/network must
+#    degrade to playable local state instead of blocking scene initialization.
+
 # this is the main scene where the game actually occurs for the players to play
 
 var is_muted
