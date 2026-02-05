@@ -183,7 +183,7 @@ func button_pressed(button):
 	size_label.text = str(size_selected)
 	panel.show()
 	
-
+# Canonical puzzle population path: each puzzle row displays 3 size options.
 func populate_grid_2():
 	var buttons = grid.get_children()
 	var columns = grid.columns
@@ -212,91 +212,7 @@ func populate_grid_2():
 					tex_node.texture = res
 					tex_node.size = button.size
 
-				## Optional: show different progress info per size
-				#if FireAuth.offlineMode == 0:
-					#var global_index = img_index * columns + col
-					#print(GlobalProgress.progress_arr)
-					#add_custom_label(button, GlobalProgress.progress_arr[global_index])
-				#else:
-					#add_custom_label(button, 0)
-
 			
-			
-# this function is what populates the grid with images so that you can
-# preview which image you want to select
-func populate_grid():
-	# function starts by calculating the index of the image to start with
-	# when populating the grid with 9 images
-	var index = (page_num-1) * grid.get_child_count()
-	# iterates through each child (button) of the grid and sets the buttons
-	# texture to the appropriate image
-	
-	for i in grid.get_children():
-		var button := i as BaseButton
-		if is_instance_valid(button):
-			if index < PuzzleVar.images.size():
-				var file_path = PuzzleVar.path+"/"+PuzzleVar.images[index]
-				var res = load(file_path)
-				print("file_path: ", file_path, " loaded")
-				button.get_child(0).texture = res
-				button.get_child(0).size = button.size
-				if FireAuth.offlineMode == 0:
-					print(GlobalProgress.progress_arr)
-					#add_custom_label(button, GlobalProgress.progress_arr[index])
-				else:
-					add_custom_label(button, 0)
-				
-			else:
-				button.get_child(0).texture = null
-			# iterates the index to get the next image after the image is
-			# loaded in
-			index += 1
-			
-			
-func add_custom_label(button, percentage):
-	# Create a Panel (Colored Background)
-	var new_panel = Panel.new()
-	new_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	new_panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	# Flat style
-	new_panel.add_theme_stylebox_override("panel", StyleBoxFlat.new())
-	# Customize the Panel's appearance
-	
-	
-	var stylebox = new_panel.get_theme_stylebox("panel").duplicate()
-	stylebox.bg_color = Color(0, 0, 0, 0.7)# Black with 70% opacity
-	new_panel.add_theme_stylebox_override("panel", stylebox)
-
-	# Set panel size and anchors (positioning)
-	new_panel.anchor_left = 0.0
-	new_panel.anchor_right = 1.0
-	# Keeps it at the bottom of the button
-	new_panel.anchor_top = 0.8
-	new_panel.anchor_bottom = 1.0
-
-	# Create Label (Text)
-	var label = Label.new()
-	label.text = "Progress: " + str(percentage) + "% completed" # Customize text
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
-	# Adjust text size
-	label.add_theme_font_size_override("font_size", 30)
-	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-
-	# Add Panel and Label to the Button
-	# Add the background first
-	button.add_child(panel)
-	# Add the text label on top of the background
-	button.add_child(label)
-
-	# Ensure Label is inside the Panel
-	label.anchor_left = 0.0
-	label.anchor_right = 1.0
-	label.anchor_top = 0.8
-	label.anchor_bottom = 1.0
-
-
 func _on_start_puzzle_pressed() -> void:
 	loading.show()  # show loading screen immediately
 	await get_tree().process_frame  # pause
