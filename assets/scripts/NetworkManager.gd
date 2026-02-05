@@ -1,5 +1,17 @@
 extends Node
 
+# Behavioral invariants (non-negotiable):
+# 1) Authority ownership: dedicated server is always authoritative for lobby membership,
+#    piece-group state, and lock ownership; clients never self-authorize server state.
+# 2) RPC direction: client->server gameplay mutations use @rpc("any_peer") entry points,
+#    while server->client state fan-out uses @rpc("authority").
+# 3) Lock semantics: group locks are per-lobby, owned by one peer at a time, expiring via TTL,
+#    and only the owning peer may refresh/release or publish movement/merge updates.
+# 4) Scene-change triggers: this singleton may trigger scene changes only through explicit flags
+#    (should_load_game/ready_to_load) or explicit kick/disconnect routing paths.
+# 5) Auth fallback behavior: failed connectivity/auth must leave FireAuth.is_online false and
+#    preserve offline authority mode instead of partial online state.
+
 ##===============================================
 ## NetworkManager Handles Network & Server State
 ##===============================================
