@@ -29,7 +29,7 @@ var page_string = "%d out of %d"
 # grid reference:
 #have an array of images to pull from that will correspond to an integer returned by the buttons
 #for each page take the integer and add a multiple of 9
-@onready var grid = $"HBoxContainer/GridContainer"
+@onready var grid: GridContainer = $"HBoxContainer/GridContainer" as GridContainer
 
 var list = []
 
