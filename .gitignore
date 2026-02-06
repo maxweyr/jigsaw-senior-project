@@ -31,3 +31,6 @@ tmp/
 *.svg
 *.html
 *.Identifier
+
+# Backup artifacts
+*.bak

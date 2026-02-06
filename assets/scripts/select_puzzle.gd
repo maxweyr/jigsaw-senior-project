@@ -136,33 +136,21 @@ func _on_right_button_pressed():
 
 # this function selects the image that is previewed on the button for the puzzle
 func button_pressed(button):
-	#need to take val into account
-	#do stuff to pick image
-	
-	#$AudioStreamPlayer.play() #this doesn't currently work because it switches scenes too quickly
-	# index is initially set as the page number subtracted by 1 and then
-	# multiplied by the number of buttons which is 9
-	# ex:
-	#	if you select something from page 2, you will currently
-	#	have an index of 9
-	var index = (page_num-1) * grid.get_child_count()
-	# how this works is by taking the name of the button and taking the
-	# number from the last character as per naming convention: gridx
-	# ex:
-	#	if you select the image in the button that is labeled grid1 then it
-	#	takes the 1 at the end and adds it to the index to get the actual index
-	#	of the image as it would be in the list PuzzleVar.images
-	
-	# ex for total thing:
-	#	if you select an image on page 2 and pick grid1, then the actual index
-	#	of the image is 10 and that will be put into PuzzleVar.choice so that
-	#	the appropriate image can be loaded in
-	
-	var button_name = String(button.name)
-	var chosen = index + int(button_name[-1])
-	var row_selected = ceil((chosen % 9)/ 3)
+	# Resolve index from grid position rather than button naming to avoid fragile coupling.
+	var button_index := grid.get_children().find(button)
+	if button_index == -1:
+		return
+
+	var columns := grid.columns
+	if columns <= 0:
+		return
+
+	var row_selected := int(button_index / columns)
+	var col_selected := button_index % columns
 	var sizes = [10, 100, 500]
-	var size_selected = sizes[chosen % 3]
+	if col_selected >= sizes.size():
+		return
+	var size_selected = sizes[col_selected]
 			
 	#print(row_selected, " from page ", page_num)
 	# now we need to select the row corresponding to the page num
@@ -183,7 +171,7 @@ func button_pressed(button):
 	size_label.text = str(size_selected)
 	panel.show()
 	
-
+# Canonical puzzle population path: each puzzle row displays 3 size options.
 func populate_grid_2():
 	var buttons = grid.get_children()
 	var columns = grid.columns
@@ -212,91 +200,7 @@ func populate_grid_2():
 					tex_node.texture = res
 					tex_node.size = button.size
 
-				## Optional: show different progress info per size
-				#if FireAuth.offlineMode == 0:
-					#var global_index = img_index * columns + col
-					#print(GlobalProgress.progress_arr)
-					#add_custom_label(button, GlobalProgress.progress_arr[global_index])
-				#else:
-					#add_custom_label(button, 0)
-
 			
-			
-# this function is what populates the grid with images so that you can
-# preview which image you want to select
-func populate_grid():
-	# function starts by calculating the index of the image to start with
-	# when populating the grid with 9 images
-	var index = (page_num-1) * grid.get_child_count()
-	# iterates through each child (button) of the grid and sets the buttons
-	# texture to the appropriate image
-	
-	for i in grid.get_children():
-		var button := i as BaseButton
-		if is_instance_valid(button):
-			if index < PuzzleVar.images.size():
-				var file_path = PuzzleVar.path+"/"+PuzzleVar.images[index]
-				var res = load(file_path)
-				print("file_path: ", file_path, " loaded")
-				button.get_child(0).texture = res
-				button.get_child(0).size = button.size
-				if FireAuth.offlineMode == 0:
-					print(GlobalProgress.progress_arr)
-					#add_custom_label(button, GlobalProgress.progress_arr[index])
-				else:
-					add_custom_label(button, 0)
-				
-			else:
-				button.get_child(0).texture = null
-			# iterates the index to get the next image after the image is
-			# loaded in
-			index += 1
-			
-			
-func add_custom_label(button, percentage):
-	# Create a Panel (Colored Background)
-	var new_panel = Panel.new()
-	new_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	new_panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	# Flat style
-	new_panel.add_theme_stylebox_override("panel", StyleBoxFlat.new())
-	# Customize the Panel's appearance
-	
-	
-	var stylebox = new_panel.get_theme_stylebox("panel").duplicate()
-	stylebox.bg_color = Color(0, 0, 0, 0.7)# Black with 70% opacity
-	new_panel.add_theme_stylebox_override("panel", stylebox)
-
-	# Set panel size and anchors (positioning)
-	new_panel.anchor_left = 0.0
-	new_panel.anchor_right = 1.0
-	# Keeps it at the bottom of the button
-	new_panel.anchor_top = 0.8
-	new_panel.anchor_bottom = 1.0
-
-	# Create Label (Text)
-	var label = Label.new()
-	label.text = "Progress: " + str(percentage) + "% completed" # Customize text
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
-	# Adjust text size
-	label.add_theme_font_size_override("font_size", 30)
-	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-
-	# Add Panel and Label to the Button
-	# Add the background first
-	button.add_child(panel)
-	# Add the text label on top of the background
-	button.add_child(label)
-
-	# Ensure Label is inside the Panel
-	label.anchor_left = 0.0
-	label.anchor_right = 1.0
-	label.anchor_top = 0.8
-	label.anchor_bottom = 1.0
-
-
 func _on_start_puzzle_pressed() -> void:
 	loading.show()  # show loading screen immediately
 	await get_tree().process_frame  # pause

@@ -1,5 +1,17 @@
 extends Node2D
 
+# Behavioral invariants (non-negotiable):
+# 1) Authority ownership: puzzle scene UI/state reflects authoritative multiplayer updates when
+#    online, while offline sessions treat local scene state as authority.
+# 2) RPC direction: this scene consumes NetworkManager events/signals and does not bypass manager
+#    routing with direct peer-to-peer mutation RPCs.
+# 3) Lock semantics: piece-level lock ownership is enforced by Piece_2d/NetworkManager; this
+#    scene must not override lock decisions when presenting or updating gameplay state.
+# 4) Scene-change triggers: win/menu transitions are initiated by explicit lifecycle events
+#    (completion, back flow, disconnect/kick handling) rather than implicit UI redraws.
+# 5) Auth fallback behavior: Firebase load/save paths are conditional; missing auth/network must
+#    degrade to playable local state instead of blocking scene initialization.
+
 # this is the main scene where the game actually occurs for the players to play
 
 var is_muted
@@ -812,6 +824,21 @@ func _center_camera_on_pieces() -> void:
 		return
 
 	cam.global_position = sum / count
+
+func _disconnect_online_client_if_needed() -> void:
+	if NetworkManager.is_online and not NetworkManager.is_server:
+		print("Client leaving online session. Closing connection...")
+		if multiplayer:
+			NetworkManager.leave_puzzle()
+		else:
+			printerr("ERROR: NetworkManager.multiplayer is not available to close connection.")
+
+func _return_to_main_menu_with_loading(delay_seconds: float = 2.0) -> void:
+	loading.show()
+	print("Returning to puzzle selection screen.")
+	await get_tree().create_timer(delay_seconds).timeout
+	loading.hide()
+	get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn")
 		
 # Handles leaving the puzzle scene, saving state, and disconnecting if online client
 func _on_back_pressed() -> void:
@@ -853,21 +880,8 @@ func _on_back_pressed() -> void:
 			print("Puzzle complete, deleting state")
 			FireAuth.write_complete(PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]))
 
-	# 2. Handle multiplayer disconnection if this is an online client
-	if NetworkManager.is_online and not NetworkManager.is_server:
-		print("Client leaving online session. Closing connection...")
-
-		# Access the MultiplayerAPI instance
-		if multiplayer:
-			NetworkManager.leave_puzzle()
-		else:
-			printerr("ERROR: NetworkManager.multiplayer is not available to close connection.")
-	# 4. Change back to the puzzle selection scene
-	loading.show()
-	print("Returning to puzzle selection screen.")
-	await get_tree().create_timer(2.0).timeout 
-	loading.hide()
-	get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn")
+	_disconnect_online_client_if_needed()
+	await _return_to_main_menu_with_loading()
 
 
 func _on_no_pressed() -> void:
@@ -878,21 +892,8 @@ func _on_no_pressed() -> void:
 		await FireAuth.mp_delete_state()
 	else:
 		print("Skipping Firebase cleanup because auth is offline.")
-	print("Returning to puzzle selection screen.")
-	# 2. Handle multiplayer disconnection if this is an online client
-	if NetworkManager.is_online and not NetworkManager.is_server:
-		print("Client leaving online session. Closing connection...")
-
-		# Access the MultiplayerAPI instance
-		if multiplayer:
-			NetworkManager.leave_puzzle()
-		else:
-			printerr("ERROR: NetworkManager.multiplayer is not available to close connection.")
-	# 4. Change back to the puzzle selection scene
-	print("Returning to puzzle selection screen.")
-	await get_tree().create_timer(2.0).timeout 
-	loading.hide()
-	get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn")
+	_disconnect_online_client_if_needed()
+	await _return_to_main_menu_with_loading()
 	
 	
 func _on_yes_pressed() -> void:
@@ -917,20 +918,8 @@ func _on_yes_pressed() -> void:
 			print("Puzzle complete, deleting state")
 			FireAuth.write_complete(PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"]))
 	
-	# 2. Handle multiplayer disconnection if this is an online client
-	if NetworkManager.is_online and not NetworkManager.is_server:
-		print("Client leaving online session. Closing connection...")
-
-		# Access the MultiplayerAPI instance
-		if multiplayer:
-			NetworkManager.leave_puzzle()
-		else:
-			printerr("ERROR: NetworkManager.multiplayer is not available to close connection.")
-
-	print("Returning to puzzle selection screen.")
-	await get_tree().create_timer(2.0).timeout 
-	loading.hide()
-	get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn")
+	_disconnect_online_client_if_needed()
+	await _return_to_main_menu_with_loading()
 
 
 func _on_help_button_pressed() -> void:
