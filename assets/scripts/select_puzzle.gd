@@ -1,23 +1,16 @@
 extends Control
 
-# this menu is used to select which puzzle the player wants to play
-
-# these are variables for changing PageIndicator which is used
-# to display the current page you are on
-# ex:
-#	PageIndicator will display:
-#	1 out of 2
-#	if you are on the first page out of
-#	two pages total
+const PuzzleCatalogService = preload("res://assets/scripts/puzzle/puzzle_catalog_service.gd")
+const PuzzleAssetCache = preload("res://assets/scripts/puzzle/puzzle_asset_cache.gd")
+const PuzzleDownloader = preload("res://assets/scripts/puzzle/puzzle_downloader.gd")
+const LocalPuzzleSource = preload("res://assets/scripts/puzzle/local_puzzle_source.gd")
+const RemotePuzzleSource = preload("res://assets/scripts/puzzle/remote_puzzle_source.gd")
 
 var page_num = 1
-# total_pages gets calculated in ready and is based off the amount
-# of images in the image list
-var total_pages # gets calculated in ready, is based off the amount of images
+var total_pages
 var page_string = "%d out of %d"
-@onready var pageind = $PageIndicator # actual reference for PageIndicator
-# buttons reference:
-@onready var go_back_menu = $GoBackToMenu
+
+@onready var pageind = $PageIndicator
 @onready var left_button = $"HBoxContainer/left button"
 @onready var right_button = $"HBoxContainer/right button"
 @onready var size_label = $Panel/VBoxContainer/Thumbnail/size_label
@@ -25,54 +18,40 @@ var page_string = "%d out of %d"
 @onready var panel = $"Panel"
 @onready var thumbnail = $Panel/VBoxContainer/Thumbnail
 @onready var loading = $LoadingScreen
-
-# grid reference:
-#have an array of images to pull from that will correspond to an integer returned by the buttons
-#for each page take the integer and add a multiple of 9
 @onready var grid = $"HBoxContainer/GridContainer"
 
-var list = []
+var all_puzzles: Array = []
+var selected_entry: Dictionary = {}
+var selected_size := 100
+var size_selector: OptionButton
 
-var local_puzzle_list = []
+var _catalog := PuzzleCatalogService.new()
+var _cache := PuzzleAssetCache.new()
+var _downloader: Node
+var _local_source := LocalPuzzleSource.new()
+var _remote_source := RemotePuzzleSource.new()
 
-# Called when the node enters the scene tree for the first time.
 func _ready():
-	# this code will iterate through the children of the grid which are buttons
-	# and will link them so that they all carry out the same function
-	# that function being button_pressed
 	print("SELECT_PUZZLE")
 	if get_tree():
 		get_tree().set_auto_accept_quit(false)
 	if NetworkManager:
 		NetworkManager.client_connected.connect(_on_online_client_connected)
 		NetworkManager.connection_failed.connect(_on_online_connection_failed)
-	# populate local_puzzle_list with puzzles and size
-	local_puzzle_list = PuzzleVar.get_avail_puzzles()
-	print(local_puzzle_list)
-	for i in grid.get_children():
-		var button := i as BaseButton
+
+	_downloader = PuzzleDownloader.new()
+	add_child(_downloader)
+
+	for child in grid.get_children():
+		var button := child as BaseButton
 		if is_instance_valid(button):
-			button.text = "" # set all buttons to have no text for formatting
-			# actual code connecting the button_pressed function to
-			# the buttons in the grid
+			button.text = ""
 			button.pressed.connect(button_pressed.bind(button))
-	#
-	# this code gets the number of total pages
-	var num_buttons = grid.get_child_count()
-	#var imgsize = float(PuzzleVar.images.size())
-	var imgsize = local_puzzle_list.size() * 3.0 # assume each image in path will get 3 sizes (10, 100, 1000
-	var nb = float(num_buttons)
-	total_pages = ceil(imgsize/nb) # round up always to get total_pages
-	# disable the buttons logic that controls switching pages depending on
-	# how many pages there are
-	left_button.disabled = true 
-	if total_pages == 1:
-		right_button.disabled = true
-	# the await is required so that the pages have time to load in
+
+	_ensure_size_selector()
+	await _load_catalog()
 	await get_tree().process_frame
-	# populates the buttons in the grid with actual images so that you can
-	# preview which puzzle you want to select
-	self.populate_grid_2()
+	populate_grid_2()
 
 func _exit_tree():
 	if get_tree():
@@ -90,120 +69,108 @@ func _release_online_selector_lock():
 	await FireAuth.release_lobby_selector(PuzzleVar.lobby_number)
 	PuzzleVar.is_online_selector = false
 
-		
-	
-# Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(_delta):
-	# this code updates the display so that you know which page you are on
-	pageind.text = page_string %[page_num,total_pages]
+	pageind.text = page_string % [page_num, total_pages]
 
 func _on_left_button_pressed():
 	$AudioStreamPlayer.play()
-	
-	# decrements the current page you are on
 	if page_num > 1:
 		page_num -= 1
-	
-	# left button should only be disabled on page 1
 	left_button.disabled = (page_num == 1)
-
-	# IMPORTANT: if we moved left off the last page, re-enable the right button
 	right_button.disabled = false
-	
-	# repopulates the grid with a new selection of images
-	self.populate_grid_2()
+	populate_grid_2()
 
 func _on_right_button_pressed():
 	$AudioStreamPlayer.play()
-	
-	# adds 1 to the current page you are on
 	if page_num < total_pages:
 		page_num += 1
-	
-	# if reach the last page, disables the right button and enables the left button
 	if page_num == total_pages:
 		right_button.disabled = true
 		left_button.disabled = false
-	
-	# if it is some page in between 1 and the total number of pages
-	# then have both buttons be enabled
 	else:
 		right_button.disabled = false
 		left_button.disabled = false
-	
-	# repopulates the grid with a new selection of images
-	self.populate_grid_2()
+	populate_grid_2()
 
-# this function selects the image that is previewed on the button for the puzzle
+func _load_catalog() -> void:
+	all_puzzles.clear()
+	for local in PuzzleVar.get_avail_puzzles():
+		all_puzzles.append({
+			"id": str(local["base_name"]),
+			"title": str(local["base_name"]),
+			"thumb_local_path": str(local["file_path"]),
+			"size_options": [10, 100, 500],
+			"source": "local",
+			"local_data": local.duplicate(true)
+		})
+
+	var remote = await _catalog.fetch_enabled_puzzles()
+	for r in remote:
+		all_puzzles.append(r)
+
+	var num_buttons = grid.get_child_count()
+	var nb = float(max(num_buttons, 1))
+	total_pages = int(ceil(float(all_puzzles.size()) / nb))
+	if total_pages <= 0:
+		total_pages = 1
+	left_button.disabled = true
+	right_button.disabled = total_pages == 1
+
 func button_pressed(button):
-	# Resolve index from grid position rather than button naming to avoid fragile coupling.
 	var button_index := grid.get_children().find(button)
 	if button_index == -1:
 		return
-
-	var columns := grid.columns
-	if columns <= 0:
+	var global_index := (page_num - 1) * grid.get_child_count() + button_index
+	if global_index < 0 or global_index >= all_puzzles.size():
 		return
 
-	var row_selected := int(button_index / columns)
-	var col_selected := button_index % columns
-	var sizes = [10, 100, 500]
-	if col_selected >= sizes.size():
-		return
-	var size_selected = sizes[col_selected]
-			
-	#print(row_selected, " from page ", page_num)
-	# now we need to select the row corresponding to the page num
-	var start_image = (page_num - 1) * 3
-	var end_image = min(local_puzzle_list.size() * 3, start_image + 3)
-	var puzzles_on_page = local_puzzle_list.slice(start_image, end_image)
-	if !(row_selected < puzzles_on_page.size()):
-		return
-	#print(puzzles_on_page[row_selected]["base_name"])
-	# if the selection is valid, proceed to the puzzle size selection menu
-	puzzles_on_page[row_selected]["size"] = size_selected
-	PuzzleVar.choice = puzzles_on_page[row_selected]
-	
-	# Show Continue panel
+	selected_entry = all_puzzles[global_index]
+	var tex := await _get_thumbnail_texture(selected_entry)
+	thumbnail.texture = tex
+	_update_size_selector(selected_entry.get("size_options", [100]))
+	size_label.text = str(selected_size)
+
 	hbox.hide()
 	pageind.hide()
-	thumbnail.texture = load(puzzles_on_page[row_selected]["file_path"])
-	size_label.text = str(size_selected)
 	panel.show()
-	
-# Canonical puzzle population path: each puzzle row displays 3 size options.
+
 func populate_grid_2():
 	var buttons = grid.get_children()
-	var columns = grid.columns
-	var rows = buttons.size() / columns
-	var base_index = (page_num - 1) * rows
-
-	for row in range(rows):
-		var img_index = base_index + row
-		if img_index >= local_puzzle_list.size():
-			# Clear all buttons in this row
-			for col in range(columns):
-				var button = buttons[row * columns + col]
-				var tex_node = button.get_child(0)
-				if tex_node and tex_node is TextureRect:
-					tex_node.texture = null
+	var base_index = (page_num - 1) * buttons.size()
+	for idx in range(buttons.size()):
+		var button = buttons[idx]
+		var puzzle_index = base_index + idx
+		var tex_node = button.get_child(0)
+		if puzzle_index >= all_puzzles.size():
+			if tex_node and tex_node is TextureRect:
+				tex_node.texture = null
+			button.disabled = true
 			continue
+		button.disabled = false
+		if tex_node and tex_node is TextureRect:
+			var entry: Dictionary = all_puzzles[puzzle_index]
+			tex_node.texture = await _get_thumbnail_texture(entry)
+			tex_node.size = button.size
 
-		var file_path = local_puzzle_list[img_index]["file_path"]
-		var res = load(file_path)
-
-		for col in range(columns):
-			var button = buttons[row * columns + col]
-			if is_instance_valid(button):
-				var tex_node = button.get_child(0)
-				if tex_node and tex_node is TextureRect:
-					tex_node.texture = res
-					tex_node.size = button.size
-
-			
 func _on_start_puzzle_pressed() -> void:
-	loading.show()  # show loading screen immediately
-	await get_tree().process_frame  # pause
+	if selected_entry.is_empty():
+		_show_simple_popup("No Puzzle Selected", "Please select a puzzle first.")
+		return
+	loading.show()
+	await get_tree().process_frame
+
+	var choice: Dictionary = {}
+	if str(selected_entry.get("source", "local")) == "remote":
+		choice = await _remote_source.resolve_choice(selected_entry, selected_size, _downloader)
+		if choice.is_empty():
+			loading.hide()
+			_show_simple_popup("Download Error", "Unable to download puzzle assets. Please try again.")
+			return
+	else:
+		choice = _local_source.resolve_choice(selected_entry, selected_size, _downloader)
+
+	PuzzleVar.choice = choice
+
 	if PuzzleVar.is_online_selector:
 		await FireAuth.set_lobby_puzzle_choice(PuzzleVar.choice, PuzzleVar.lobby_number)
 		PuzzleVar.is_online_selector = false
@@ -238,34 +205,75 @@ func _on_go_back_pressed() -> void:
 	pageind.show()
 	hbox.show()
 
-
 func _on_go_back_to_menu_pressed() -> void:
 	if PuzzleVar.is_online_selector:
 		loading.show()
 		await _release_online_selector_lock()
 	get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn")
 
+func _ensure_size_selector() -> void:
+	size_selector = panel.get_node_or_null("VBoxContainer/SizeSelector")
+	if size_selector == null:
+		size_selector = OptionButton.new()
+		size_selector.name = "SizeSelector"
+		size_selector.custom_minimum_size = Vector2(0, 72)
+		size_selector.item_selected.connect(_on_size_selected)
+		$Panel/VBoxContainer.add_child(size_selector)
+		$Panel/VBoxContainer.move_child(size_selector, 1)
+
+func _update_size_selector(sizes: Array) -> void:
+	size_selector.clear()
+	var safe_sizes: Array = []
+	for s in sizes:
+		var v := int(s)
+		if v > 0:
+			safe_sizes.append(v)
+	if safe_sizes.is_empty():
+		safe_sizes = [100]
+	for s in safe_sizes:
+		size_selector.add_item("~%d pieces" % s, s)
+	selected_size = int(safe_sizes[0])
+	size_label.text = str(selected_size)
+
+func _on_size_selected(index: int) -> void:
+	selected_size = size_selector.get_item_id(index)
+	size_label.text = str(selected_size)
+
+func _get_thumbnail_texture(entry: Dictionary) -> Texture2D:
+	if str(entry.get("source", "local")) == "local":
+		return load(str(entry.get("thumb_local_path", "")))
+
+	var puzzle_id := str(entry.get("id", ""))
+	var version := int(entry.get("asset_version", 1))
+	var thumb_cache := _cache.get_version_dir(puzzle_id, version).path_join("thumb.jpg")
+	if FileAccess.file_exists(thumb_cache):
+		return ImageTexture.create_from_image(Image.load_from_file(thumb_cache))
+
+	var thumb_path := str(entry.get("thumb_path", ""))
+	if thumb_path == "":
+		return null
+	var task = await Firebase.Storage.ref(thumb_path).get_data()
+	if task == null or int(task.result) != OK:
+		return null
+	if int(task.response_code) < 200 or int(task.response_code) >= 300:
+		return null
+	_cache.write_bytes(thumb_cache, task.data)
+	return ImageTexture.create_from_image(Image.load_from_file(thumb_cache))
+
 func _show_simple_popup(title: String, message: String, size: Vector2i = Vector2i(620, 260)) -> AcceptDialog:
 	var popup := AcceptDialog.new()
 	popup.title = title
 	popup.dialog_text = message
 	add_child(popup)
-	
-	# font sizing
 	popup.get_label().add_theme_font_size_override("font_size", 42)
 	popup.get_ok_button().add_theme_font_size_override("font_size", 28)
 	popup.add_theme_font_size_override("title_font_size", 28)
-	
-	# text centering
 	var lbl := popup.get_label()
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	
-	# resize popup
 	popup.reset_size()
 	popup.size = size
 	popup.call_deferred("popup_centered")
-	
 	return popup
