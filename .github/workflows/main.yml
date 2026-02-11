@@ -1,40 +1,51 @@
-name: Build Godot Project
+name: Build Godot Project (Release)
 
 on:
-  push: {}
-  pull_request: {}
+  workflow_dispatch: {}
+  release:
+    types: [created]
 
 jobs:
-  Godot:
+  export:
     runs-on: ubuntu-latest
+
+    # Godot CI image with templates available
+    container:
+      image: barichello/godot-ci:4.6
+
     strategy:
       fail-fast: false
       matrix:
         include:
           - preset: LinuxDesktop
-            artifact: Client - linux
+            out: build/linux/jigsaw.x86_64
+            artifact: Client-linux
           - preset: LinuxServer
-            artifact: Server - linux
+            out: build/server/jigsaw_server.x86_64
+            artifact: Server-linux
           - preset: Windows
-            artifact: Client - windows
+            out: build/windows/jigsaw.exe
+            artifact: Client-windows
           - preset: macOS
-            artifact: Client - mac
+            out: build/mac/jigsaw.zip
+            artifact: Client-mac
 
     steps:
       - uses: actions/checkout@v4
         with:
           lfs: true
 
-      - name: Build
-        id: build
-        uses: manleydev/build-godot-action@v1.4.1
-        with:
-          name: jigsaw
-          preset: ${{ matrix.preset }}
-          debugMode: "true"
+      - name: Make output folders
+        run: |
+          mkdir -p build/linux build/server build/windows build/mac
+
+      # Release export (change to --export-debug if you want debug builds)
+      - name: Export
+        run: |
+          godot --headless --verbose --export-release "${{ matrix.preset }}" "${{ matrix.out }}"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: ${{ github.workspace }}/${{ steps.build.outputs.build }}
+          path: ${{ matrix.out }}
