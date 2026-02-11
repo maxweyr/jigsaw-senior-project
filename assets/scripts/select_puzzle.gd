@@ -144,13 +144,18 @@ func populate_grid_2():
 		if puzzle_index >= all_puzzles.size():
 			if tex_node and tex_node is TextureRect:
 				tex_node.texture = null
+				tex_node.remove_meta("puzzle_id")
 			button.disabled = true
 			continue
 		button.disabled = false
 		if tex_node and tex_node is TextureRect:
 			var entry: Dictionary = all_puzzles[puzzle_index]
-			tex_node.texture = await _get_thumbnail_texture(entry)
+			var entry_id := str(entry.get("id", ""))
+			tex_node.set_meta("puzzle_id", entry_id)
+			tex_node.texture = _get_cached_thumbnail_texture(entry)
 			tex_node.size = button.size
+			if tex_node.texture == null and str(entry.get("source", "local")) == "remote":
+				_load_thumbnail_into_slot(tex_node, entry, entry_id)
 
 func _on_start_puzzle_pressed() -> void:
 	if selected_entry.is_empty():
@@ -239,16 +244,36 @@ func _on_size_selected(index: int) -> void:
 	selected_size = size_selector.get_item_id(index)
 	size_label.text = str(selected_size)
 
-func _get_thumbnail_texture(entry: Dictionary) -> Texture2D:
+func _get_cached_thumbnail_texture(entry: Dictionary) -> Texture2D:
 	if str(entry.get("source", "local")) == "local":
 		return load(str(entry.get("thumb_local_path", "")))
 
 	var puzzle_id := str(entry.get("id", ""))
 	var version := int(entry.get("asset_version", 1))
 	var thumb_cache := _cache.get_version_dir(puzzle_id, version).path_join("thumb.jpg")
-	if FileAccess.file_exists(thumb_cache):
-		return ImageTexture.create_from_image(Image.load_from_file(thumb_cache))
+	if not FileAccess.file_exists(thumb_cache):
+		return null
+	return ImageTexture.create_from_image(Image.load_from_file(thumb_cache))
 
+func _load_thumbnail_into_slot(tex_node: TextureRect, entry: Dictionary, entry_id: String) -> void:
+	var tex := await _get_thumbnail_texture(entry)
+	if tex == null or not is_instance_valid(tex_node):
+		return
+	if str(tex_node.get_meta("puzzle_id", "")) != entry_id:
+		return
+	tex_node.texture = tex
+
+func _get_thumbnail_texture(entry: Dictionary) -> Texture2D:
+	var cached := _get_cached_thumbnail_texture(entry)
+	if cached != null:
+		return cached
+
+	if str(entry.get("source", "local")) == "local":
+		return null
+
+	var puzzle_id := str(entry.get("id", ""))
+	var version := int(entry.get("asset_version", 1))
+	var thumb_cache := _cache.get_version_dir(puzzle_id, version).path_join("thumb.jpg")
 	var thumb_path := str(entry.get("thumb_path", ""))
 	if thumb_path == "":
 		return null
