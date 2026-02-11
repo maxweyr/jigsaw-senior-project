@@ -1,5 +1,8 @@
 extends Control
 
+const PuzzleCatalogService = preload("res://assets/scripts/puzzle/puzzle_catalog_service.gd")
+const PuzzleAssetCache = preload("res://assets/scripts/puzzle/puzzle_asset_cache.gd")
+
 var progress_arr = []
 var overlay
 @onready var nickname_label: Label = $VBoxContainer/NicknameLabel
@@ -8,6 +11,9 @@ var nickname_line_edit: LineEdit
 var joining_online := false
 const STATUS_FONT = preload("res://assets/fonts/KiriFont.ttf")
 const STATUS_TEXT_COLOR = Color(0.941176, 0.67451, 0.0431373, 1)
+var _thumb_catalog := PuzzleCatalogService.new()
+var _thumb_cache := PuzzleAssetCache.new()
+var _thumbnail_preload_started := false
 
 func _ready():
 	rename_popup = get_node_or_null("RenamePopup")
@@ -44,6 +50,7 @@ func _ready():
 		FireAuth.logged_in.connect(_on_login)
 		FireAuth.login_failed.connect(_on_login)
 	_refresh_nickname_display()
+	_start_thumbnail_preload()
 
 	if PuzzleVar.auto_rejoin_online:
 		PuzzleVar.auto_rejoin_online = false
@@ -199,6 +206,33 @@ func _input(event):
 
 func _on_login() -> void:
 	overlay.visible = false # Hide the overlay after login completes
+	_start_thumbnail_preload()
+
+func _start_thumbnail_preload() -> void:
+	if _thumbnail_preload_started:
+		return
+	_thumbnail_preload_started = true
+	_preload_remote_thumbnails.call_deferred()
+
+func _preload_remote_thumbnails() -> void:
+	await get_tree().process_frame
+	var remote_entries = await _thumb_catalog.fetch_enabled_puzzles()
+	for entry in remote_entries:
+		var puzzle_id := str(entry.get("id", ""))
+		var version := int(entry.get("asset_version", 1))
+		var thumb_cache := _thumb_cache.get_version_dir(puzzle_id, version).path_join("thumb.jpg")
+		if FileAccess.file_exists(thumb_cache):
+			continue
+
+		var thumb_path := str(entry.get("thumb_path", ""))
+		if thumb_path == "":
+			continue
+		var task = await Firebase.Storage.ref(thumb_path).get_data()
+		if task == null or int(task.result) != OK:
+			continue
+		if int(task.response_code) < 200 or int(task.response_code) >= 300:
+			continue
+		_thumb_cache.write_bytes(thumb_cache, task.data)
 
 func _refresh_nickname_display():
 	if nickname_label:
