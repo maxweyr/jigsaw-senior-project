@@ -28,11 +28,15 @@ var velocity = Vector2() # actual velocity
 var lock_pending = false
 var has_lock = false
 var pending_select = false
+var batch_request_pending = false
 var pending_merge_source_id = -1
 var pending_merge_target_id = -1
 var pending_merge_stamp = 0
 var last_lock_refresh_sec = 0.0
+var snapshot_resync_requested = false
+const LARGE_DISTANCE = 1.0e20
 const LOCK_REFRESH_INTERVAL_SEC = 3.0
+const USE_BATCH_GROUP_ACTIONS = true
 
 func _ready():
 	PuzzleVar.active_piece = 0 # 0 is false, any other number is true
@@ -50,6 +54,8 @@ func _ready():
 		NetworkManager.lock_granted.connect(_on_lock_granted)
 	if not NetworkManager.lock_denied.is_connected(_on_lock_denied):
 		NetworkManager.lock_denied.connect(_on_lock_denied)
+	if not NetworkManager.group_action_batch_result.is_connected(_on_group_action_batch_result):
+		NetworkManager.group_action_batch_result.connect(_on_group_action_batch_result)
 
 # Called every frame where 'delta' is the elapsed time since the previous frame
 func _process(delta):
@@ -144,6 +150,154 @@ func _get_lock_owner_for_piece(piece_id: int, group_id_hint: int) -> int:
 			return int(data[2])
 	return -1
 
+func _collect_group_piece_positions(group_id: int) -> Array:
+	var piece_positions: Array = []
+	var all_pieces = get_tree().get_nodes_in_group("puzzle_pieces")
+	for node in all_pieces:
+		if node.group_number == group_id:
+			piece_positions.append({
+				"id": node.ID,
+				"position": node.global_position
+			})
+	return piece_positions
+
+func _get_snap_distance_for_pair(source_node, adjacent_piece_id: int) -> float:
+	if source_node == null or not is_instance_valid(source_node):
+		return LARGE_DISTANCE
+	var source_piece_id = int(source_node.ID)
+	if adjacent_piece_id < 0 or adjacent_piece_id >= PuzzleVar.ordered_pieces_array.size():
+		return LARGE_DISTANCE
+	var adjacent_node = PuzzleVar.ordered_pieces_array[adjacent_piece_id]
+	if adjacent_node == null or not is_instance_valid(adjacent_node):
+		return LARGE_DISTANCE
+	if adjacent_node.group_number == source_node.group_number:
+		return LARGE_DISTANCE
+	if not PuzzleVar.global_coordinates_list.has(str(source_piece_id)):
+		return LARGE_DISTANCE
+	if not PuzzleVar.global_coordinates_list.has(str(adjacent_piece_id)):
+		return LARGE_DISTANCE
+	var current_ref_bounding_box = PuzzleVar.global_coordinates_list[str(source_piece_id)]
+	var adjacent_ref_bounding_box = PuzzleVar.global_coordinates_list[str(adjacent_piece_id)]
+	var current_global_position = source_node.global_position
+	var adjusted_current_upper_left = Vector2(
+		current_global_position[0] - (source_node.piece_width / 2),
+		current_global_position[1] - (source_node.piece_height / 2)
+	)
+	var adjacent_global_position = adjacent_node.global_position
+	var adjusted_adjacent_upper_left = Vector2(
+		adjacent_global_position[0] - (adjacent_node.piece_width / 2),
+		adjacent_global_position[1] - (adjacent_node.piece_height / 2)
+	)
+	var current_ref_upper_left = Vector2(current_ref_bounding_box[0], current_ref_bounding_box[1])
+	var adjacent_ref_upper_left = Vector2(adjacent_ref_bounding_box[0], adjacent_ref_bounding_box[1])
+	var ref_relative_position = current_ref_upper_left - adjacent_ref_upper_left
+	return calc_distance(ref_relative_position, adjusted_current_upper_left - adjusted_adjacent_upper_left)
+
+func _is_snap_candidate(source_node, adjacent_piece_id: int) -> bool:
+	return _get_snap_distance_for_pair(source_node, adjacent_piece_id) < snap_threshold
+
+func _build_merge_candidate(source_node, adjacent_piece_id: int, snap_distance: float = LARGE_DISTANCE) -> Dictionary:
+	if source_node == null or not is_instance_valid(source_node):
+		return {}
+	var source_piece_id = int(source_node.ID)
+	if adjacent_piece_id < 0 or adjacent_piece_id >= PuzzleVar.ordered_pieces_array.size():
+		return {}
+	var adjacent_node = PuzzleVar.ordered_pieces_array[adjacent_piece_id]
+	if adjacent_node == null or not is_instance_valid(adjacent_node):
+		return {}
+	var source_group_id = int(source_node.group_number)
+	if adjacent_node.group_number == source_group_id:
+		return {}
+	if not PuzzleVar.global_coordinates_list.has(str(source_piece_id)):
+		return {}
+	if not PuzzleVar.global_coordinates_list.has(str(adjacent_piece_id)):
+		return {}
+
+	var all_pieces = get_tree().get_nodes_in_group("puzzle_pieces")
+	var target_group_id = adjacent_node.group_number
+	var prev_group_number = target_group_id
+	var new_group_number = source_group_id
+
+	var current_global_pos = source_node.global_position
+	var current_ref_coord = PuzzleVar.global_coordinates_list[str(source_piece_id)]
+	var adjacent_global_pos = adjacent_node.global_position
+	var adjacent_ref_coord = PuzzleVar.global_coordinates_list[str(adjacent_piece_id)]
+	var ref_upper_left_diff = Vector2(current_ref_coord[0] - adjacent_ref_coord[0], current_ref_coord[1] - adjacent_ref_coord[1])
+	var adjusted_current_upper_left = Vector2(current_global_pos[0] - (source_node.piece_width / 2), current_global_pos[1] - (source_node.piece_height / 2))
+	var adjusted_adjacent_upper_left = Vector2(adjacent_global_pos[0] - (adjacent_node.piece_width / 2), adjacent_global_pos[1] - (adjacent_node.piece_height / 2))
+	var current_left_diff = adjusted_current_upper_left - adjusted_adjacent_upper_left
+	var dist = current_left_diff - ref_upper_left_diff
+
+	var countprev = 0
+	var countcurr = 0
+	for node in all_pieces:
+		if node.group_number == source_group_id:
+			countcurr += 1
+		elif node.group_number == prev_group_number:
+			countprev += 1
+	if countcurr < countprev:
+		new_group_number = prev_group_number
+		prev_group_number = source_group_id
+		dist *= -1
+
+	var piece_positions: Array = []
+	for node in all_pieces:
+		if node.group_number == new_group_number:
+			piece_positions.append({
+				"id": node.ID,
+				"position": node.global_position
+			})
+		elif node.group_number == prev_group_number:
+			piece_positions.append({
+				"id": node.ID,
+				"position": node.global_position + dist
+			})
+
+	return {
+		"connected_piece_id": adjacent_piece_id,
+		"source_group_id": source_group_id,
+		"target_group_id": target_group_id,
+		"new_group_number": new_group_number,
+		"snap_distance": snap_distance,
+		"piece_positions": piece_positions
+	}
+
+func _collect_merge_candidates_for_batch() -> Array:
+	var best_candidate_by_target: Dictionary = {}
+	var all_pieces = get_tree().get_nodes_in_group("puzzle_pieces")
+	for source_node in all_pieces:
+		if source_node.group_number != group_number:
+			continue
+		for adjacent_piece in source_node.neighbor_list:
+			var adjacent_piece_id = int(adjacent_piece)
+			if adjacent_piece_id < 0:
+				continue
+			var snap_distance = _get_snap_distance_for_pair(source_node, adjacent_piece_id)
+			if snap_distance >= snap_threshold:
+				continue
+			var candidate = _build_merge_candidate(source_node, adjacent_piece_id, snap_distance)
+			if candidate.is_empty():
+				continue
+			var existing_candidate: Dictionary = best_candidate_by_target.get(adjacent_piece_id, {})
+			if existing_candidate.is_empty() or snap_distance < float(existing_candidate.get("snap_distance", LARGE_DISTANCE)):
+				best_candidate_by_target[adjacent_piece_id] = candidate
+
+	var merge_candidates: Array = []
+	for candidate in best_candidate_by_target.values():
+		var inserted := false
+		var candidate_dist := float(candidate.get("snap_distance", LARGE_DISTANCE))
+		for idx in range(merge_candidates.size()):
+			var existing_dist := float(merge_candidates[idx].get("snap_distance", LARGE_DISTANCE))
+			if candidate_dist < existing_dist:
+				merge_candidates.insert(idx, candidate)
+				inserted = true
+				break
+		if not inserted:
+			merge_candidates.append(candidate)
+	for candidate in merge_candidates:
+		candidate.erase("snap_distance")
+	return merge_candidates
+
 #this is called whenever an event occurs within the area of the piece
 #	Example events include a key press within the area of the piece or
 #	a piece being clicked or even mouse movement
@@ -175,29 +329,37 @@ func _on_area_2d_input_event(_viewport, event, _shape_idx):
 			
 				# get all nodes from puzzle pieces
 				var all_pieces = get_tree().get_nodes_in_group("puzzle_pieces")
-				var num = group_number
-				var connection_found = false
-				var piece_positions = []
-				
-				for node in all_pieces: 
-					if node.group_number == group_number:
-						var n_list = node.neighbor_list
-						#run through each of the pieces that should be adjacent to the selected piece
-						for adjacent_piece in n_list:
-							var adjacent_node = PuzzleVar.ordered_pieces_array[int(adjacent_piece)]
-							await check_connections(adjacent_node.ID)
-							piece_positions.append({
-								"id": node.ID,
-								"position": node.global_position
-							})
-				
-				if PuzzleVar.draw_green_check == true: # a puzzle snap occurred
-					# Local snap sound and visual already handled in snap_and_connect
-					PuzzleVar.draw_green_check = false
+				if NetworkManager.is_online and has_lock and USE_BATCH_GROUP_ACTIONS:
+					if velocity != Vector2(0,0):
+						await get_tree().create_timer(.05).timeout
+					var move_piece_positions = _collect_group_piece_positions(group_number)
+					var merge_candidates = _collect_merge_candidates_for_batch()
+					if not merge_candidates.is_empty():
+						var first_candidate: Dictionary = merge_candidates[0]
+						_set_pending_merge(ID, int(first_candidate.get("connected_piece_id", -1)))
+					batch_request_pending = true
+					NetworkManager.rpc_id(1, "process_group_action_batch", ID, group_number, move_piece_positions, merge_candidates)
 				else:
-					if NetworkManager.is_online and has_lock:
-						# REMOVED lobby_number (server routes by lobby)
-						NetworkManager.rpc_id(1, "_receive_piece_move", group_number, piece_positions)  # send to server 
+					var piece_positions = []
+					for node in all_pieces: 
+						if node.group_number == group_number:
+							var n_list = node.neighbor_list
+							#run through each of the pieces that should be adjacent to the selected piece
+							for adjacent_piece in n_list:
+								var adjacent_node = PuzzleVar.ordered_pieces_array[int(adjacent_piece)]
+								await check_connections(adjacent_node.ID)
+								piece_positions.append({
+									"id": node.ID,
+									"position": node.global_position
+								})
+					
+					if PuzzleVar.draw_green_check == true: # a puzzle snap occurred
+						# Local snap sound and visual already handled in snap_and_connect
+						PuzzleVar.draw_green_check = false
+					else:
+						if NetworkManager.is_online and has_lock:
+							# REMOVED lobby_number (server routes by lobby)
+							NetworkManager.rpc_id(1, "_receive_piece_move", group_number, piece_positions)  # send to server 
 
 				if FireAuth.is_online and not NetworkManager.is_server and NetworkManager.is_online:
 					FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
@@ -447,42 +609,101 @@ func remove_transparency():
 func move_to_position(target_position: Vector2):
 	position = target_position
 
+func _is_valid_piece_index(piece_id: int) -> bool:
+	return piece_id >= 0 and piece_id < PuzzleVar.ordered_pieces_array.size()
+
+func _request_group_snapshot_resync_once(reason: String) -> void:
+	if snapshot_resync_requested:
+		return
+	snapshot_resync_requested = true
+	var main_scene = get_node_or_null("/root/JigsawPuzzleNode")
+	if main_scene and main_scene.has_method("send_piece_group_snapshot_to_server"):
+		print("Piece ", ID, " requesting snapshot resync due to batch rejection reason: ", reason)
+		main_scene.send_piece_group_snapshot_to_server()
+	else:
+		print("WARNING::Piece_2d unable to request snapshot resync (scene missing method).")
+
+func _on_group_action_batch_result(status: String, reason: String, _applied_op: String, _applied_group_id: int):
+	if not NetworkManager.is_online:
+		return
+	if not batch_request_pending:
+		return
+	batch_request_pending = false
+	if status == "ok":
+		snapshot_resync_requested = false
+		return
+	pending_merge_source_id = -1
+	pending_merge_target_id = -1
+	print("WARNING::Batch group action rejected for piece ", ID, " reason=", reason, " group=", group_number)
+	if reason in ["invalid_move_payload", "invalid_merge_payload", "group_map_out_of_sync"]:
+		_request_group_snapshot_resync_once(reason)
+
 # Handles network connection for moved pieces
 func _on_network_pieces_moved(_piece_positions):
 	#print("SIGNAL::_on_network_pieces_moved")
 	# (No lobby check needed; server routes by lobby)
+	var malformed_entries := 0
 	for piece_info in _piece_positions:
-		var piece_id = piece_info.id
-		var updated_position = piece_info.position
-		if piece_id < PuzzleVar.ordered_pieces_array.size():
-			var piece = PuzzleVar.ordered_pieces_array[piece_id]
-			piece.position = updated_position
-			PuzzleVar.ordered_pieces_array[piece_id] = piece
+		if typeof(piece_info) != TYPE_DICTIONARY or not piece_info.has("id") or not piece_info.has("position"):
+			malformed_entries += 1
+			continue
+		var piece_id = int(piece_info.get("id", -1))
+		var updated_position = piece_info.get("position", Vector2.ZERO)
+		if typeof(updated_position) != TYPE_VECTOR2:
+			malformed_entries += 1
+			continue
+		if not _is_valid_piece_index(piece_id):
+			malformed_entries += 1
+			continue
+		var piece = PuzzleVar.ordered_pieces_array[piece_id]
+		if piece == null or not is_instance_valid(piece):
+			malformed_entries += 1
+			continue
+		piece.position = updated_position
+		PuzzleVar.ordered_pieces_array[piece_id] = piece
+	if malformed_entries > 0 and ID == 0:
+		print("WARNING::Piece_2d ignored ", malformed_entries, " malformed move payload entries.")
 
 
 func _on_network_pieces_connected(_source_piece_id, _connected_piece_id, new_group_number, piece_positions):
 	#print("SIGNAL::_on_network_pieces_connected")
 	# (No lobby check needed; server routes by lobby)
+	var malformed_entries := 0
 	for piece_info in piece_positions:
-		var updated_piece_id = piece_info.id
-		var piece_position = piece_info.position
-		
-		if updated_piece_id < PuzzleVar.ordered_pieces_array.size():
-			var piece = PuzzleVar.ordered_pieces_array[updated_piece_id]
-			piece.group_number = new_group_number
-			piece.position = piece_position
-			PuzzleVar.ordered_pieces_array[updated_piece_id] = piece
+		if typeof(piece_info) != TYPE_DICTIONARY or not piece_info.has("id") or not piece_info.has("position"):
+			malformed_entries += 1
+			continue
+		var updated_piece_id = int(piece_info.get("id", -1))
+		var piece_position = piece_info.get("position", Vector2.ZERO)
+		if typeof(piece_position) != TYPE_VECTOR2:
+			malformed_entries += 1
+			continue
+		if not _is_valid_piece_index(updated_piece_id):
+			malformed_entries += 1
+			continue
+		var piece = PuzzleVar.ordered_pieces_array[updated_piece_id]
+		if piece == null or not is_instance_valid(piece):
+			malformed_entries += 1
+			continue
+		piece.group_number = int(new_group_number)
+		piece.position = piece_position
+		PuzzleVar.ordered_pieces_array[updated_piece_id] = piece
+	if malformed_entries > 0 and ID == 0:
+		print("WARNING::Piece_2d ignored ", malformed_entries, " malformed connect payload entries.")
 	#FireAuth.write_puzzle_state_server(PuzzleVar.lobby_number)
 
 	if pending_merge_source_id == _source_piece_id and pending_merge_target_id == _connected_piece_id:
-		var source_piece = PuzzleVar.ordered_pieces_array[_source_piece_id]
-		var target_piece = PuzzleVar.ordered_pieces_array[_connected_piece_id]
-		if source_piece and target_piece:
-			var mid = (source_piece.global_position + target_piece.global_position) / 2
-			show_image_on_snap(mid)
-			var main_scene = get_node("/root/JigsawPuzzleNode")
-			if main_scene:
-				main_scene.play_snap_sound()
+		if _is_valid_piece_index(_source_piece_id) and _is_valid_piece_index(_connected_piece_id):
+			var source_piece = PuzzleVar.ordered_pieces_array[_source_piece_id]
+			var target_piece = PuzzleVar.ordered_pieces_array[_connected_piece_id]
+			if source_piece and target_piece and is_instance_valid(source_piece) and is_instance_valid(target_piece):
+				var mid = (source_piece.global_position + target_piece.global_position) / 2
+				show_image_on_snap(mid)
+				var main_scene = get_node("/root/JigsawPuzzleNode")
+				if main_scene:
+					main_scene.play_snap_sound()
+		else:
+			print("WARNING::Piece_2d received pending merge confirmation with out-of-range piece ids.")
 		pending_merge_source_id = -1
 		pending_merge_target_id = -1
 

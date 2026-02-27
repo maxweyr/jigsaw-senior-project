@@ -111,6 +111,8 @@ func _ready():
 		# client is connected to firebase
 		var puzzle_name_with_size = PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"])
 		await load_firebase_state(puzzle_name_with_size)
+	if NetworkManager.is_online and not NetworkManager.is_server:
+		send_piece_group_snapshot_to_server()
 		
 	#if not is_online_mode and FireAuth.offlineMode == 0:
 		#FireAuth.add_active_puzzle(selected_puzzle_name, PuzzleVar.global_num_pieces)
@@ -180,6 +182,32 @@ func load_firebase_state(p_name):
 		print("Puzzle was already complete on join.")
 		completed_on_join = true
 	update_piece_count_display()
+
+func send_piece_group_snapshot_to_server() -> void:
+	if not NetworkManager.is_online or NetworkManager.is_server:
+		return
+	var piece_groups: Array = []
+	var malformed := 0
+	for piece in PuzzleVar.ordered_pieces_array:
+		if piece == null or not is_instance_valid(piece):
+			malformed += 1
+			continue
+		var pid := int(piece.ID)
+		var gid := int(piece.group_number if piece.group_number != null else piece.ID)
+		if pid < 0 or gid < 0:
+			malformed += 1
+			continue
+		piece_groups.append({
+			"id": pid,
+			"group_id": gid
+		})
+	if piece_groups.is_empty():
+		if malformed > 0:
+			print("WARNING::JigsawPuzzleNode could not build valid piece-group snapshot.")
+		return
+	NetworkManager.rpc_id(1, "sync_piece_group_snapshot", piece_groups)
+	if malformed > 0:
+		print("WARNING::JigsawPuzzleNode sent snapshot with ", malformed, " skipped malformed pieces.")
 
 #-----------------------------------------------------------------------------
 # UI CREATION AND MANAGEMENT

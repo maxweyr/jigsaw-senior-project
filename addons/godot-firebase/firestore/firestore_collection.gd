@@ -163,15 +163,28 @@ func _get_request_url() -> String:
 func _process_request(task : FirestoreTask, document_id : String, url : String, fields := "") -> void:
 	if auth == null or auth.is_empty():
 		Firebase._print("Unauthenticated request issued...")
-		Firebase.Auth.login_anonymous()
-		var result : Array = await Firebase.Auth.auth_request
-		if typeof(result[0]) != TYPE_INT:
+		# Reuse an existing auth token if it is already available to avoid
+		# starting a second overlapping auth request (ERR_BUSY).
+		if Firebase.Auth.is_logged_in():
+			auth = Firebase.Auth.auth
+		else:
+			var result : Array = []
+			if Firebase.Auth.is_busy:
+				result = await Firebase.Auth.auth_request
+			else:
+				Firebase.Auth.login_anonymous()
+				result = await Firebase.Auth.auth_request
+			if result.is_empty() or typeof(result[0]) != TYPE_INT:
+				FireAuth.is_online = false
+				return
+			if result[0] != 1:
+				Firebase.Firestore._check_auth_error(result[0], result[1])
+				return
+			Firebase._print("Client authenticated as Anonymous User.")
+			auth = Firebase.Auth.auth
+		if auth == null or auth.is_empty() or not auth.has("idtoken"):
 			FireAuth.is_online = false
 			return
-		if result[0] != 1:
-			Firebase.Firestore._check_auth_error(result[0], result[1])
-			return
-		Firebase._print("Client authenticated as Anonymous User.")
 
 	task._url = url
 	task._fields = fields

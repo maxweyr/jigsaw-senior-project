@@ -6,6 +6,8 @@ var overlay
 var rename_popup: PopupPanel
 var nickname_line_edit: LineEdit
 var joining_online := false
+var join_attempt_token := 0
+const JOIN_TIMEOUT_SEC := 12.0
 const STATUS_FONT = preload("res://assets/fonts/KiriFont.ttf")
 const STATUS_TEXT_COLOR = Color(0.941176, 0.67451, 0.0431373, 1)
 
@@ -43,6 +45,10 @@ func _ready():
 	if FireAuth:
 		FireAuth.logged_in.connect(_on_login)
 		FireAuth.login_failed.connect(_on_login)
+
+	# This scene is entered only after the login flow path, so ensure the
+	# click-blocking overlay is not left visible if no signal arrives here.
+	_on_login()
 	_refresh_nickname_display()
 
 	if PuzzleVar.auto_rejoin_online:
@@ -106,6 +112,8 @@ func _on_play_online_pressed():
 # Network signal handlers
 func _on_client_connected():
 	print("Connected to server successfully")
+	join_attempt_token += 1
+	joining_online = false
 	_clear_status_label("ConnectingLabel")
 	await FireAuth.update_my_player_entry(PuzzleVar.lobby_number)
 	
@@ -128,6 +136,7 @@ func _on_client_connected():
 		print("ERROR: network_manager is null!")
 
 func _on_connection_failed():
+	join_attempt_token += 1
 	_clear_status_label("ConnectingLabel")
 	joining_online = false
 	
@@ -141,13 +150,28 @@ func _join_online_with_choice():
 		joining_online = false
 		_show_simple_popup("No Puzzle Selected", "Please wait for a puzzle selection before joining.")
 		return
+	join_attempt_token += 1
+	var local_join_token := join_attempt_token
 	_show_status_label("Connecting to server...", "ConnectingLabel")
 	print("Attempting to connect to server...")
 	if NetworkManager.join_server():
+		_start_join_watchdog(local_join_token)
 		return
 	_clear_status_label("ConnectingLabel")
 	joining_online = false
 	_show_simple_popup("Connection Error", "Failed to connect to server.")
+
+func _start_join_watchdog(join_token: int) -> void:
+	await get_tree().create_timer(JOIN_TIMEOUT_SEC).timeout
+	if join_attempt_token != join_token:
+		return
+	if not joining_online:
+		return
+	_clear_status_label("ConnectingLabel")
+	joining_online = false
+	if NetworkManager and NetworkManager.is_online and not NetworkManager.is_server:
+		NetworkManager.disconnect_from_server()
+	_show_simple_popup("Connection Error", "Timed out while connecting to server.")
 
 func _wait_for_lobby_choice_and_join():
 	_show_status_label("Waiting for lobby host to pick a puzzle...", "ConnectingLabel")

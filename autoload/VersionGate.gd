@@ -11,6 +11,12 @@ var local_version: String
 
 # Entry point (runs at app start)
 func _ready() -> void:
+	var args := OS.get_cmdline_args()
+	if OS.has_feature("server") or "--server" in args \
+	or OS.has_feature("headless") or "--headless" in args:
+		print("VersionGate: Skipping checks for dedicated server/headless mode")
+		return
+
 	local_version = ProjectSettings.get_setting("application/config/version")
 	print("VersionGate: Local version =", local_version)
 

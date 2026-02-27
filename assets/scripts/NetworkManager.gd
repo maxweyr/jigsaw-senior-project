@@ -30,6 +30,7 @@ signal chat_message_received(sender_name: String, message: String)
 signal lock_granted(piece_id: int, group_id: int)
 signal lock_denied(piece_id: int, group_id: int, owner_id: int)
 signal lock_status(piece_id: int, group_id: int, owner_id: int)
+signal group_action_batch_result(status: String, reason: String, applied_op: String, applied_group_id: int)
 
 # Variables
 var DEFAULT_PORT = 8080
@@ -98,9 +99,12 @@ func _ready():
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 	
-	# Authentication can happen regardless of peer type initially
-	# It sets FireAuth.is_online (internet status)
-	await check_internet_and_authenticate()
+	# Dedicated servers should not block startup on external auth/internet probes.
+	if is_server:
+		print("NetworkManager: Skipping internet/auth probe in dedicated server mode.")
+	else:
+		# Authentication sets FireAuth.is_online for client flows.
+		await check_internet_and_authenticate()
 
 func _process(_delta):
 	# Check if we should load the game
@@ -289,12 +293,132 @@ func _get_lock_owner(lobby_number: int, group_id: int) -> int:
 		return -1
 	return int(lock.get("owner", -1))
 
+func _get_peer_locked_groups(lobby_number: int, peer_id: int) -> Array:
+	var locks = _get_lobby_lock_map(lobby_number)
+	var now = _now_sec()
+	var owned_groups: Array = []
+	var expired_groups: Array = []
+	for group_id in locks.keys():
+		var lock = locks[group_id]
+		if float(lock.get("expires_at", 0.0)) <= now:
+			expired_groups.append(group_id)
+			continue
+		if int(lock.get("owner", -1)) == peer_id:
+			owned_groups.append(int(group_id))
+	for group_id in expired_groups:
+		locks.erase(group_id)
+	return owned_groups
+
+func _peer_has_single_lock(lobby_number: int, peer_id: int, expected_group_id: int = -1) -> bool:
+	var owned_groups = _get_peer_locked_groups(lobby_number, peer_id)
+	if owned_groups.size() != 1:
+		return false
+	if expected_group_id >= 0 and int(owned_groups[0]) != expected_group_id:
+		return false
+	return true
+
+func _peek_piece_group_id(lobby_number: int, piece_id: int) -> int:
+	var piece_map = _get_lobby_piece_map(lobby_number)
+	if piece_map.has(piece_id):
+		return int(piece_map[piece_id])
+	return piece_id
+
+func _known_piece_group_id(lobby_number: int, piece_id: int) -> int:
+	var piece_map = _get_lobby_piece_map(lobby_number)
+	if piece_map.has(piece_id):
+		return int(piece_map[piece_id])
+	return -1
+
+func _validate_move_piece_positions(lobby_number: int, expected_group_id: int, piece_positions: Array) -> bool:
+	if piece_positions.is_empty():
+		return false
+	var piece_map = _get_lobby_piece_map(lobby_number)
+	for info in piece_positions:
+		if typeof(info) != TYPE_DICTIONARY:
+			return false
+		if not info.has("id") or not info.has("position"):
+			return false
+		if typeof(info.get("position")) != TYPE_VECTOR2:
+			return false
+		var pid = int(info.get("id", -1))
+		if pid < 0:
+			return false
+		if not piece_map.has(pid):
+			# Bootstrap tolerance: materialize missing mappings from a lock-validated move payload.
+			piece_map[pid] = expected_group_id
+		if int(piece_map[pid]) != expected_group_id:
+			return false
+	return true
+
+func _validate_merge_piece_positions(lobby_number: int, source_group_id: int, target_group_id: int, piece_positions: Array, allow_unmapped_target: bool = false) -> bool:
+	if piece_positions.is_empty():
+		return false
+	var saw_source = false
+	var saw_target = false
+	var piece_map = _get_lobby_piece_map(lobby_number)
+	for info in piece_positions:
+		if typeof(info) != TYPE_DICTIONARY:
+			return false
+		if not info.has("id") or not info.has("position"):
+			return false
+		if typeof(info.get("position")) != TYPE_VECTOR2:
+			return false
+		var pid = int(info.get("id", -1))
+		if pid < 0:
+			return false
+		var current_group = _known_piece_group_id(lobby_number, pid)
+		if current_group == -1:
+			if not allow_unmapped_target:
+				return false
+			# In batch flow, source pieces are materialized by move validation first.
+			# Any remaining unmapped pieces are accepted only as target-group bootstrap.
+			piece_map[pid] = target_group_id
+			current_group = target_group_id
+		if current_group == source_group_id:
+			saw_source = true
+		elif current_group == target_group_id:
+			saw_target = true
+		else:
+			return false
+	return saw_source and saw_target
+
+func _merge_piece_group_snapshot(lobby_number: int, piece_groups: Array) -> Dictionary:
+	var piece_map = _get_lobby_piece_map(lobby_number)
+	var inserted := 0
+	var conflicts := 0
+	var malformed := 0
+	for entry in piece_groups:
+		if typeof(entry) != TYPE_DICTIONARY:
+			malformed += 1
+			continue
+		if not entry.has("id") or not entry.has("group_id"):
+			malformed += 1
+			continue
+		var pid := int(entry.get("id", -1))
+		var gid := int(entry.get("group_id", -1))
+		if pid < 0 or gid < 0:
+			malformed += 1
+			continue
+		if not piece_map.has(pid):
+			piece_map[pid] = gid
+			inserted += 1
+		elif int(piece_map[pid]) != gid:
+			conflicts += 1
+	return {"inserted": inserted, "conflicts": conflicts, "malformed": malformed}
+
+func _set_lock_owner(lobby_number: int, group_id: int, peer_id: int) -> void:
+	var locks = _get_lobby_lock_map(lobby_number)
+	locks[group_id] = {"owner": peer_id, "expires_at": _now_sec() + LOCK_TTL_SEC}
+
 func _try_acquire_lock(lobby_number: int, group_id: int, peer_id: int) -> bool:
+	var owned_groups = _get_peer_locked_groups(lobby_number, peer_id)
+	for owned_group in owned_groups:
+		if int(owned_group) != group_id:
+			return false
 	var owner = _get_lock_owner(lobby_number, group_id)
 	if owner != -1 and owner != peer_id:
 		return false
-	var locks = _get_lobby_lock_map(lobby_number)
-	locks[group_id] = {"owner": peer_id, "expires_at": _now_sec() + LOCK_TTL_SEC}
+	_set_lock_owner(lobby_number, group_id, peer_id)
 	return true
 
 func _refresh_lock(lobby_number: int, group_id: int, peer_id: int) -> void:
@@ -380,6 +504,13 @@ func request_group_lock(piece_id: int, group_id_hint: int = -1):
 		return
 	var lobby: int = int(client_lobby[from_id])
 	var group_id := _resolve_group_id(lobby, piece_id, group_id_hint)
+	var owned_groups = _get_peer_locked_groups(lobby, from_id)
+	if owned_groups.size() > 1:
+		rpc_id(from_id, "_lock_denied", piece_id, group_id, from_id)
+		return
+	if owned_groups.size() == 1 and int(owned_groups[0]) != group_id:
+		rpc_id(from_id, "_lock_denied", piece_id, group_id, from_id)
+		return
 	if _try_acquire_lock(lobby, group_id, from_id):
 		rpc_id(from_id, "_lock_granted", piece_id, group_id)
 	else:
@@ -444,6 +575,21 @@ func _lock_status(piece_id: int, group_id: int, owner_id: int):
 		return
 	lock_status.emit(piece_id, group_id, owner_id)
 
+# Client -> server: bootstrap piece/group map for restored multiplayer states.
+@rpc("any_peer", "call_remote", "reliable")
+func sync_piece_group_snapshot(piece_groups: Array):
+	if not is_online:
+		return
+	if not is_server:
+		return
+	var from_id: int = multiplayer.get_remote_sender_id()
+	if not client_lobby.has(from_id):
+		return
+	var lobby: int = int(client_lobby[from_id])
+	var stats := _merge_piece_group_snapshot(lobby, piece_groups)
+	if int(stats.get("malformed", 0)) > 0:
+		print("WARNING::NetworkManager ignored malformed piece-group snapshot entries from peer ", from_id, ": ", stats)
+
 # Send piece connection info FROM client -> server -> other clients (scoped to lobby)
 @rpc("any_peer", "call_remote", "reliable")
 func sync_connected_pieces(piece_id: int, connected_piece_id: int, source_group_id: int, target_group_id: int, new_group_number: int, piece_positions: Array):
@@ -460,19 +606,23 @@ func sync_connected_pieces(piece_id: int, connected_piece_id: int, source_group_
 		var owner := _get_lock_owner(lobby, resolved_source)
 		if owner != from_id:
 			return
+		if not _peer_has_single_lock(lobby, from_id, resolved_source):
+			return
 		var target_owner := _get_lock_owner(lobby, resolved_target)
-		if target_owner != -1 and target_owner != from_id:
+		if target_owner != -1:
 			return
 		var final_group := new_group_number
 		if final_group != resolved_source and final_group != resolved_target:
 			final_group = resolved_source
+		if not _validate_merge_piece_positions(lobby, resolved_source, resolved_target, piece_positions):
+			return
 		_sync_piece_groups_from_positions(lobby, final_group, piece_positions)
 		if final_group == resolved_source:
 			_refresh_lock(lobby, final_group, from_id)
 			_release_lock(lobby, resolved_target, from_id)
 		else:
 			_release_lock(lobby, resolved_source, from_id)
-			_try_acquire_lock(lobby, final_group, from_id)
+			_set_lock_owner(lobby, final_group, from_id)
 		for pid in lobby_players.get(lobby, {}).keys():
 			rpc_id(pid, "_receive_piece_connection", piece_id, connected_piece_id, final_group, piece_positions)
 	else:
@@ -504,6 +654,10 @@ func _receive_piece_move(group_id: int, piece_positions: Array):
 		var owner := _get_lock_owner(lobby, resolved_group)
 		if owner != from_id:
 			return
+		if not _peer_has_single_lock(lobby, from_id, resolved_group):
+			return
+		if not _validate_move_piece_positions(lobby, resolved_group, piece_positions):
+			return
 		_sync_piece_groups_from_positions(lobby, resolved_group, piece_positions)
 		_refresh_lock(lobby, resolved_group, from_id)
 		for pid in lobby_players.get(lobby, {}).keys():
@@ -513,11 +667,90 @@ func _receive_piece_move(group_id: int, piece_positions: Array):
 		# clients shouldn't call this locally
 		pass
 
+# Client -> server: atomic batch for move/merge validation + apply
+@rpc("any_peer", "call_remote", "reliable")
+func process_group_action_batch(held_piece_id: int, held_group_id_hint: int, move_piece_positions: Array, merge_candidates: Array):
+	if not is_server:
+		return
+	var from_id: int = multiplayer.get_remote_sender_id()
+	if not client_lobby.has(from_id):
+		return
+	var lobby: int = int(client_lobby[from_id])
+	var source_group := _resolve_group_id(lobby, held_piece_id, held_group_id_hint)
+	if _get_lock_owner(lobby, source_group) != from_id:
+		rpc_id(from_id, "_group_action_batch_result", "rejected", "lock_not_owned", "none", -1)
+		return
+	if not _peer_has_single_lock(lobby, from_id, source_group):
+		rpc_id(from_id, "_group_action_batch_result", "rejected", "invalid_lock_state", "none", -1)
+		return
+	if not _validate_move_piece_positions(lobby, source_group, move_piece_positions):
+		rpc_id(from_id, "_group_action_batch_result", "rejected", "invalid_move_payload", "none", -1)
+		return
+
+	var applied_merge = false
+	var merged_piece_id = -1
+	var merge_final_group = source_group
+	var merge_positions: Array = []
+	for candidate_variant in merge_candidates:
+		if typeof(candidate_variant) != TYPE_DICTIONARY:
+			continue
+		var candidate: Dictionary = candidate_variant
+		if not candidate.has("connected_piece_id") or not candidate.has("piece_positions"):
+			continue
+		var connected_piece_id = int(candidate.get("connected_piece_id", -1))
+		if connected_piece_id < 0:
+			continue
+		var candidate_source := _resolve_group_id(lobby, held_piece_id, int(candidate.get("source_group_id", source_group)))
+		if candidate_source != source_group:
+			continue
+		var candidate_target := _resolve_group_id(lobby, connected_piece_id, int(candidate.get("target_group_id", -1)))
+		if candidate_target == source_group:
+			continue
+		var target_owner := _get_lock_owner(lobby, candidate_target)
+		if target_owner != -1:
+			continue
+		var candidate_positions: Array = candidate.get("piece_positions", [])
+		if not _validate_merge_piece_positions(lobby, source_group, candidate_target, candidate_positions, true):
+			continue
+		var final_group := int(candidate.get("new_group_number", source_group))
+		if final_group != source_group and final_group != candidate_target:
+			final_group = source_group
+		applied_merge = true
+		merged_piece_id = connected_piece_id
+		merge_final_group = final_group
+		merge_positions = candidate_positions
+		break
+
+	if applied_merge:
+		_sync_piece_groups_from_positions(lobby, merge_final_group, merge_positions)
+		if merge_final_group == source_group:
+			_refresh_lock(lobby, merge_final_group, from_id)
+		else:
+			_release_lock(lobby, source_group, from_id)
+			_set_lock_owner(lobby, merge_final_group, from_id)
+		for pid in lobby_players.get(lobby, {}).keys():
+			rpc_id(pid, "_receive_piece_connection", held_piece_id, merged_piece_id, merge_final_group, merge_positions)
+		rpc_id(from_id, "_group_action_batch_result", "ok", "", "merge", merge_final_group)
+		return
+
+	_sync_piece_groups_from_positions(lobby, source_group, move_piece_positions)
+	_refresh_lock(lobby, source_group, from_id)
+	for pid in lobby_players.get(lobby, {}).keys():
+		if pid != from_id:
+			rpc_id(pid, "_receive_piece_move_client", move_piece_positions)
+	rpc_id(from_id, "_group_action_batch_result", "ok", "", "move", source_group)
+
 # Server -> clients: apply moved pieces
 @rpc("authority", "call_remote", "reliable")
 func _receive_piece_move_client(piece_positions: Array):
 	if not is_online: return
 	pieces_moved.emit(piece_positions)
+
+@rpc("authority", "call_remote", "reliable")
+func _group_action_batch_result(status: String, reason: String, applied_op: String, applied_group_id: int):
+	if is_server:
+		return
+	group_action_batch_result.emit(status, reason, applied_op, applied_group_id)
 
 @rpc("authority", "call_remote", "reliable")
 func _update_player_list(players: Dictionary):
@@ -608,6 +841,7 @@ func _on_connected_to_server():
 func _on_connection_failed():
 	print("WARNING::NetworkManager: Connection failed")
 	disconnect_from_server()
+	connection_failed.emit()
 
 func _on_server_disconnected():
 	print("NetworkManager: Server disconnected (callback)")

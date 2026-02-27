@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://assets/scripts/server_bootstrap.gd" id="1_8r3lc"]
+
+[node name="ServerBootstrap" type="Node"]
+script = ExtResource("1_8r3lc")

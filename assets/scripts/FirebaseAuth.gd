@@ -184,6 +184,8 @@ func _wait_for_auth_idle(max_frames: int = 300) -> void:
 func _finish_login(success: bool) -> bool:
 	is_online = success
 	_login_in_progress = false
+	if success:
+		logged_in.emit()
 	login_finished.emit(success)
 	return success
 
@@ -252,6 +254,7 @@ func _on_signup_succeeded(auth_info: Dictionary) -> void:
 
 func _on_login_succeeded(auth_info: Dictionary) -> void:
 	user_id = auth_info.get("localid", auth_info.get("user_id", ""))
+	logged_in.emit()
 
 ##==============================
 ## Quick Get/Set Helper Methods
