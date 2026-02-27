@@ -34,7 +34,7 @@ window/stretch/mode="viewport"
 
 [editor]
 
-run/main_run_args="--user=Max"
+run/main_run_args="--user=Max --stage=beta"
 
 [editor_plugins]
 

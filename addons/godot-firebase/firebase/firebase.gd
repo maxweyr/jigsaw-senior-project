@@ -104,7 +104,17 @@ func _check_emulating() -> void:
 func _load_config() -> void:
 	if not (_config.apiKey != "" and _config.authDomain != ""):
 		var env = ConfigFile.new()
-		var err = env.load("res://addons/godot-firebase/.env")
+		var stage := "prod"
+		for arg in OS.get_cmdline_args():
+			if arg.begins_with("--stage="):
+				stage = arg.get_slice("=", 1)
+
+		var env_path := "res://addons/godot-firebase/.env"
+		if stage == "beta":
+			env_path = "res://addons/godot-firebase/firebase.beta.env"
+
+		var err = env.load(env_path)
+		print("[Firebase] Loaded config from:", env_path)
 		if err == OK:
 			for key in _config.keys():
 				var config_value = _config[key]
@@ -121,7 +131,7 @@ func _load_config() -> void:
 					else:
 						_config[key] = value
 		else:
-			_printerr("Unable to read .env file at path 'res://addons/godot-firebase/.env'")
+			_printerr("Unable to read .env file at path '%s'" % env_path)
 
 	_setup_modules()
 

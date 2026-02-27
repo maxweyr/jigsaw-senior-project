@@ -63,6 +63,22 @@ func _ready():
 	else:
 		DEFAULT_PORT = env.get_value("server", "PORT", 8080)
 		SERVER_IP = str(env.get_value("server", "SERVER_IP", "127.0.0.1"))
+	
+	# ===============================
+	# Stage detection (prod vs beta)
+	# ===============================
+	var args := OS.get_cmdline_args()
+	var stage := StageConfig.get_stage_from_cmdline(args)
+
+	# override port based on stage
+	DEFAULT_PORT = StageConfig.get_port(stage)
+
+	# tell Firebase which environment to use
+	var fb_cfg := StageConfig.get_firebase_config(stage)
+	FireAuth.set_environment(fb_cfg)
+
+	print("Stage:", fb_cfg["env_name"], " Port:", DEFAULT_PORT)
+	
 	# Prioritize Dedicated Server Check
 	if OS.has_feature("server") or "--server" in OS.get_cmdline_args() \
 	or OS.has_feature("headless") or "--headless" in OS.get_cmdline_args():
@@ -120,9 +136,7 @@ func _on_request_completed(_result, response_code, _headers, _body):
 	if response_code == 200:
 		print("NetworkManager has internet connection available")
 		var login_success := await FireAuth.handle_login()
-		if !login_success:
-			FireAuth.is_online = false
-		FireAuth.is_online = true
+		FireAuth.is_online = login_success
 	else:
 		print("WARNING: NetworkManager has no internet connection or bad response, code:", response_code)
 		is_online = false
