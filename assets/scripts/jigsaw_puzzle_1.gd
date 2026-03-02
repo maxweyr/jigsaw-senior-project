@@ -46,6 +46,14 @@ var chat_input_row: HBoxContainer
 var chat_minimized := false
 var chat_expanded_height := 200.0
 var chat_bottom_offset := -85.0
+var spawned_piece_count := 0
+var all_pieces_ready := false
+const PIECE_SCENE_PATH = "res://assets/scenes/Piece_2d.tscn"
+var spawn_watchdog_running := false
+var block_loading_until_state_sync: bool = false
+var initial_state_sync_complete: bool = true
+var groups_root: Node2D = null
+var group_nodes: Dictionary = {}
 
 # --- Network Data	---
 var connected_players = [] # Array to store connected player names (excluding self)
@@ -54,6 +62,163 @@ var connected_players = [] # Array to store connected player names (excluding se
 const BOX_BACKGROUND_COLOR = Color(0.15, 0.15, 0.2, 0.85) # Dark semi-transparent
 const BOX_BORDER_COLOR = Color(0.4, 0.4, 0.45, 0.9)
 const BOX_FONT_COLOR = Color(0.95, 0.95, 0.95)
+
+func _vector2_from_variant(value: Variant, fallback: Vector2 = Vector2.ZERO) -> Vector2:
+	if value is Vector2:
+		return value
+	if value is Dictionary and value.has("x") and value.has("y"):
+		return Vector2(float(value["x"]), float(value["y"]))
+	return fallback
+
+func _get_live_ordered_piece(piece_id: int):
+	if piece_id < 0:
+		return null
+	if piece_id >= PuzzleVar.ordered_pieces_array.size():
+		return null
+	var piece = PuzzleVar.ordered_pieces_array[piece_id]
+	if piece == null or not is_instance_valid(piece):
+		PuzzleVar.ordered_pieces_array[piece_id] = null
+		return null
+	return piece
+
+func _ensure_groups_root() -> void:
+	if groups_root != null and is_instance_valid(groups_root):
+		return
+	var existing = get_node_or_null("GroupsRoot")
+	if existing and is_instance_valid(existing):
+		groups_root = existing
+		return
+	groups_root = Node2D.new()
+	groups_root.name = "GroupsRoot"
+	add_child(groups_root)
+
+func _ensure_group_node(group_id: int, anchor_pos: Vector2 = Vector2.ZERO) -> Node2D:
+	_ensure_groups_root()
+	if group_nodes.has(group_id):
+		var node = group_nodes[group_id]
+		if node != null and is_instance_valid(node):
+			return node
+		group_nodes.erase(group_id)
+	var node := Node2D.new()
+	node.name = "Group_" + str(group_id)
+	node.global_position = anchor_pos
+	groups_root.add_child(node)
+	group_nodes[group_id] = node
+	return node
+
+func _attach_piece_to_group(piece: Node2D, group_id: int, keep_world: bool = true, anchor_pos: Vector2 = Vector2.ZERO) -> void:
+	if piece == null or not is_instance_valid(piece):
+		return
+	var target_group := _ensure_group_node(group_id, anchor_pos)
+	var current_parent = piece.get_parent()
+	if current_parent == target_group:
+		return
+	var old_global := piece.global_position
+	if current_parent != null:
+		current_parent.remove_child(piece)
+	target_group.add_child(piece)
+	if keep_world:
+		piece.global_position = old_global
+
+func _delete_empty_group_nodes(valid_group_ids: Dictionary = {}) -> void:
+	var stale_group_ids: Array = []
+	for raw_gid in group_nodes.keys():
+		var gid := int(raw_gid)
+		var node = group_nodes[raw_gid]
+		if node == null or not is_instance_valid(node):
+			stale_group_ids.append(gid)
+			continue
+		if not valid_group_ids.is_empty() and not valid_group_ids.has(gid):
+			node.queue_free()
+			stale_group_ids.append(gid)
+			continue
+		if node.get_child_count() == 0:
+			node.queue_free()
+			stale_group_ids.append(gid)
+	for raw_gid in stale_group_ids:
+		group_nodes.erase(int(raw_gid))
+
+func _bring_group_to_front(group_id: int) -> void:
+	if not group_nodes.has(group_id):
+		return
+	var node = group_nodes[group_id]
+	if node == null or not is_instance_valid(node):
+		return
+	if groups_root == null or not is_instance_valid(groups_root):
+		return
+	groups_root.move_child(node, groups_root.get_child_count() - 1)
+
+func _move_group_local(group_id: int, distance: Vector2) -> void:
+	var node := _ensure_group_node(group_id, _get_group_anchor_position(group_id))
+	node.global_position += distance
+
+func _set_group_modulate(group_id: int, color: Color) -> void:
+	if not group_nodes.has(group_id):
+		return
+	var node = group_nodes[group_id]
+	if node == null or not is_instance_valid(node):
+		return
+	for child in node.get_children():
+		if child and is_instance_valid(child) and child is CanvasItem:
+			child.modulate = color
+
+func _get_group_anchor_position(group_id: int) -> Vector2:
+	if group_nodes.has(group_id):
+		var node = group_nodes[group_id]
+		if node != null and is_instance_valid(node):
+			return node.global_position
+	for piece in PuzzleVar.ordered_pieces_array:
+		if piece == null or not is_instance_valid(piece):
+			continue
+		if int(piece.group_number) == group_id:
+			return piece.global_position
+	return Vector2.ZERO
+
+func _apply_group_commit_local(_commit_id: int, changed_pieces: Array, changed_groups: Array, _released_group_id: int) -> void:
+	_ensure_groups_root()
+	var group_anchor_map: Dictionary = {}
+	var valid_group_ids: Dictionary = {}
+	var touched_group_ids: Dictionary = {}
+	for raw_piece in changed_pieces:
+		if not (raw_piece is Dictionary):
+			continue
+		var pentry: Dictionary = raw_piece
+		var touched_gid := int(pentry.get("group", -1))
+		if touched_gid >= 0:
+			touched_group_ids[touched_gid] = true
+	for raw_group in changed_groups:
+		if not (raw_group is Dictionary):
+			continue
+		var gdata: Dictionary = raw_group
+		var gid := int(gdata.get("group_id", -1))
+		if gid < 0:
+			continue
+		var anchor := _vector2_from_variant(gdata.get("anchor_pos", Vector2.ZERO), Vector2.ZERO)
+		group_anchor_map[gid] = anchor
+		valid_group_ids[gid] = true
+		var group_node = _ensure_group_node(gid, anchor)
+		if touched_group_ids.has(gid) or group_node.get_child_count() == 0:
+			group_node.global_position = anchor
+
+	for raw_piece in changed_pieces:
+		if not (raw_piece is Dictionary):
+			continue
+		var pdata: Dictionary = raw_piece
+		var pid := int(pdata.get("id", -1))
+		if pid < 0:
+			continue
+		var piece = _get_live_ordered_piece(pid)
+		if piece == null:
+			continue
+		var gid := int(pdata.get("group", piece.group_number))
+		var pos := _vector2_from_variant(pdata.get("position", piece.global_position), piece.global_position)
+		piece.group_number = gid
+		piece.global_position = pos
+		var anchor := _vector2_from_variant(group_anchor_map.get(gid, pos), pos)
+		_attach_piece_to_group(piece, gid, true, anchor)
+
+	_delete_empty_group_nodes(valid_group_ids)
+	call_deferred("update_piece_count_display")
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -69,6 +234,7 @@ func _ready():
 		help_popup.hide()
 		
 	name = "JigsawPuzzleNode"
+	_ensure_groups_root()
 	selected_puzzle_dir = PuzzleVar.choice["base_file_path"] + "_" + str(PuzzleVar.choice["size"])
 	PuzzleVar.selected_puzzle_dir = selected_puzzle_dir
 	selected_puzzle_name = PuzzleVar.choice["base_name"] + str(PuzzleVar.choice["size"])
@@ -78,6 +244,10 @@ func _ready():
 		NetworkManager.player_joined.connect(_on_player_joined)
 		NetworkManager.player_left.connect(_on_player_left)
 		NetworkManager.chat_message_received.connect(append_chat_message)
+		if not NetworkManager.group_commit_applied.is_connected(_on_network_group_commit_applied):
+			NetworkManager.group_commit_applied.connect(_on_network_group_commit_applied)
+		if not NetworkManager.group_snap_feedback.is_connected(_on_network_group_snap_feedback):
+			NetworkManager.group_snap_feedback.connect(_on_network_group_snap_feedback)
 		create_floating_player_display()
 		create_chat_window()
 	
@@ -90,27 +260,40 @@ func _ready():
 	PuzzleVar.piece_clicked = false
 
 	# preload the scenes
-	var sprite_scene = preload("res://assets/scenes/Piece_2d.tscn")
+	var sprite_scene = preload(PIECE_SCENE_PATH)
 	
 	parse_pieces_json()
 	parse_adjacent_json()
+	PuzzleVar.ordered_pieces_array.resize(PuzzleVar.global_num_pieces)
+	spawned_piece_count = 0
+	all_pieces_ready = false
+	block_loading_until_state_sync = NetworkManager.is_online and not NetworkManager.is_server
+	initial_state_sync_complete = not block_loading_until_state_sync
+	var spawner = $PieceSpawner
+	if spawner:
+		spawner.spawn_function = Callable(self, "_spawn_piece_from_data")
+	if NetworkManager.is_online and not NetworkManager.is_server:
+		NetworkManager.call_deferred("_try_apply_pending_lobby_snapshot", PuzzleVar.lobby_number)
+		NetworkManager.rpc_id(1, "client_scene_ready", PuzzleVar.lobby_number)
 	
 	z_index = 0
 	
 	# create puzzle pieces and place in scene
-	PuzzleVar.load_and_or_add_puzzle_random_loc(self, sprite_scene, selected_puzzle_dir, true)
-	
-	await get_tree().process_frame
-	_center_camera_on_pieces()
-	$Camera2D.zoom = Vector2(0.8, 0.8)
+	if not NetworkManager.is_online:
+		PuzzleVar.load_and_or_add_puzzle_random_loc(self, sprite_scene, selected_puzzle_dir, true)
+		
+		await get_tree().process_frame
+		_center_camera_on_pieces()
+		$Camera2D.zoom = Vector2(0.8, 0.8)
 
-	# create piece count display
-	create_piece_count_display()
+		# create piece count display
+		create_piece_count_display()
 
-	if FireAuth.is_online and !NetworkManager.is_server:
-		# client is connected to firebase
-		var puzzle_name_with_size = PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"])
-		await load_firebase_state(puzzle_name_with_size)
+		if FireAuth.is_online and !NetworkManager.is_server:
+			# client is connected to firebase
+			var puzzle_name_with_size = PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"])
+			await load_firebase_state(puzzle_name_with_size)
+		all_pieces_ready = true
 		
 	#if not is_online_mode and FireAuth.offlineMode == 0:
 		#FireAuth.add_active_puzzle(selected_puzzle_name, PuzzleVar.global_num_pieces)
@@ -121,10 +304,26 @@ func _ready():
 	#back_button.connect("pressed", Callable(self, "_on_back_button_pressed"))
 	main_menu.connect(show_win_screen)
 
-	loading.hide()
+	if not NetworkManager.is_online:
+		_hide_loading_if_ready()
 	
 	if NetworkManager.is_online:
 		update_online_status_label()
+		NetworkManager.lobby_state_applied.connect(_on_lobby_state_applied)
+		_start_spawn_watchdog()
+
+func _hide_loading_if_ready() -> void:
+	if block_loading_until_state_sync and not initial_state_sync_complete:
+		return
+	loading.hide()
+
+func _mark_initial_state_sync_complete() -> void:
+	if initial_state_sync_complete:
+		return
+	initial_state_sync_complete = true
+	block_loading_until_state_sync = false
+	update_online_status_label()
+	_hide_loading_if_ready()
 
 # Load state from Firebase 
 func load_firebase_state(p_name):
@@ -142,6 +341,12 @@ func load_firebase_state(p_name):
 		saved_piece_data = await FireAuth.get_puzzle_state(p_name)
 	if saved_piece_data.is_empty():
 		complete = false
+		if NetworkManager.is_online:
+			_mark_initial_state_sync_complete()
+		return
+	if NetworkManager.is_online:
+		_apply_completion_from_state(saved_piece_data)
+		NetworkManager.rpc_id(1, "apply_lobby_state", PuzzleVar.lobby_number, saved_piece_data)
 		return
 
 	# Always apply saved positions (including fully-completed puzzles).
@@ -180,6 +385,247 @@ func load_firebase_state(p_name):
 		print("Puzzle was already complete on join.")
 		completed_on_join = true
 	update_piece_count_display()
+
+func _apply_completion_from_state(saved_piece_data: Array) -> void:
+	var unique_group_ids = []
+	for data in saved_piece_data:
+		if data["GroupID"] not in unique_group_ids:
+			unique_group_ids.append(data["GroupID"])
+	complete = unique_group_ids.size() <= 1
+	if complete:
+		print("Puzzle was already complete on join.")
+		completed_on_join = true
+
+func _spawn_piece_from_data(data: Variant) -> Node:
+	var piece_scene = preload(PIECE_SCENE_PATH)
+	var piece = piece_scene.instantiate()
+	if piece and piece.has_method("init_from_spawn"):
+		piece.init_from_spawn(data)
+	return piece
+
+func _piece_has_texture(piece: Node) -> bool:
+	if piece == null or not is_instance_valid(piece):
+		return false
+	var sprite: Sprite2D = piece.get_node_or_null("Sprite2D")
+	return sprite != null and sprite.texture != null
+
+func _ensure_piece_texture(piece: Node, puzzle_dir: String, piece_id: int) -> bool:
+	if piece == null or not is_instance_valid(piece):
+		return false
+	var sprite: Sprite2D = piece.get_node_or_null("Sprite2D")
+	if sprite == null:
+		return false
+	if sprite.texture != null:
+		return true
+	var normalized_dir := str(puzzle_dir).strip_edges()
+	if normalized_dir == "":
+		return false
+	var texture_path := normalized_dir + "/pieces/raster/" + str(piece_id) + ".png"
+	var tex: Texture2D = load(texture_path)
+	if tex == null:
+		printerr("Jigsaw: Failed to hydrate texture id=", piece_id, " path=", texture_path)
+		return false
+	sprite.texture = tex
+	piece.piece_height = tex.get_height()
+	piece.piece_width = tex.get_width()
+	var collision_box: CollisionShape2D = piece.get_node_or_null("Sprite2D/Area2D/CollisionShape2D")
+	if collision_box and collision_box.shape is RectangleShape2D:
+		var rect_shape := collision_box.shape as RectangleShape2D
+		rect_shape.extents = Vector2(tex.get_width() / 2, tex.get_height() / 2)
+	return true
+
+func _apply_network_snapshot(_puzzle_dir: String, snapshot: Array) -> void:
+	if snapshot.is_empty():
+		return
+	print("Jigsaw: Applying snapshot pieces=", snapshot.size(), " puzzle_dir=", _puzzle_dir)
+	_ensure_groups_root()
+	var piece_scene = preload(PIECE_SCENE_PATH)
+	var max_id := -1
+	var valid_group_ids: Dictionary = {}
+	var group_anchor_map: Dictionary = {}
+	for entry in snapshot:
+		if not (entry is Dictionary):
+			continue
+		var pid := int(entry.get("id", -1))
+		if pid < 0:
+			continue
+		var gid := int(entry.get("group_id", entry.get("group", pid)))
+		var pos := _vector2_from_variant(entry.get("position", Vector2.ZERO), Vector2.ZERO)
+		var anchor := _vector2_from_variant(entry.get("anchor_pos", pos), pos)
+		group_anchor_map[gid] = anchor
+		valid_group_ids[gid] = true
+		_ensure_group_node(gid, anchor).global_position = anchor
+		if pid > max_id:
+			max_id = pid
+		if PuzzleVar.ordered_pieces_array.size() <= pid:
+			PuzzleVar.ordered_pieces_array.resize(pid + 1)
+		var entry_puzzle_dir := str(entry.get("puzzle_dir", _puzzle_dir)).strip_edges()
+		var existing = PuzzleVar.ordered_pieces_array[pid]
+		if existing == null or not is_instance_valid(existing):
+			var piece = piece_scene.instantiate()
+			if piece and piece.has_method("init_from_spawn"):
+				piece.init_from_spawn(entry)
+			piece.group_number = gid
+			piece.global_position = pos
+			_ensure_piece_texture(piece, entry_puzzle_dir, pid)
+			piece.set_meta("snapshot_fallback", true)
+			add_child(piece)
+			PuzzleVar.ordered_pieces_array[pid] = piece
+			_attach_piece_to_group(piece, gid, true, anchor)
+		else:
+			existing.group_number = gid
+			existing.global_position = pos
+			_ensure_piece_texture(existing, entry_puzzle_dir, pid)
+			_attach_piece_to_group(existing, gid, true, anchor)
+	if max_id >= 0 and PuzzleVar.global_num_pieces < max_id + 1:
+		PuzzleVar.global_num_pieces = max_id + 1
+	_delete_empty_group_nodes(valid_group_ids)
+	_refresh_spawned_piece_state()
+	print("Jigsaw: Snapshot apply complete spawned=", spawned_piece_count, " total=", PuzzleVar.global_num_pieces)
+	if spawned_piece_count > 0:
+		var sample_piece: Node = null
+		if PuzzleVar.ordered_pieces_array.size() > 0:
+			sample_piece = PuzzleVar.ordered_pieces_array[0]
+		var sample_pos: Vector2 = Vector2.ZERO
+		var sample_tex_ok: bool = false
+		if sample_piece != null and is_instance_valid(sample_piece):
+			sample_pos = sample_piece.global_position
+			var sample_sprite: Sprite2D = sample_piece.get_node_or_null("Sprite2D")
+			if sample_sprite and sample_sprite.texture != null:
+				sample_tex_ok = true
+		print(
+			"Jigsaw: Snapshot debug cam=", $Camera2D.global_position,
+			" sample_pos=", sample_pos,
+			" sample_tex_ok=", sample_tex_ok
+		)
+	if spawned_piece_count > 0:
+		_hide_loading_if_ready()
+	if not all_pieces_ready and spawned_piece_count >= PuzzleVar.global_num_pieces and PuzzleVar.global_num_pieces > 0:
+		await _on_all_pieces_spawned()
+
+func _piece_spawned(node: Node) -> void:
+	if node == null:
+		return
+	_ensure_groups_root()
+	var piece = node
+	if not piece.is_in_group("puzzle_pieces"):
+		piece.add_to_group("puzzle_pieces")
+	if piece.ID < 0:
+		return
+	var piece_texture_ok := _piece_has_texture(piece)
+	if not piece_texture_ok:
+		piece_texture_ok = _ensure_piece_texture(piece, str(PuzzleVar.selected_puzzle_dir), piece.ID)
+	if PuzzleVar.ordered_pieces_array.size() <= piece.ID:
+		PuzzleVar.ordered_pieces_array.resize(piece.ID + 1)
+	var existing = PuzzleVar.ordered_pieces_array[piece.ID]
+	if existing != null and is_instance_valid(existing) and existing != piece:
+		var existing_is_fallback := bool(existing.get_meta("snapshot_fallback", false))
+		var existing_texture_ok := _piece_has_texture(existing)
+		if existing_is_fallback:
+			if existing_texture_ok and not piece_texture_ok:
+				# Keep textured snapshot fallback if replicated spawn arrived without texture data.
+				piece.queue_free()
+				return
+			existing.queue_free()
+			PuzzleVar.ordered_pieces_array[piece.ID] = piece
+		else:
+			piece.queue_free()
+			return
+	else:
+		PuzzleVar.ordered_pieces_array[piece.ID] = piece
+	piece.set_meta("snapshot_fallback", false)
+	_attach_piece_to_group(piece, int(piece.group_number), true, piece.global_position)
+	_refresh_spawned_piece_state()
+	if not all_pieces_ready and spawned_piece_count >= PuzzleVar.global_num_pieces:
+		await _on_all_pieces_spawned()
+
+func _on_all_pieces_spawned() -> void:
+	all_pieces_ready = true
+	spawn_watchdog_running = false
+	_center_camera_on_pieces()
+	$Camera2D.zoom = Vector2(0.8, 0.8)
+	create_piece_count_display()
+	if NetworkManager.is_online and not NetworkManager.is_server:
+		if FireAuth.is_online:
+			var puzzle_name_with_size = PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"])
+			load_firebase_state(puzzle_name_with_size)
+		else:
+			_mark_initial_state_sync_complete()
+	else:
+		_hide_loading_if_ready()
+
+func _on_lobby_state_applied(_lobby_number: int) -> void:
+	if NetworkManager.is_online and not NetworkManager.is_server:
+		_mark_initial_state_sync_complete()
+	call_deferred("update_piece_count_display")
+	update_online_status_label()
+
+func _refresh_spawned_piece_state() -> void:
+	var pieces = get_tree().get_nodes_in_group("puzzle_pieces")
+	if PuzzleVar.global_num_pieces <= 0:
+		var max_id := -1
+		for p in pieces:
+			if p == null:
+				continue
+			if p.ID > max_id:
+				max_id = p.ID
+		if max_id >= 0:
+			PuzzleVar.global_num_pieces = max_id + 1
+	if PuzzleVar.global_num_pieces <= 0:
+		spawned_piece_count = 0
+		return
+	if PuzzleVar.ordered_pieces_array.size() < PuzzleVar.global_num_pieces:
+		PuzzleVar.ordered_pieces_array.resize(PuzzleVar.global_num_pieces)
+	var found := 0
+	for p in pieces:
+		if p == null:
+			continue
+		if p.ID >= 0 and p.ID < PuzzleVar.global_num_pieces:
+			PuzzleVar.ordered_pieces_array[p.ID] = p
+			found += 1
+	spawned_piece_count = found
+
+func _start_spawn_watchdog() -> void:
+	if spawn_watchdog_running:
+		return
+	spawn_watchdog_running = true
+	_watch_for_spawn_completion()
+
+func _watch_for_spawn_completion() -> void:
+	var waited_sec := 0.0
+	var reannounce_sec := 0.0
+	var debug_tick_sec := 0.0
+	var unblocked_loading := false
+	var showed_partial_ready := false
+	while spawn_watchdog_running and not all_pieces_ready:
+		_refresh_spawned_piece_state()
+		if spawned_piece_count > 0 and not showed_partial_ready:
+			showed_partial_ready = true
+			_hide_loading_if_ready()
+			update_online_status_label("Loading pieces: " + str(spawned_piece_count) + "/" + str(PuzzleVar.global_num_pieces))
+		if spawned_piece_count >= PuzzleVar.global_num_pieces and PuzzleVar.global_num_pieces > 0:
+			await _on_all_pieces_spawned()
+			return
+		if NetworkManager.is_online and not NetworkManager.is_server:
+			reannounce_sec += 0.1
+			if reannounce_sec >= 1.0:
+				reannounce_sec = 0.0
+				NetworkManager.rpc_id(1, "client_scene_ready", PuzzleVar.lobby_number)
+		debug_tick_sec += 0.1
+		if debug_tick_sec >= 5.0:
+			debug_tick_sec = 0.0
+			print(
+				"Spawn watchdog: waited=", waited_sec,
+				"s global_num_pieces=", PuzzleVar.global_num_pieces,
+				" spawned_piece_count=", spawned_piece_count
+			)
+		waited_sec += 0.1
+		if waited_sec >= 20.0 and not unblocked_loading:
+			unblocked_loading = true
+			_hide_loading_if_ready()
+			update_online_status_label("Connected. Waiting for puzzle pieces...")
+			printerr("Timeout while waiting for piece spawns. Continuing to retry.")
+		await get_tree().create_timer(0.1).timeout
 
 #-----------------------------------------------------------------------------
 # UI CREATION AND MANAGEMENT
@@ -253,19 +699,28 @@ func create_piece_count_display():
 	update_piece_count_display()
 
 
+func _has_all_live_pieces_for_counter() -> bool:
+	if PuzzleVar.ordered_pieces_array.size() < PuzzleVar.global_num_pieces:
+		return false
+	for x in range(PuzzleVar.global_num_pieces):
+		var piece = PuzzleVar.ordered_pieces_array[x]
+		if piece == null or not is_instance_valid(piece):
+			PuzzleVar.ordered_pieces_array[x] = null
+			return false
+		if piece.group_number == null:
+			return false
+	return true
+
 func update_piece_count_display():
-	if not is_instance_valid(_cur_count_label):
+	if not is_instance_valid(_cur_count_label) or not is_instance_valid(_total_label):
 		return
 	if PuzzleVar.global_num_pieces <= 0:
 		_cur_count_label.text = "0"
 		_total_label.text = "0"
 		return
-	if PuzzleVar.ordered_pieces_array.size() < PuzzleVar.global_num_pieces:
-		_cur_count_label.text = "0"
-		_total_label.text = str(PuzzleVar.global_num_pieces)
-		return
-	for piece in PuzzleVar.ordered_pieces_array:
-		if piece.group_number == null:
+	if not _has_all_live_pieces_for_counter():
+		_refresh_spawned_piece_state()
+		if not _has_all_live_pieces_for_counter():
 			_cur_count_label.text = "0"
 			_total_label.text = str(PuzzleVar.global_num_pieces)
 			return
@@ -273,7 +728,10 @@ func update_piece_count_display():
 	# Count groups to avoid showing N/N when two large groups remain.
 	var group_sizes := {}
 	for x in range(PuzzleVar.global_num_pieces):
-		var group_id = PuzzleVar.ordered_pieces_array[x].group_number
+		var piece = PuzzleVar.ordered_pieces_array[x]
+		if piece == null or not is_instance_valid(piece):
+			continue
+		var group_id = piece.group_number
 		if not group_sizes.has(group_id):
 			group_sizes[group_id] = 1
 		else:
@@ -500,6 +958,38 @@ func _on_player_joined(_client_id, client_name):
 
 func _on_player_left(_client_id, client_name):
 	update_online_status_label()
+
+func _on_network_group_commit_applied(commit_id: int, changed_pieces: Array, changed_groups: Array, released_group_id: int) -> void:
+	_apply_group_commit_local(commit_id, changed_pieces, changed_groups, released_group_id)
+
+func _on_network_group_snap_feedback(points: Array) -> void:
+	_show_group_snap_feedback(points)
+
+func _cleanup_snap_feedback_popup(popup: Node) -> void:
+	await get_tree().create_timer(0.45).timeout
+	if popup != null and is_instance_valid(popup):
+		popup.queue_free()
+
+func _show_group_snap_feedback(points: Array) -> void:
+	if points.is_empty():
+		return
+	var check_texture: Texture2D = preload("res://assets/images/checkmark2.0.png")
+	if check_texture == null:
+		return
+	var spawned_count: int = 0
+	for raw_point in points:
+		var point: Vector2 = _vector2_from_variant(raw_point, Vector2.ZERO)
+		var popup := Sprite2D.new()
+		popup.texture = check_texture
+		popup.position = point
+		popup.scale = Vector2(1.25, 1.25)
+		popup.visible = true
+		popup.z_index = 10
+		add_child(popup)
+		spawned_count += 1
+		_cleanup_snap_feedback_popup(popup)
+	if spawned_count > 0:
+		play_snap_sound()
 	
 func update_online_status_label(custom_text=""):
 	connected_players.clear()
@@ -567,7 +1057,7 @@ func _input(event):
 			
 	if event is InputEventKey:
 		if event.is_pressed():
-			if event.keycode == KEY_P && Input.is_key_pressed(KEY_SHIFT):
+			if event.keycode == KEY_P and event.shift_pressed:
 				# Arrange grid
 				arrange_grid()
 			elif event.keycode == KEY_M:
@@ -732,19 +1222,45 @@ func build_grid():
 func arrange_grid():
 	# Get the 2D grid from build_grid
 	var grid = build_grid()
-	var cell_piece = PuzzleVar.ordered_pieces_array[0]
-	var cell_width = cell_piece.piece_width
-	var cell_height = cell_piece.piece_height
-	
-	# Loop through the grid and arrange pieces
+	var cell_piece = null
+	for candidate in PuzzleVar.ordered_pieces_array:
+		if candidate != null and is_instance_valid(candidate):
+			cell_piece = candidate
+			break
+	if cell_piece == null:
+		return
+	var cell_width: float = float(cell_piece.piece_width)
+	var cell_height: float = float(cell_piece.piece_height)
+
+	var arranged_positions: Array = []
 	for row in range(grid.size()):
 		for col in range(grid[row].size()):
-			var piece_id = grid[row][col]
-			var piece = PuzzleVar.ordered_pieces_array[piece_id]
-			
-			# Compute new position based on the grid cell
-			var new_position = Vector2(col * cell_width * 1.05, row * cell_height * 1.05)
-			piece.move_to_position(new_position)
+			var piece_id: int = int(grid[row][col])
+			var new_position: Vector2 = Vector2(col * cell_width * 1.05, row * cell_height * 1.05)
+			arranged_positions.append({
+				"id": piece_id,
+				"position": new_position
+			})
+
+	if NetworkManager.is_online and NetworkManager.use_group_parent_sync and not NetworkManager.use_legacy_piece_flow:
+		if arranged_positions.is_empty():
+			return
+		NetworkManager.rpc_id(1, "request_grid_arrange_v2", int(PuzzleVar.lobby_number), arranged_positions)
+		return
+	
+	# Loop through the grid and arrange pieces
+	for raw_entry in arranged_positions:
+		if not (raw_entry is Dictionary):
+			continue
+		var entry: Dictionary = raw_entry
+		var piece_id: int = int(entry.get("id", -1))
+		if piece_id < 0 or piece_id >= PuzzleVar.ordered_pieces_array.size():
+			continue
+		var piece = PuzzleVar.ordered_pieces_array[piece_id]
+		if piece == null or not is_instance_valid(piece):
+			continue
+		var new_position: Vector2 = _vector2_from_variant(entry.get("position", piece.global_position), piece.global_position)
+		piece.move_to_position(new_position)
 			
 func play_snap_sound():
 	var snap_sound = preload("res://assets/sounds/ding.mp3")
