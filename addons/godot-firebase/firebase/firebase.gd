@@ -109,7 +109,7 @@ func _load_config() -> void:
 			if arg.begins_with("--stage="):
 				stage = arg.get_slice("=", 1)
 
-		var env_path := "res://addons/godot-firebase/.env"
+		var env_path := "res://addons/godot-firebase/firebase.env"
 		if stage == "beta":
 			env_path = "res://addons/godot-firebase/firebase.beta.env"
 
