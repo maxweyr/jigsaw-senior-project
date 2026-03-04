@@ -1,0 +1,21 @@
+name: CI - Validate Godot Project
+
+on:
+  pull_request:
+  push:
+    branches: [main, ci_cd]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.6
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Import and validate project
+        run: godot --headless --path . --quit
