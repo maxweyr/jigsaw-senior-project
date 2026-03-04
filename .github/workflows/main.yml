@@ -9,9 +9,9 @@ jobs:
   export:
     runs-on: ubuntu-latest
 
-    # Godot CI image with templates available
     container:
       image: barichello/godot-ci:4.6
+      options: --user root
 
     strategy:
       fail-fast: false
@@ -34,17 +34,29 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: true
-       
-      - name: Install export dependencies
+
+      # Optional but helpful debug
+      - name: Show environment
         run: |
-          sudo apt-get update
-          sudo apt-get install -y fontconfig libfontconfig1
+          whoami
+          godot --version || true
+
+      # Templates path setup (mirrors godot-ci's own workflow style)
+      - name: Setup export templates dir
+        run: |
+          mkdir -p ~/.local/share/godot/export_templates/
+
+      # Only needed for Linux exports; harmless for others
+      - name: Install Linux runtime deps
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends fontconfig libfontconfig1
+          rm -rf /var/lib/apt/lists/*
 
       - name: Make output folders
         run: |
           mkdir -p build/linux build/server build/windows build/mac
 
-      # Release export (change to --export-debug if you want debug builds)
       - name: Export
         run: |
           godot --headless --verbose --export-release "${{ matrix.preset }}" "${{ matrix.out }}"
