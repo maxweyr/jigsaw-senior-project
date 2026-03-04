@@ -17,5 +17,13 @@ jobs:
         with:
           lfs: true
 
-      - name: Import and validate project
-        run: godot --headless --path . --quit
+      - name: Install runtime dependencies
+        run: |
+          apt-get update
+          apt-get install -y fontconfig libfontconfig1
+
+      - name: Import project assets
+        run: godot --headless --path . --import
+
+      - name: Validate project loads
+        run: godot --headless --path . --editor --quit
