@@ -1,12 +1,13 @@
-name: Build Godot Project (Release)
+name: Build Executables
 
 on:
   workflow_dispatch: {}
-  release:
-    types: [created]
+  push:
+    branches: [main]
 
 jobs:
-  export:
+  build:
+    name: Build Executables
     runs-on: ubuntu-latest
 
     # Godot CI image with templates available
@@ -37,8 +38,8 @@ jobs:
        
       - name: Install export dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y fontconfig libfontconfig1
+          apt-get update
+          apt-get install -y fontconfig libfontconfig1
 
       - name: Make output folders
         run: |
