@@ -45,10 +45,14 @@ jobs:
         run: |
           mkdir -p build/linux build/server build/windows build/mac
 
+      - name: Import project assets
+        run: |
+          godot --headless --path . --import
+
       # Release export (change to --export-debug if you want debug builds)
       - name: Export
         run: |
-          godot --headless --verbose --export-release "${{ matrix.preset }}" "${{ matrix.out }}"
+          godot --headless --path . --verbose --export-release "${{ matrix.preset }}" "${{ matrix.out }}"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
