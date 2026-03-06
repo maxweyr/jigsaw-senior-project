@@ -151,10 +151,12 @@ func load_and_or_add_puzzle_random_loc(parent_node: Node, sprite_scene: PackedSc
 func get_avail_puzzles():
 	var ret_arr = []
 	for puzzle in PuzzleImageData.PUZZLE_DATA:
-		var size10 = puzzle.base_file_path + "_10"
-		var size100 = puzzle.base_file_path + "_100"
-		var size500 = puzzle.base_file_path + "_500"
-		if DirAccess.dir_exists_absolute(size10) and DirAccess.dir_exists_absolute(size100) and DirAccess.dir_exists_absolute(size500):
+		# Directory existence checks on res:// can fail in exported packs.
+		# Probe representative piece files instead.
+		var size10_probe = puzzle.base_file_path + "_10/pieces/raster/0.png"
+		var size100_probe = puzzle.base_file_path + "_100/pieces/raster/0.png"
+		var size500_probe = puzzle.base_file_path + "_500/pieces/raster/0.png"
+		if ResourceLoader.exists(size10_probe) and ResourceLoader.exists(size100_probe) and ResourceLoader.exists(size500_probe):
 			ret_arr.append(puzzle.duplicate())
 	print(ret_arr)
 	return ret_arr
