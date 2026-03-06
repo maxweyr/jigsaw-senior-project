@@ -10,7 +10,7 @@ jobs:
     name: Build Executables
     runs-on: ubuntu-latest
 
-    # Godot CI image with templates available
+    # Godot CI image
     container:
       image: barichello/godot-ci:4.6
 
@@ -39,7 +39,19 @@ jobs:
       - name: Install export dependencies
         run: |
           apt-get update
-          apt-get install -y fontconfig libfontconfig1
+          apt-get install -y curl unzip fontconfig libfontconfig1
+
+      - name: Install Godot export templates
+        run: |
+          TEMPLATE_VERSION="4.6.stable"
+          TEMPLATE_URL="https://github.com/godotengine/godot/releases/download/4.6-stable/Godot_v4.6-stable_export_templates.tpz"
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/$TEMPLATE_VERSION"
+
+          mkdir -p "$TEMPLATE_DIR"
+          curl -fsSL "$TEMPLATE_URL" -o /tmp/godot_export_templates.tpz
+          unzip -q -o /tmp/godot_export_templates.tpz -d /tmp/godot_export_templates
+          cp -r /tmp/godot_export_templates/templates/* "$TEMPLATE_DIR/"
+          ls -la "$TEMPLATE_DIR"
 
       - name: Make output folders
         run: |
