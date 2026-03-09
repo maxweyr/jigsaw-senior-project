@@ -102,6 +102,10 @@ jobs:
         run: |
           scp -i ~/.ssh/id_ed25519 build/server/jigsaw_server.x86_64 "$BETA_USER@$BETA_HOST:$BETA_REMOTE_DIR/jigsaw_server.x86_64"
 
+      - name: Verify SSH connection
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes "$BETA_USER@$BETA_HOST" "echo connected && whoami && pwd"
+
       - name: Replace and start beta server
         run: |
           ssh -i ~/.ssh/id_ed25519 "$BETA_USER@$BETA_HOST" "
