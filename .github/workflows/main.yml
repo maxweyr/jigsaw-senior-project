@@ -108,4 +108,4 @@ jobs:
 
       - name: Replace and start beta server
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes "$BETA_USER@$BETA_HOST" "set -e; cd \"$BETA_REMOTE_DIR\"; mv -f jigsaw_server.x86_64 \"$BETA_REMOTE_BIN_NAME\"; chmod +x \"$BETA_REMOTE_BIN_NAME\"; pkill -f \"$BETA_REMOTE_BIN_NAME --stage=beta\" || true; nohup \"./$BETA_REMOTE_BIN_NAME\" --stage=beta > beta_server.log 2>&1 < /dev/null & sleep 2; pgrep -af \"$BETA_REMOTE_BIN_NAME --stage=beta\""
+          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes "$BETA_USER@$BETA_HOST" "set -e; cd \"$BETA_REMOTE_DIR\"; mv -f jigsaw_server.x86_64 \"$BETA_REMOTE_BIN_NAME\"; chmod +x \"$BETA_REMOTE_BIN_NAME\"; OLD_PIDS=\$(pgrep -f \"^\\./$BETA_REMOTE_BIN_NAME --stage=beta\$\" || true); if [ -n \"\$OLD_PIDS\" ]; then kill \$OLD_PIDS; fi; nohup \"./$BETA_REMOTE_BIN_NAME\" --stage=beta > beta_server.log 2>&1 < /dev/null & sleep 2; pgrep -af \"^\\./$BETA_REMOTE_BIN_NAME --stage=beta\$\""
