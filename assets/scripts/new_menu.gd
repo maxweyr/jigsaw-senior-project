@@ -2,7 +2,7 @@ extends Control
 
 var progress_arr = []
 var overlay
-@onready var nickname_label: Label = $VBoxContainer/NicknameLabel
+@onready var nickname_label: Label = get_node_or_null("VBoxContainer/NicknameLabel")
 var rename_popup: PopupPanel
 var nickname_line_edit: LineEdit
 var joining_online := false

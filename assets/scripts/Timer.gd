@@ -8,6 +8,8 @@ func _ready():
 func update_user_playing_time() -> void:
 	while true:
 		await get_tree().create_timer(60.0).timeout
+		if NetworkManager == null:
+			continue
 
 		if not NetworkManager.is_server and FireAuth.is_online:
 			if get_tree().current_scene.name == "JigsawPuzzleNode": 

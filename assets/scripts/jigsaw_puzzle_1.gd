@@ -54,6 +54,7 @@ var block_loading_until_state_sync: bool = false
 var initial_state_sync_complete: bool = true
 var groups_root: Node2D = null
 var group_nodes: Dictionary = {}
+var group_drag_sequences: Dictionary = {}
 
 # --- Network Data	---
 var connected_players = [] # Array to store connected player names (excluding self)
@@ -136,7 +137,9 @@ func _delete_empty_group_nodes(valid_group_ids: Dictionary = {}) -> void:
 			node.queue_free()
 			stale_group_ids.append(gid)
 	for raw_gid in stale_group_ids:
-		group_nodes.erase(int(raw_gid))
+		var gid: int = int(raw_gid)
+		group_nodes.erase(gid)
+		group_drag_sequences.erase(gid)
 
 func _bring_group_to_front(group_id: int) -> void:
 	if not group_nodes.has(group_id):
@@ -173,6 +176,11 @@ func _get_group_anchor_position(group_id: int) -> Vector2:
 		if int(piece.group_number) == group_id:
 			return piece.global_position
 	return Vector2.ZERO
+
+func _next_group_drag_sequence(group_id: int) -> int:
+	var next_seq: int = int(group_drag_sequences.get(group_id, 0)) + 1
+	group_drag_sequences[group_id] = next_seq
+	return next_seq
 
 func _apply_group_commit_local(_commit_id: int, changed_pieces: Array, changed_groups: Array, _released_group_id: int) -> void:
 	_ensure_groups_root()
@@ -608,7 +616,8 @@ func _watch_for_spawn_completion() -> void:
 			return
 		if NetworkManager.is_online and not NetworkManager.is_server:
 			reannounce_sec += 0.1
-			if reannounce_sec >= 1.0:
+			# Reannounce only while nothing is spawned yet; avoid gameplay-time snapshot replays.
+			if reannounce_sec >= 1.0 and spawned_piece_count <= 0:
 				reannounce_sec = 0.0
 				NetworkManager.rpc_id(1, "client_scene_ready", PuzzleVar.lobby_number)
 		debug_tick_sec += 0.1
@@ -1242,10 +1251,10 @@ func arrange_grid():
 				"position": new_position
 			})
 
-	if NetworkManager.is_online and NetworkManager.use_group_parent_sync and not NetworkManager.use_legacy_piece_flow:
+	if NetworkManager.is_online:
 		if arranged_positions.is_empty():
 			return
-		NetworkManager.rpc_id(1, "request_grid_arrange_v2", int(PuzzleVar.lobby_number), arranged_positions)
+		NetworkManager.rpc_id(1, "request_grid_arrange", int(PuzzleVar.lobby_number), arranged_positions)
 		return
 	
 	# Loop through the grid and arrange pieces
@@ -1445,3 +1454,4 @@ func _on_help_button_pressed() -> void:
 
 func _on_close_button_pressed() -> void:
 	help_popup.hide()
+
