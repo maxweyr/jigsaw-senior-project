@@ -18,24 +18,17 @@ extends Node
 signal logged_in
 signal signup_succeeded
 signal login_failed
-signal login_finished(success: bool)
 
 var user_id = ""
 var currentPuzzle = ""
 var is_online: bool = false
-var _login_in_progress: bool = false
 var box_id: String
 var nickname: String
 
-# Default to PROD (will be overridden by FireAuth.set_environment at startup)
-var USER_COLLECTION: String = "users"
+const USER_COLLECTION: String = "sp_users"
 const USER_SUBCOLLECTIONS = ["active_puzzles", "completed_puzzles"]
 
-var SERVER_COLLECTION: String = "servers"
-
-# optional debug fields (used by set_environment)
-var env_name: String = "prod"
-var project_id: String = ""
+const SERVER_COLLECTION: String = "sp_servers"
 
 var puzzleNames = {
 	0: ["china10", 12],
@@ -82,21 +75,13 @@ func _ready() -> void:
 	print("FirebaseAuth: Box ID set to ", box_id)
 	nickname = _parse_nickname()
 	print("FirebaseAuth: Nickname set to ", nickname)
-	Firebase.Auth.login_succeeded.connect(_on_login_succeeded)
+	await _wait_for_firebase_auth()
 	Firebase.Auth.signup_succeeded.connect(_on_signup_succeeded)
 	Firebase.Auth.login_failed.connect(_on_login_failed)
 
-func set_environment(cfg: Dictionary) -> void:
-	env_name = str(cfg.get("env_name", "prod"))
-	project_id = str(cfg.get("project_id", ""))
-
-	USER_COLLECTION = str(cfg.get("users_collection", "users"))
-	SERVER_COLLECTION = str(cfg.get("servers_collection", "servers"))
-
-	print("FireAuth set_environment -> env=", env_name,
-		" project_id=", project_id,
-		" USER_COLLECTION=", USER_COLLECTION,
-		" SERVER_COLLECTION=", SERVER_COLLECTION)
+func _wait_for_firebase_auth() -> void:
+	while Firebase == null or Firebase.Auth == null:
+		await get_tree().process_frame
 
 func _parse_user_arg() -> String:
 	# check for saved username file
@@ -132,6 +117,7 @@ func attempt_anonymous_login() -> void:
 # check if there's an existing auth session
 func check_auth_file() -> void:
 	await Firebase.Auth.check_auth_file()
+	FireAuth.write_last_login_time()
 
 # check if login is needed
 func needs_login() -> bool:
@@ -140,52 +126,40 @@ func needs_login() -> bool:
 # Handles the login process: checks existing session, loads file, or attempts anonymous login.
 # Returns true if a valid session exists after the process, false otherwise.
 func handle_login() -> bool:
-	if _login_in_progress:
-		print("FirebaseAuth: Login already in progress, waiting for result...")
-		await login_finished
-		return is_online
-
-	_login_in_progress = true
 	print("FirebaseAuth: Handling login...")
-	# 1. Check if already logged in with an in-memory token
-	if Firebase.Auth.is_logged_in():
-		print("FirebaseAuth: Already logged in (session valid).")
-		return _finish_login(true)
-
-	# 2. If an auth file exists, try restoring/refreshing token from disk
+	# 1. Check if already logged in (SDK might have a valid session)
 	if not Firebase.Auth.needs_login():
-		print("FirebaseAuth: Found auth file, attempting session restore...")
-		await check_auth_file()
-		await _wait_for_auth_idle()
-		if Firebase.Auth.is_logged_in():
-			print("FirebaseAuth: Login successful via auth file.")
-			return _finish_login(true)
-		print("FirebaseAuth: Auth file restore did not produce a valid session.")
-
-	# 3. If no valid session, attempt anonymous login
+		print("FirebaseAuth: Already logged in (session valid).")
+		is_online = true
+		write_last_login_time()
+		return true
+	# 2. Try loading from the auth file
+	print("FirebaseAuth: No active session, checking auth file...")
+	await check_auth_file() # Wait for the check to completed
+	# Check again: Did loading the file log us in?
+	if not Firebase.Auth.needs_login():
+		print("FirebaseAuth: Login successful via auth file.")
+		is_online = true
+		write_last_login_time() # Record login time on success
+		return true
+	# 3. If still needing login, attempt anonymous login
 	print("FirebaseAuth: No valid auth file found or needed login. Attempting anonymous login...")
 	await attempt_anonymous_login()
-	await _wait_for_auth_idle()
 	# 4. Check final login status
-	if Firebase.Auth.is_logged_in():
+	# After attempt_anonymous_login, the SDK's state (checked by needs_login())
+	# should be updated based on the success/failure signals it received internally.
+	# We might need a brief yield or rely on the check after await.
+	# await get_tree().create_timer(0.1).timeout # Optional small delay if needed for signals
+	if not needs_login():
 		print("FirebaseAuth: Anonymous login successful.")
-		return _finish_login(true)
-
-	# This means anonymous login likely failed. The _on_login_failed signal handler logs details.
-	print("FirebaseAuth: Anonymous login failed or still requires login.")
-	return _finish_login(false)
-
-func _wait_for_auth_idle(max_frames: int = 300) -> void:
-	var frames := 0
-	while Firebase.Auth.is_busy and frames < max_frames:
-		frames += 1
-		await get_tree().process_frame
-
-func _finish_login(success: bool) -> bool:
-	is_online = success
-	_login_in_progress = false
-	login_finished.emit(success)
-	return success
+		is_online = true
+		write_last_login_time() # Record login time on success
+		return true
+	else:
+		# This means anonymous login likely failed. The _on_login_failed signal handler below logs details.
+		print("FirebaseAuth: Anonymous login failed or still requires login.")
+		is_online = false
+		return false
 
 # handle username login for lobby number
 func handle_username_login(username: String) -> bool:
@@ -239,7 +213,7 @@ func get_current_puzzle() -> String:
 	
 # get current user puzzle list
 func get_user_puzzle_list(id: String) -> FirestoreDocument:
-	var collection: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION)
+	var collection: FirestoreCollection = Firebase.Firestore.collection("users")
 	return (await collection.get_doc(id))
 # handle successful anonymous login
 
@@ -249,9 +223,6 @@ func _on_signup_succeeded(auth_info: Dictionary) -> void:
 	Firebase.Auth.save_auth(auth_info)
 	print("Anon Login Success: ", user_id)
 	logged_in.emit()
-
-func _on_login_succeeded(auth_info: Dictionary) -> void:
-	user_id = auth_info.get("localid", auth_info.get("user_id", ""))
 
 ##==============================
 ## Quick Get/Set Helper Methods
@@ -310,7 +281,7 @@ func create_initial_user(id: String) -> FirestoreDocument:
 	var user = await users.add(id, init_doc)
 	
 	for collection_name in USER_SUBCOLLECTIONS:
-		var collection = Firebase.Firestore.collection(USER_COLLECTION + "/" + id + "/" + collection_name)
+		var collection = Firebase.Firestore.collection("sp_users/" + id + "/" + collection_name)
 		await collection.add("temp", temp_doc)
 	return user
 
@@ -328,7 +299,7 @@ func get_user_doc(id: String) -> FirestoreDocument:
 func write_last_login_time():
 	if(NetworkManager.is_server):
 		return
-	var users: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION)
+	var users: FirestoreCollection = Firebase.Firestore.collection("sp_users")
 	var user = await users.get_doc(get_box_id())
 	# this is first time we  find user, so if it doesnt exist lets add them to collection
 	if !user:
@@ -340,10 +311,6 @@ func write_last_login_time():
 
 func _on_login_failed(code, message):
 	login_failed.emit()
-	is_online = false
-	# Stale auth files can leave an invalid id token in memory. Clear local auth
-	# so the next handle_login() performs a clean anonymous login.
-	Firebase.Auth.remove_auth()
 	print("Login failed with code: ", code, " message: ", message)
 
 # increments a users total_playing_time field by 1 (int)
@@ -352,7 +319,7 @@ func write_total_playing_time() -> void:
 	Updates the amount of time the player has been playing
 	Note: this only counts up if the player is in a puzzle
 	'''
-	var users: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION)
+	var users: FirestoreCollection = Firebase.Firestore.collection("sp_users")
 	var user = await users.get_doc(get_box_id())
 	var current_user_time = user.get_value("total_playing_time")
 	if(!current_user_time):
@@ -370,7 +337,7 @@ func write_mult_playing_time() -> void:
 	Updates the amount of time the player has been playing
 	Note: this only counts up if the player is in a puzzle
 	'''
-	var users: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION)
+	var users: FirestoreCollection = Firebase.Firestore.collection("sp_users")
 	var user = await users.get_doc(get_box_id())
 	var current_user_time = user.get_value("mult_playing_time")
 	if(!current_user_time):
@@ -386,7 +353,7 @@ func write_mult_playing_time() -> void:
 func update_my_player_entry(lobby_num: int) -> void:
 	if NetworkManager.is_server: return # SAFETY CHECK (Only run on clients)
 
-	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection(SERVER_COLLECTION + "/lobbies/lobby" + str(lobby_num))
+	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(lobby_num))
 	var players = await lobby_puzzle.get_doc("players")
 	
 	if !players:
@@ -400,8 +367,8 @@ func write_puzzle_time_spent(puzzle_name):
 	''' Senior Project
 	Updates the amount spent on a specific puzzle
 	'''
-	var users: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION)
-	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION + "/" + get_box_id() + "/active_puzzles")
+	var users: FirestoreCollection = Firebase.Firestore.collection("sp_users")
+	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/active_puzzles")
 	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
 	if not current_puzzle:
 		print("ERROR: ACCESSING PUZZLE FB")
@@ -418,8 +385,8 @@ func mp_write_puzzle_time_spent(puzzle_name):
 	''' Senior Project
 	Updates the amount spent on a specific puzzle
 	'''
-	var users: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION)
-	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION + "/" + get_box_id() + "/mp_active_puzzles")
+	var users: FirestoreCollection = Firebase.Firestore.collection("sp_users")
+	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/mp_active_puzzles")
 	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
 	if not current_puzzle:
 		print("ERROR: ACCESSING PUZZLE FB")
@@ -466,8 +433,8 @@ func update_active_puzzle(puzzle_name):
 	''' Senior Project
 	On non-multiplayer puzzle select, adds active_puzzle
 	'''
-	var users: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION)
-	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION + "/" + get_box_id() + "/active_puzzles")
+	var users: FirestoreCollection = Firebase.Firestore.collection("sp_users")
+	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/active_puzzles")
 	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
 	
 	if not current_puzzle:
@@ -475,17 +442,19 @@ func update_active_puzzle(puzzle_name):
 			"start_time": Time.get_datetime_string_from_system(),
 			"last_opened": Time.get_datetime_string_from_system(),
 			"time_spent": 0,
+			"piece_count": int(PuzzleVar.global_num_pieces),
 		})
 	else:
 		current_puzzle.add_or_update_field("last_opened", Time.get_datetime_string_from_system())
+		current_puzzle.add_or_update_field("piece_count", int(PuzzleVar.global_num_pieces))
 		await active_puzzles.update(current_puzzle)	
 
 func mp_update_active_puzzle(puzzle_name):
 	''' Senior Project
 	On multiplayer puzzle select, adds active_puzzle
 	'''
-	var users: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION)
-	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION + "/" + get_box_id() + "/mp_active_puzzles")
+	var users: FirestoreCollection = Firebase.Firestore.collection("sp_users")
+	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/mp_active_puzzles")
 	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
 	
 	if not current_puzzle:
@@ -499,7 +468,7 @@ func mp_update_active_puzzle(puzzle_name):
 		await active_puzzles.update(current_puzzle)	
 
 func write_puzzle_state(state_arr, puzzle_name, size):
-	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION + "/" + get_box_id() + "/active_puzzles")
+	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/active_puzzles")
 	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
 	if not current_puzzle:
 		print("ERROR: ACCESSING WRONG PUZZLE")
@@ -521,12 +490,13 @@ func write_puzzle_state(state_arr, puzzle_name, size):
 	#print("groups ", group_ids, " ", group_ids.size(), " ", percentage_done)
 	# update current_puzzle
 	current_puzzle.add_or_update_field("piece_locations", puzzle_data)
+	current_puzzle.add_or_update_field("piece_count", int(PuzzleVar.global_num_pieces))
 	current_puzzle.add_or_update_field("progress", int(percentage_done))
 	await active_puzzles.update(current_puzzle)
 
 func ensure_lobby_state(lobby_num: int):
 	''' Ensure lobby state doc exists and has default fields '''
-	var lobby_path := SERVER_COLLECTION + "/lobbies/lobby" + str(lobby_num)
+	var lobby_path := "sp_servers/lobbies/lobby" + str(lobby_num)
 	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection(lobby_path)
 	var state = await lobby_puzzle.get_doc("state")
 	if not state:
@@ -561,7 +531,7 @@ func ensure_lobby_state(lobby_num: int):
 
 func try_claim_lobby_selector(lobby_num: int) -> bool:
 	''' Attempt to set isActive=true to claim puzzle selection lock '''
-	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection(SERVER_COLLECTION + "/lobbies/lobby" + str(lobby_num))
+	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(lobby_num))
 	var state = await ensure_lobby_state(lobby_num)
 	var active_flag = state.get_value("isActive")
 	if active_flag == null or active_flag == false:
@@ -572,7 +542,7 @@ func try_claim_lobby_selector(lobby_num: int) -> bool:
 
 func set_lobby_puzzle_choice(choice: Dictionary, lobby_num: int) -> void:
 	''' Persist the chosen puzzle for the lobby and reset progress '''
-	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection(SERVER_COLLECTION + "/lobbies/lobby" + str(lobby_num))
+	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(lobby_num))
 	var state = await ensure_lobby_state(lobby_num)
 	state.add_or_update_field("puzzle_choice", choice)
 	state.add_or_update_field("piece_locations", [])
@@ -583,7 +553,7 @@ func set_lobby_puzzle_choice(choice: Dictionary, lobby_num: int) -> void:
 
 func release_lobby_selector(lobby_num: int) -> void:
 	''' Release selection lock only if no puzzle has been chosen yet '''
-	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection(SERVER_COLLECTION + "/lobbies/lobby" + str(lobby_num))
+	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(lobby_num))
 	var state = await ensure_lobby_state(lobby_num)
 	var choice = state.get_value("puzzle_choice")
 	if choice is Dictionary and not choice.is_empty():
@@ -630,7 +600,7 @@ func write_puzzle_state_server(lobby_num):
 	'''
 	if(NetworkManager.is_server):
 		return
-	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection(SERVER_COLLECTION + "/lobbies/lobby" + str(lobby_num))
+	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(lobby_num))
 	var state = await ensure_lobby_state(lobby_num)
 	if(PuzzleVar.ordered_pieces_array.is_empty()):
 		print("Trying to update puzzle state to empty????")
@@ -663,8 +633,18 @@ func get_puzzle_state(puzzle_name):
 	''' Senior Project
 	Returns the puzzle state for the user
 	'''
-	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION + "/" + get_box_id() + "/active_puzzles")
+	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/active_puzzles")
 	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
+	if current_puzzle == null:
+		return []
+	var saved_piece_count = current_puzzle.get_value("piece_count")
+	var expected_piece_count = int(PuzzleVar.global_num_pieces)
+	if saved_piece_count == null:
+		print("FB: Missing piece_count for ", puzzle_name, ", skipping single-player state restore.")
+		return []
+	if int(saved_piece_count) != expected_piece_count:
+		print("FB: piece_count mismatch for ", puzzle_name, " (saved=", saved_piece_count, ", expected=", expected_piece_count, "), skipping restore.")
+		return []
 	var res = current_puzzle.get_value("piece_locations")
 	if(!res):
 		return []
@@ -682,6 +662,14 @@ func get_puzzle_state_server():
 	if choice == null:
 		print("ERROR: Lobby", PuzzleVar.lobby_number, " has no puzzle choice")
 		return []
+	if choice is Dictionary and PuzzleVar.choice is Dictionary:
+		var saved_id = str(choice.get("id", choice.get("base_name", ""))).strip_edges()
+		var current_id = str(PuzzleVar.choice.get("id", PuzzleVar.choice.get("base_name", ""))).strip_edges()
+		var saved_size = int(choice.get("size", 0))
+		var current_size = int(PuzzleVar.choice.get("size", 0))
+		if saved_id != current_id or saved_size != current_size:
+			print("FB: Lobby state puzzle mismatch (saved=", saved_id, "_", saved_size, ", current=", current_id, "_", current_size, "), skipping restore.")
+			return []
 	# get location
 	var loc = state.get_value("piece_locations2")
 	if loc == null:
@@ -699,8 +687,8 @@ func write_complete(puzzle_name):
 	Writes the current puzzle to completion with stats about players progress
 	ie how long it took them. 
 	'''
-	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION + "/" + get_box_id() + "/active_puzzles")
-	var completed_puzzles: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION + "/" + get_box_id() + "/completed_puzzles")
+	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/active_puzzles")
+	var completed_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/completed_puzzles")
 	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
 	if(!current_puzzle):
 		print("ERROR: could not send puzzle to complete bc it does not exist in active puzzles")
@@ -724,8 +712,8 @@ func write_complete_server():
 	on next time joining multiplayer, a new puzzle will be loaded in
 	'''
 	var puzzle_name = PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"])
-	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION + "/" + get_box_id() + "/mp_active_puzzles")
-	var completed_puzzles: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION + "/" + get_box_id() + "/mp_completed_puzzles")
+	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/mp_active_puzzles")
+	var completed_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/mp_completed_puzzles")
 	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
 	if(!current_puzzle):
 		print("ERROR: could not send puzzle to complete bc it does not exist in active puzzles")
@@ -748,8 +736,8 @@ func mp_delete_state():
 	on next time joining multiplayer, a new puzzle will be loaded in
 	'''
 	var puzzle_name = PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"])
-	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION + "/" + get_box_id() + "/mp_active_puzzles")
-	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection(SERVER_COLLECTION + "/lobbies/lobby" + str(PuzzleVar.lobby_number))
+	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/mp_active_puzzles")
+	var lobby_puzzle: FirestoreCollection = Firebase.Firestore.collection("sp_servers/lobbies/lobby" + str(PuzzleVar.lobby_number))
 	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
 	var state = await lobby_puzzle.get_doc("state")
 	if !state:
@@ -768,7 +756,7 @@ func mp_delete_active_puzzle():
 	Deletes the active multiplayer puzzle for the user
 	'''
 	var puzzle_name = PuzzleVar.choice["base_name"] + "_" + str(PuzzleVar.choice["size"])
-	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection(USER_COLLECTION + "/" + get_box_id() + "/mp_active_puzzles")
+	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/mp_active_puzzles")
 	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
 	if current_puzzle:
 		await active_puzzles.delete(current_puzzle)

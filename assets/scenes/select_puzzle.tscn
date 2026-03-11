@@ -10,7 +10,6 @@
 [ext_resource type="Texture2D" uid="uid://chxeyv42e71ho" path="res://assets/images/left_arrow.png" id="5_2ca8n"]
 [ext_resource type="AudioStream" uid="uid://dbjdeh7acychu" path="res://assets/sounds/finger-snap-179180.mp3" id="5_7prs1"]
 [ext_resource type="Texture2D" uid="uid://fup4ssxc0htk" path="res://assets/images/Left_Arrow_Light copy.png" id="7_http0"]
-[ext_resource type="FontFile" uid="uid://eiuxkjsrskgd" path="res://assets/fonts/KiriFont.ttf" id="9_3rueg"]
 [ext_resource type="Texture2D" uid="uid://uibcjjsvjae7" path="res://assets/images/Right_Arrow_Light.png" id="9_i8mdc"]
 
 [sub_resource type="FontVariation" id="FontVariation_05g7m"]
@@ -20,6 +19,18 @@ variation_embolden = 2.0
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_tswy4"]
 texture = ExtResource("5_2ca8n")
 modulate_color = Color(0.823529, 0.976471, 0.427451, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_size_badge"]
+bg_color = Color(0.0588235, 0.0588235, 0.0588235, 0.72)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.862745, 0.843137, 0.729412, 0.85)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
 [node name="selectpuzzle" type="Control"]
 layout_mode = 3
@@ -175,19 +186,24 @@ offset_right = 40.0
 offset_bottom = 40.0
 expand_mode = 1
 
-[node name="RichTextLabel" type="RichTextLabel" parent="HBoxContainer/GridContainer/grid0"]
+[node name="SizeBadge" type="PanelContainer" parent="HBoxContainer/GridContainer/grid0"]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
+anchors_preset = 2
+anchor_top = 1.0
 anchor_bottom = 1.0
-offset_top = 10.0
-grow_horizontal = 2
-grow_vertical = 2
+offset_left = 10.0
+offset_top = -52.0
+offset_right = 86.0
+offset_bottom = -8.0
 mouse_filter = 2
-theme_override_fonts/normal_font = ExtResource("9_3rueg")
-theme_override_font_sizes/normal_font_size = 40
-text = "10
-"
+theme_override_styles/panel = SubResource("StyleBoxFlat_size_badge")
+
+[node name="SizeText" type="Label" parent="HBoxContainer/GridContainer/grid0/SizeBadge"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_3hl4u")
+theme_override_font_sizes/font_size = 30
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="grid1" type="Button" parent="HBoxContainer/GridContainer"]
 layout_mode = 2
@@ -204,19 +220,24 @@ offset_right = 40.0
 offset_bottom = 40.0
 expand_mode = 1
 
-[node name="RichTextLabel" type="RichTextLabel" parent="HBoxContainer/GridContainer/grid1"]
+[node name="SizeBadge" type="PanelContainer" parent="HBoxContainer/GridContainer/grid1"]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
+anchors_preset = 2
+anchor_top = 1.0
 anchor_bottom = 1.0
-offset_top = 10.0
-grow_horizontal = 2
-grow_vertical = 2
+offset_left = 10.0
+offset_top = -52.0
+offset_right = 86.0
+offset_bottom = -8.0
 mouse_filter = 2
-theme_override_fonts/normal_font = ExtResource("9_3rueg")
-theme_override_font_sizes/normal_font_size = 40
-text = "10 0
-"
+theme_override_styles/panel = SubResource("StyleBoxFlat_size_badge")
+
+[node name="SizeText" type="Label" parent="HBoxContainer/GridContainer/grid1/SizeBadge"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_3hl4u")
+theme_override_font_sizes/font_size = 30
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="grid2" type="Button" parent="HBoxContainer/GridContainer"]
 layout_mode = 2
@@ -233,19 +254,24 @@ offset_right = 40.0
 offset_bottom = 40.0
 expand_mode = 1
 
-[node name="RichTextLabel" type="RichTextLabel" parent="HBoxContainer/GridContainer/grid2"]
+[node name="SizeBadge" type="PanelContainer" parent="HBoxContainer/GridContainer/grid2"]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
+anchors_preset = 2
+anchor_top = 1.0
 anchor_bottom = 1.0
-offset_top = 10.0
-grow_horizontal = 2
-grow_vertical = 2
+offset_left = 10.0
+offset_top = -52.0
+offset_right = 86.0
+offset_bottom = -8.0
 mouse_filter = 2
-theme_override_fonts/normal_font = ExtResource("9_3rueg")
-theme_override_font_sizes/normal_font_size = 40
-text = "50 0
-"
+theme_override_styles/panel = SubResource("StyleBoxFlat_size_badge")
+
+[node name="SizeText" type="Label" parent="HBoxContainer/GridContainer/grid2/SizeBadge"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_3hl4u")
+theme_override_font_sizes/font_size = 30
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="grid3" type="Button" parent="HBoxContainer/GridContainer"]
 layout_mode = 2
@@ -262,19 +288,24 @@ offset_right = 40.0
 offset_bottom = 40.0
 expand_mode = 1
 
-[node name="RichTextLabel" type="RichTextLabel" parent="HBoxContainer/GridContainer/grid3"]
+[node name="SizeBadge" type="PanelContainer" parent="HBoxContainer/GridContainer/grid3"]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
+anchors_preset = 2
+anchor_top = 1.0
 anchor_bottom = 1.0
-offset_top = 10.0
-grow_horizontal = 2
-grow_vertical = 2
+offset_left = 10.0
+offset_top = -52.0
+offset_right = 86.0
+offset_bottom = -8.0
 mouse_filter = 2
-theme_override_fonts/normal_font = ExtResource("9_3rueg")
-theme_override_font_sizes/normal_font_size = 40
-text = "10
-"
+theme_override_styles/panel = SubResource("StyleBoxFlat_size_badge")
+
+[node name="SizeText" type="Label" parent="HBoxContainer/GridContainer/grid3/SizeBadge"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_3hl4u")
+theme_override_font_sizes/font_size = 30
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="grid4" type="Button" parent="HBoxContainer/GridContainer"]
 layout_mode = 2
@@ -291,19 +322,24 @@ offset_right = 40.0
 offset_bottom = 40.0
 expand_mode = 1
 
-[node name="RichTextLabel" type="RichTextLabel" parent="HBoxContainer/GridContainer/grid4"]
+[node name="SizeBadge" type="PanelContainer" parent="HBoxContainer/GridContainer/grid4"]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
+anchors_preset = 2
+anchor_top = 1.0
 anchor_bottom = 1.0
-offset_top = 10.0
-grow_horizontal = 2
-grow_vertical = 2
+offset_left = 10.0
+offset_top = -52.0
+offset_right = 86.0
+offset_bottom = -8.0
 mouse_filter = 2
-theme_override_fonts/normal_font = ExtResource("9_3rueg")
-theme_override_font_sizes/normal_font_size = 40
-text = "10 0
-"
+theme_override_styles/panel = SubResource("StyleBoxFlat_size_badge")
+
+[node name="SizeText" type="Label" parent="HBoxContainer/GridContainer/grid4/SizeBadge"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_3hl4u")
+theme_override_font_sizes/font_size = 30
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="grid5" type="Button" parent="HBoxContainer/GridContainer"]
 layout_mode = 2
@@ -320,19 +356,24 @@ offset_right = 40.0
 offset_bottom = 40.0
 expand_mode = 1
 
-[node name="RichTextLabel" type="RichTextLabel" parent="HBoxContainer/GridContainer/grid5"]
+[node name="SizeBadge" type="PanelContainer" parent="HBoxContainer/GridContainer/grid5"]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
+anchors_preset = 2
+anchor_top = 1.0
 anchor_bottom = 1.0
-offset_top = 10.0
-grow_horizontal = 2
-grow_vertical = 2
+offset_left = 10.0
+offset_top = -52.0
+offset_right = 86.0
+offset_bottom = -8.0
 mouse_filter = 2
-theme_override_fonts/normal_font = ExtResource("9_3rueg")
-theme_override_font_sizes/normal_font_size = 40
-text = "50 0
-"
+theme_override_styles/panel = SubResource("StyleBoxFlat_size_badge")
+
+[node name="SizeText" type="Label" parent="HBoxContainer/GridContainer/grid5/SizeBadge"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_3hl4u")
+theme_override_font_sizes/font_size = 30
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="grid6" type="Button" parent="HBoxContainer/GridContainer"]
 layout_mode = 2
@@ -349,20 +390,24 @@ offset_right = 40.0
 offset_bottom = 40.0
 expand_mode = 1
 
-[node name="RichTextLabel" type="RichTextLabel" parent="HBoxContainer/GridContainer/grid6"]
+[node name="SizeBadge" type="PanelContainer" parent="HBoxContainer/GridContainer/grid6"]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
+anchors_preset = 2
+anchor_top = 1.0
 anchor_bottom = 1.0
-offset_top = 10.0
-offset_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+offset_left = 10.0
+offset_top = -52.0
+offset_right = 86.0
+offset_bottom = -8.0
 mouse_filter = 2
-theme_override_fonts/normal_font = ExtResource("9_3rueg")
-theme_override_font_sizes/normal_font_size = 40
-text = "10
-"
+theme_override_styles/panel = SubResource("StyleBoxFlat_size_badge")
+
+[node name="SizeText" type="Label" parent="HBoxContainer/GridContainer/grid6/SizeBadge"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_3hl4u")
+theme_override_font_sizes/font_size = 30
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="grid7" type="Button" parent="HBoxContainer/GridContainer"]
 layout_mode = 2
@@ -379,20 +424,24 @@ offset_right = 40.0
 offset_bottom = 40.0
 expand_mode = 1
 
-[node name="RichTextLabel" type="RichTextLabel" parent="HBoxContainer/GridContainer/grid7"]
+[node name="SizeBadge" type="PanelContainer" parent="HBoxContainer/GridContainer/grid7"]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
+anchors_preset = 2
+anchor_top = 1.0
 anchor_bottom = 1.0
-offset_top = 10.0
-offset_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+offset_left = 10.0
+offset_top = -52.0
+offset_right = 86.0
+offset_bottom = -8.0
 mouse_filter = 2
-theme_override_fonts/normal_font = ExtResource("9_3rueg")
-theme_override_font_sizes/normal_font_size = 40
-text = "10 0
-"
+theme_override_styles/panel = SubResource("StyleBoxFlat_size_badge")
+
+[node name="SizeText" type="Label" parent="HBoxContainer/GridContainer/grid7/SizeBadge"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_3hl4u")
+theme_override_font_sizes/font_size = 30
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="grid8" type="Button" parent="HBoxContainer/GridContainer"]
 layout_mode = 2
@@ -409,20 +458,24 @@ offset_right = 40.0
 offset_bottom = 40.0
 expand_mode = 1
 
-[node name="RichTextLabel" type="RichTextLabel" parent="HBoxContainer/GridContainer/grid8"]
+[node name="SizeBadge" type="PanelContainer" parent="HBoxContainer/GridContainer/grid8"]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
+anchors_preset = 2
+anchor_top = 1.0
 anchor_bottom = 1.0
-offset_top = 10.0
-offset_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+offset_left = 10.0
+offset_top = -52.0
+offset_right = 86.0
+offset_bottom = -8.0
 mouse_filter = 2
-theme_override_fonts/normal_font = ExtResource("9_3rueg")
-theme_override_font_sizes/normal_font_size = 40
-text = "50 0
-"
+theme_override_styles/panel = SubResource("StyleBoxFlat_size_badge")
+
+[node name="SizeText" type="Label" parent="HBoxContainer/GridContainer/grid8/SizeBadge"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_3hl4u")
+theme_override_font_sizes/font_size = 30
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="right button" type="Button" parent="HBoxContainer"]
 layout_mode = 2

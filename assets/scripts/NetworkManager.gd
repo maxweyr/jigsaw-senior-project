@@ -53,6 +53,24 @@ var lobby_puzzle: Dictionary = {}        # { lobby_number: puzzle_id }  # option
 var lobby_group_locks: Dictionary = {}   # { lobby_number: { group_id: { owner, expires_at } } }
 var lobby_piece_groups: Dictionary = {}  # { lobby_number: { piece_id: group_id } }
 
+func _build_choice_puzzle_identity(choice: Dictionary) -> String:
+	if not (choice is Dictionary) or choice.is_empty():
+		return ""
+	var puzzle_id := str(choice.get("id", choice.get("base_name", ""))).strip_edges()
+	if puzzle_id == "":
+		var cache_id := str(choice.get("cache_id", "")).strip_edges()
+		if cache_id != "":
+			puzzle_id = cache_id
+	var size := int(choice.get("size", 0))
+	if puzzle_id == "":
+		return ""
+	if size > 0:
+		var suffix := "_%d" % size
+		if puzzle_id.ends_with(suffix):
+			return puzzle_id
+		return "%s%s" % [puzzle_id, suffix]
+	return puzzle_id
+
 func _ready():
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	# load env file for server info
@@ -63,22 +81,6 @@ func _ready():
 	else:
 		DEFAULT_PORT = env.get_value("server", "PORT", 8080)
 		SERVER_IP = str(env.get_value("server", "SERVER_IP", "127.0.0.1"))
-	
-	# ===============================
-	# Stage detection (prod vs beta)
-	# ===============================
-	var args := OS.get_cmdline_args()
-	var stage := StageConfig.get_stage_from_cmdline(args)
-
-	# override port based on stage
-	DEFAULT_PORT = StageConfig.get_port(stage)
-
-	# tell Firebase which environment to use
-	var fb_cfg := StageConfig.get_firebase_config(stage)
-	FireAuth.set_environment(fb_cfg)
-
-	print("Stage:", fb_cfg["env_name"], " Port:", DEFAULT_PORT)
-	
 	# Prioritize Dedicated Server Check
 	if OS.has_feature("server") or "--server" in OS.get_cmdline_args() \
 	or OS.has_feature("headless") or "--headless" in OS.get_cmdline_args():
@@ -136,7 +138,9 @@ func _on_request_completed(_result, response_code, _headers, _body):
 	if response_code == 200:
 		print("NetworkManager has internet connection available")
 		var login_success := await FireAuth.handle_login()
-		FireAuth.is_online = login_success
+		if !login_success:
+			FireAuth.is_online = false
+		FireAuth.is_online = true
 	else:
 		print("WARNING: NetworkManager has no internet connection or bad response, code:", response_code)
 		is_online = false
@@ -161,7 +165,9 @@ func set_offline_mode():
 func start_server():
 	print("NetworkManager starting headless server for ", str(SERVER_IP), " and port ", DEFAULT_PORT)
 	# For server, just pick a default puzzle ID (can be changed via args later)
-	var puzzle_id = PuzzleVar.default_path 
+	var puzzle_id := "remote_default"
+	if str(PuzzleVar.default_path) != "":
+		puzzle_id = str(PuzzleVar.default_path)
 	if OS.get_cmdline_args().size() > 1:
 		var args = OS.get_cmdline_args()
 		for i in range(args.size()):
@@ -598,9 +604,7 @@ func _on_connected_to_server():
 	
 	if FireAuth.is_online and FireAuth.get_nickname() != "":
 		print("NetworkManager: Sending hello for '", FireAuth.get_nickname(), "'")
-		var puzzle_id := ""
-		if PuzzleVar.choice is Dictionary and PuzzleVar.choice.has("base_file_path") and PuzzleVar.choice.has("size"):
-			puzzle_id = str(PuzzleVar.choice["base_file_path"]) + "_" + str(PuzzleVar.choice["size"])
+		var puzzle_id := _build_choice_puzzle_identity(PuzzleVar.choice)
 		rpc_id(1, "hello", FireAuth.get_nickname(), PuzzleVar.lobby_number, puzzle_id)
 	else:
 		print("ERROR::NetworkManager: Unable to register player, FireAuth is offline or box ID invalid")

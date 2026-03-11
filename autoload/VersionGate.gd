@@ -14,33 +14,27 @@ func _ready() -> void:
 	local_version = ProjectSettings.get_setting("application/config/version")
 	print("VersionGate: Local version =", local_version)
 
-	var auth_ok := await _wait_for_firebase_auth()
-	if not auth_ok:
-		print("VersionGate: Skipping remote gate check (auth unavailable)")
-		return
+	await _wait_for_firebase_auth()
 	await _check_version_gate()
 
 
 # Ensure Firebase Auth is ready
-func _wait_for_firebase_auth() -> bool:
+func _wait_for_firebase_auth() -> void:
+	while Firebase == null or Firebase.Auth == null:
+		await get_tree().process_frame
+
+	if not Firebase.Auth.needs_login():
+		return
+
 	print("VersionGate: Waiting for Firebase auth...")
-	var ok := await FireAuth.handle_login()
-	if not ok:
-		print("VersionGate: Firebase auth unavailable, skipping remote gate check")
-	return ok
+	while Firebase.Auth.needs_login():
+		await get_tree().process_frame
 
 
 # Fetch version rules from Firestore
 func _check_version_gate() -> void:
 	var config_collection: FirestoreCollection = Firebase.Firestore.collection(CONFIG_COLLECTION)
-	var doc = null
-	for attempt in range(8):
-		doc = await config_collection.get_doc(CONFIG_DOC)
-		if doc:
-			break
-		# Startup auth refresh can race the first Firestore read.
-		await FireAuth.handle_login()
-		await get_tree().create_timer(0.25).timeout
+	var doc = await config_collection.get_doc(CONFIG_DOC)
 
 	if not doc:
 		print("VersionGate: No config found, allowing execution")

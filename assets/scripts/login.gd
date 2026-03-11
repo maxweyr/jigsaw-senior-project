@@ -6,34 +6,31 @@ extends Control
 
 func _ready():
 	loading.show()
-	var ok := await FireAuth.handle_login()
-	FireAuth.is_online = ok
-	print("BOOT: FireAuth.is_online =", FireAuth.is_online)
 	var file_path = "user://user_data.txt" 
 	var file = FileAccess.open(file_path, FileAccess.READ) 
 	if file != null and file.get_length() > 0:
-		var username := file.get_line().strip_edges()
-		FireAuth.box_id = username
-		if FireAuth.is_online:
-			var user_exist = await FireAuth.handle_username_login(username)
-			if user_exist == false:
-				loading.hide()
-				show_popup("Login Failed", "Email does not exist.\nPlease try again.")
-				%UsernameLineEdit.text = ""
-				%NicknameLineEdit.text = ""
-				return
-			await FireAuth.get_user_lobby(username)
-			FireAuth.write_last_login_time()
+		var username = file.get_line()
+		var user_exist = await FireAuth.handle_username_login(username)
+		if(user_exist == false):
 			loading.hide()
-		else:
-			# offline fallback: skip Firestore validation
-			loading.hide()
+			show_popup("Login Failed", "Email does not exist. \nPlease try again.")
+			%UsernameLineEdit.text = ""
+			%NicknameLineEdit.text = ""
 			return
-
+		else: 
+			# Proceed to next scene based on whether nickname is set
+			await FireAuth.get_user_lobby(username)
+			var nickname = file.get_line()
+			if nickname == "":
+				file.close()
+				loading.hide()
+				return
+			file.close()
+			FireAuth.write_last_login_time()
+			get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn")
+			loading.hide()
 	else:
-		# no saved login file
 		loading.hide()
-
 
 func _on_login_button_pressed():
 	var username = %UsernameLineEdit.text

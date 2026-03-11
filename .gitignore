@@ -34,3 +34,7 @@ tmp/
 
 # Backup artifacts
 *.bak
+
+#
+.venv/
+.python_packages/

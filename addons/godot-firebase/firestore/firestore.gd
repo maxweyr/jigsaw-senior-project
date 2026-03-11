@@ -125,7 +125,10 @@ func query(query : FirestoreQuery) -> Array:
 	task._fields = JSON.stringify(body)
 	task._url = url
 	_pooled_request(task)
-	return await _handle_task_finished(task)
+	var result = await _handle_task_finished(task)
+	if result is Array:
+		return result
+	return []
 
 
 ## Request a list of contents (documents and/or collections) inside a collection, specified by its [i]id[/i]. This method will return a [code]FirestoreTask[/code] object, representing a reference to the request issued. If saved into a variable, the [code]FirestoreTask[/code] object can be used to yield checked the [code]result_query(result)[/code] signal, or the more generic [code]task_finished(result)[/code] signal.
@@ -157,7 +160,10 @@ func list(path : String = "", page_size : int = 0, page_token : String = "", ord
 	task._url = url
 	_pooled_request(task)
 	
-	return await _handle_task_finished(task)
+	var result = await _handle_task_finished(task)
+	if result is Array:
+		return result
+	return []
 
 
 func set_networking(value: bool) -> void:

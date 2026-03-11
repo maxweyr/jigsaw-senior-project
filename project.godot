@@ -18,13 +18,14 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-PuzzleVar="*res://assets/scripts/puzzleData.gd"
 Firebase="*res://addons/godot-firebase/firebase/firebase.tscn"
+PuzzleVar="*res://assets/scripts/puzzleData.gd"
 FireAuth="*res://assets/scripts/FirebaseAuth.gd"
 GlobalTimer="*res://assets/scripts/Timer.gd"
 GlobalProgress="*res://assets/scripts/new_menu.gd"
 NetworkManager="*res://assets/scripts/NetworkManager.gd"
 VersionGate="*res://autoload/VersionGate.gd"
+PuzzleCatalogCache="*res://autoload/PuzzleCatalogCache.gd"
 
 [display]
 
@@ -34,7 +35,7 @@ window/stretch/mode="viewport"
 
 [editor]
 
-run/main_run_args="--user=Max --stage=beta"
+run/main_run_args="--user=Max"
 
 [editor_plugins]
 
