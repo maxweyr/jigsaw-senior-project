@@ -2,6 +2,7 @@ extends Control
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	await _wait_for_firebase_auth()
 	Firebase.Auth.login_succeeded.connect(on_login_succeeded)
 	Firebase.Auth.signup_succeeded.connect(on_signup_succeeded)
 	Firebase.Auth.login_failed.connect(on_login_failed)
@@ -10,6 +11,10 @@ func _ready():
 	if Firebase.Auth.check_auth_file():
 		%StateLabel.text = "Logged in"
 		get_tree().change_scene_to_file("res://assets/scenes/new_menu.tscn")
+
+func _wait_for_firebase_auth() -> void:
+	while Firebase == null or Firebase.Auth == null:
+		await get_tree().process_frame
 
 func _on_login_button_pressed():
 	var email = %EmailLineEdit.text

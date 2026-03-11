@@ -14,14 +14,18 @@ var last_mouse_position: Vector2 = Vector2.ZERO
 var camera_bounds: Rect2 = Rect2(Vector2(-3700, -2700), Vector2(6000, 4100))
 
 # -------- Reference / preview image --------
-var reference_image_path: String = PuzzleVar.choice["file_path"]
-var reference_texture: Texture2D = load(reference_image_path)
+var reference_image_path: String = ""
+var reference_texture: Texture2D = null
 var preview_image: TextureRect    # the small finished-puzzle preview
 
 
 func _ready() -> void:
 	make_current()
 	limit_smoothed = true
+	_resolve_reference_texture()
+	if reference_texture == null:
+		push_warning("Camera2D: Missing reference texture, skipping preview image.")
+		return
 
 	# ---- Create a small preview image in a CanvasLayer ----
 	var canvas_layer := CanvasLayer.new()
@@ -33,6 +37,9 @@ func _ready() -> void:
 
 	# Target size for the preview
 	var texture_size: Vector2 = reference_texture.get_size()
+	if texture_size.x <= 0.0 or texture_size.y <= 0.0:
+		push_warning("Camera2D: Invalid reference texture size, skipping preview image.")
+		return
 	var target_size: Vector2 = Vector2(400.0, 400.0)
 	var scale_x: float = target_size.x / texture_size.x
 	var scale_y: float = target_size.y / texture_size.y
@@ -44,6 +51,17 @@ func _ready() -> void:
 	preview_image.position = Vector2(20.0, 20.0)
 
 	canvas_layer.add_child(preview_image)
+
+func _resolve_reference_texture() -> void:
+	reference_texture = null
+	reference_image_path = str(PuzzleVar.choice.get("file_path", ""))
+	if reference_image_path != "" and ResourceLoader.exists(reference_image_path):
+		reference_texture = load(reference_image_path) as Texture2D
+		return
+	var fallback := str(PuzzleVar.default_path)
+	if fallback != "" and ResourceLoader.exists(fallback):
+		reference_image_path = fallback
+		reference_texture = load(reference_image_path) as Texture2D
 
 
 func _process(delta: float) -> void:

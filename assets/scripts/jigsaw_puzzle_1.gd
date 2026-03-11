@@ -73,6 +73,15 @@ func _ready():
 		selected_puzzle_dir = str(PuzzleVar.choice["resolved_dir"])
 	else:
 		selected_puzzle_dir = PuzzleVar.choice["base_file_path"] + "_" + str(PuzzleVar.choice["size"])
+	if not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(selected_puzzle_dir)):
+		_handle_puzzle_load_error("Puzzle assets directory not found:\n%s" % selected_puzzle_dir)
+		return
+	if not FileAccess.file_exists(selected_puzzle_dir.path_join("pieces/pieces.json")):
+		_handle_puzzle_load_error("Puzzle metadata missing:\n%s" % selected_puzzle_dir.path_join("pieces/pieces.json"))
+		return
+	if not FileAccess.file_exists(selected_puzzle_dir.path_join("adjacent.json")):
+		_handle_puzzle_load_error("Puzzle metadata missing:\n%s" % selected_puzzle_dir.path_join("adjacent.json"))
+		return
 	PuzzleVar.selected_puzzle_dir = selected_puzzle_dir
 	selected_puzzle_name = PuzzleVar.choice["base_name"] + str(PuzzleVar.choice["size"])
 	is_muted = false
@@ -85,9 +94,15 @@ func _ready():
 		create_chat_window()
 	
 	# load up reference image
-	var ref_image = PuzzleVar.choice["file_path"]
-	# Load the image
-	$Image.texture = load(ref_image)
+	var ref_image := str(PuzzleVar.choice.get("file_path", ""))
+	if ref_image == "" or not ResourceLoader.exists(ref_image):
+		var fallback := str(PuzzleVar.default_path)
+		ref_image = fallback if fallback != "" else ""
+	if ResourceLoader.exists(ref_image):
+		$Image.texture = load(ref_image)
+	else:
+		push_warning("Jigsaw: Missing reference image; preview disabled.")
+		$Image.texture = null
 	
 	PuzzleVar.background_clicked = false
 	PuzzleVar.piece_clicked = false
@@ -101,7 +116,10 @@ func _ready():
 	z_index = 0
 	
 	# create puzzle pieces and place in scene
-	PuzzleVar.load_and_or_add_puzzle_random_loc(self, sprite_scene, selected_puzzle_dir, true)
+	var spawned_ok := PuzzleVar.load_and_or_add_puzzle_random_loc(self, sprite_scene, selected_puzzle_dir, true)
+	if not spawned_ok:
+		_handle_puzzle_load_error("Unable to load puzzle piece textures.\nPlease reselect this puzzle.")
+		return
 	
 	await get_tree().process_frame
 	_center_camera_on_pieces()
@@ -129,6 +147,20 @@ func _ready():
 	if NetworkManager.is_online:
 		update_online_status_label()
 
+func _handle_puzzle_load_error(message: String) -> void:
+	push_error("Jigsaw: %s" % message)
+	loading.hide()
+	var popup := AcceptDialog.new()
+	popup.title = "Puzzle Load Error"
+	popup.dialog_text = message
+	add_child(popup)
+	popup.confirmed.connect(_on_puzzle_load_error_acknowledged)
+	popup.popup_centered()
+
+func _on_puzzle_load_error_acknowledged() -> void:
+	if get_tree():
+		get_tree().change_scene_to_file("res://assets/scenes/select_puzzle.tscn")
+
 # Load state from Firebase 
 func load_firebase_state(p_name):
 	print("LOADING STATE")
@@ -148,22 +180,44 @@ func load_firebase_state(p_name):
 		return
 
 	# Always apply saved positions (including fully-completed puzzles).
+	var piece_count := PuzzleVar.ordered_pieces_array.size()
+	var unique_group_ids = []
+	var applied_count := 0
+	var skipped_count := 0
 	for idx in range(len(saved_piece_data)):
 		var data = saved_piece_data[idx]
-		var piece = PuzzleVar.ordered_pieces_array[idx]
+		var piece_idx := idx
+		if data is Dictionary and data.has("ID"):
+			piece_idx = int(data["ID"])
+		if piece_idx < 0 or piece_idx >= piece_count:
+			skipped_count += 1
+			continue
+		var piece = PuzzleVar.ordered_pieces_array[piece_idx]
+		if piece == null:
+			skipped_count += 1
+			continue
+
+		if not (data is Dictionary and data.has("CenterLocation") and data.has("GroupID")):
+			skipped_count += 1
+			continue
+		var center_location = data["CenterLocation"]
+		if not (center_location is Dictionary and center_location.has("x") and center_location.has("y")):
+			skipped_count += 1
+			continue
 
 		# Set the position from the saved data
-		var center_location = data["CenterLocation"]
-		piece.position = Vector2(center_location["x"], center_location["y"])
+		piece.position = Vector2(float(center_location["x"]), float(center_location["y"]))
 
 		# Assign the group number
-		piece.group_number = data["GroupID"]
+		piece.group_number = int(data["GroupID"])
+		if piece.group_number not in unique_group_ids:
+			unique_group_ids.append(piece.group_number)
+		applied_count += 1
 
-	# Collect all unique group IDs from the saved data
-	var unique_group_ids = []
-	for data in saved_piece_data:
-		if data["GroupID"] not in unique_group_ids:
-			unique_group_ids.append(data["GroupID"])
+	if skipped_count > 0:
+		push_warning("Jigsaw: Skipped %d stale/invalid saved pieces while loading Firebase state." % skipped_count)
+	if applied_count == 0 and not saved_piece_data.is_empty():
+		push_warning("Jigsaw: Firebase state present but incompatible with current puzzle layout.")
 
 	# Re-group all pieces based on their group number
 	for group_id in unique_group_ids:
@@ -610,6 +664,7 @@ func parse_pieces_json():
 	if !file:
 		print("ERROR LOADING FILE")
 		get_tree().quit(-1)
+		return
 	var json = file.get_as_text()
 	file.close()
 
@@ -649,6 +704,10 @@ func parse_adjacent_json():
 			print("Number of pieces " + str(num_pieces))
 			for n in num_pieces: # for each piece, add the adjacent pieces to the list
 				PuzzleVar.adjacent_pieces_list[str(n)] =  json_parser.data[str(n)]
+	else:
+		print("ERROR LOADING FILE")
+		get_tree().quit(-1)
+		return
 				
 				
 # The purpose of this function is to build a grid of the puzzle piece numbers

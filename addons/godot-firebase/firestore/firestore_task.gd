@@ -97,9 +97,11 @@ func _on_request_completed(result : int, response_code : int, headers : PackedSt
 		var description = ""
 		if TASK_MAP.has(action):
 			description = "(" + TASK_MAP[action] + ")"
-
-		Firebase._printerr("Action in error was: " + str(action) + " " + description)
 		build_error(bod, action, description)
+		var err_info := error.get("error", {})
+		var status := str(err_info.get("status", "Unknown"))
+		var message := str(err_info.get("message", "No message"))
+		Firebase._printerr("Action in error was: %s %s [http=%d, result=%d, status=%s, message=%s]" % [str(action), description, response_code, result, status, message])
 	
 	task_finished.emit()
 		

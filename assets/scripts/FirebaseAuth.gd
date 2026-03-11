@@ -75,8 +75,13 @@ func _ready() -> void:
 	print("FirebaseAuth: Box ID set to ", box_id)
 	nickname = _parse_nickname()
 	print("FirebaseAuth: Nickname set to ", nickname)
+	await _wait_for_firebase_auth()
 	Firebase.Auth.signup_succeeded.connect(_on_signup_succeeded)
 	Firebase.Auth.login_failed.connect(_on_login_failed)
+
+func _wait_for_firebase_auth() -> void:
+	while Firebase == null or Firebase.Auth == null:
+		await get_tree().process_frame
 
 func _parse_user_arg() -> String:
 	# check for saved username file
@@ -437,9 +442,11 @@ func update_active_puzzle(puzzle_name):
 			"start_time": Time.get_datetime_string_from_system(),
 			"last_opened": Time.get_datetime_string_from_system(),
 			"time_spent": 0,
+			"piece_count": int(PuzzleVar.global_num_pieces),
 		})
 	else:
 		current_puzzle.add_or_update_field("last_opened", Time.get_datetime_string_from_system())
+		current_puzzle.add_or_update_field("piece_count", int(PuzzleVar.global_num_pieces))
 		await active_puzzles.update(current_puzzle)	
 
 func mp_update_active_puzzle(puzzle_name):
@@ -483,6 +490,7 @@ func write_puzzle_state(state_arr, puzzle_name, size):
 	#print("groups ", group_ids, " ", group_ids.size(), " ", percentage_done)
 	# update current_puzzle
 	current_puzzle.add_or_update_field("piece_locations", puzzle_data)
+	current_puzzle.add_or_update_field("piece_count", int(PuzzleVar.global_num_pieces))
 	current_puzzle.add_or_update_field("progress", int(percentage_done))
 	await active_puzzles.update(current_puzzle)
 
@@ -627,6 +635,16 @@ func get_puzzle_state(puzzle_name):
 	'''
 	var active_puzzles: FirestoreCollection = Firebase.Firestore.collection("sp_users/" + get_box_id() + "/active_puzzles")
 	var current_puzzle = await active_puzzles.get_doc(puzzle_name)
+	if current_puzzle == null:
+		return []
+	var saved_piece_count = current_puzzle.get_value("piece_count")
+	var expected_piece_count = int(PuzzleVar.global_num_pieces)
+	if saved_piece_count == null:
+		print("FB: Missing piece_count for ", puzzle_name, ", skipping single-player state restore.")
+		return []
+	if int(saved_piece_count) != expected_piece_count:
+		print("FB: piece_count mismatch for ", puzzle_name, " (saved=", saved_piece_count, ", expected=", expected_piece_count, "), skipping restore.")
+		return []
 	var res = current_puzzle.get_value("piece_locations")
 	if(!res):
 		return []
@@ -644,6 +662,14 @@ func get_puzzle_state_server():
 	if choice == null:
 		print("ERROR: Lobby", PuzzleVar.lobby_number, " has no puzzle choice")
 		return []
+	if choice is Dictionary and PuzzleVar.choice is Dictionary:
+		var saved_id = str(choice.get("id", choice.get("base_name", ""))).strip_edges()
+		var current_id = str(PuzzleVar.choice.get("id", PuzzleVar.choice.get("base_name", ""))).strip_edges()
+		var saved_size = int(choice.get("size", 0))
+		var current_size = int(PuzzleVar.choice.get("size", 0))
+		if saved_id != current_id or saved_size != current_size:
+			print("FB: Lobby state puzzle mismatch (saved=", saved_id, "_", saved_size, ", current=", current_id, "_", current_size, "), skipping restore.")
+			return []
 	# get location
 	var loc = state.get_value("piece_locations2")
 	if loc == null:

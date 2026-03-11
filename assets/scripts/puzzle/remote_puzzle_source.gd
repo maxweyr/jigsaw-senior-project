@@ -3,7 +3,7 @@ extends "res://assets/scripts/puzzle/puzzle_source.gd"
 func resolve_choice(entry: Dictionary, selected_size: int, downloader: Node) -> Dictionary:
 	if downloader == null:
 		return {}
-	var result = await downloader.download_puzzle(entry)
+	var result = await downloader.download_puzzle(entry, selected_size)
 	if not bool(result.get("ok", false)):
 		return {}
 	var local_root := str(result.get("local_root", ""))
@@ -29,5 +29,6 @@ func resolve_choice(entry: Dictionary, selected_size: int, downloader: Node) -> 
 		"size": selected_size,
 		"source": "remote",
 		"resolved_dir": local_root,
-		"asset_version": int(entry.get("asset_version", 1))
+		"asset_version": int(entry.get("asset_version", 1)),
+		"cache_id": str(result.get("cache_id", ""))
 	}

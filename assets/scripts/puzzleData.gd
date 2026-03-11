@@ -19,7 +19,7 @@ var active_piece= -1
 var choice = {}
 
 var path = "res://assets/puzzles/jigsawpuzzleimages" # path for the images
-var default_path = "res://assets/puzzles/jigsawpuzzleimages/dog.jpg"
+var default_path = ""
 var images = [] # this will be loaded up in the new menu scene
 const PuzzleImageData = preload("res://puzzle_image_list.gd")
 
@@ -89,12 +89,20 @@ func get_online_choice():
 		return choice
 	return {}
 		
-func load_and_or_add_puzzle_random_loc(parent_node: Node, sprite_scene: PackedScene, selected_puzzle_dir: String, add: bool) -> void:
+func load_and_or_add_puzzle_random_loc(parent_node: Node, sprite_scene: PackedScene, selected_puzzle_dir: String, add: bool) -> bool:
 	PuzzleVar.ordered_pieces_array.clear()
 	#var placed_pieces: Array = [] #Array of placed pieces for overlap detection
 	#var max_attempts = 1000  # Avoid infinite loops during overlap detection
 	
 	randomize()
+	var raster_dir := selected_puzzle_dir + "/pieces/raster"
+	var available_raster_count := _count_raster_png_files(raster_dir)
+	if available_raster_count < PuzzleVar.global_num_pieces:
+		push_error(
+			"PuzzleData: Raster count mismatch in %s (expected >= %d, found %d)" %
+			[raster_dir, PuzzleVar.global_num_pieces, available_raster_count]
+		)
+		return false
 	
 	for x in range(PuzzleVar.global_num_pieces):
 		var piece = sprite_scene.instantiate()
@@ -102,9 +110,16 @@ func load_and_or_add_puzzle_random_loc(parent_node: Node, sprite_scene: PackedSc
 
 		var sprite = piece.get_node("Sprite2D")
 		var piece_image_path = selected_puzzle_dir + "/pieces/raster/" + str(x) + ".png"
+		if not FileAccess.file_exists(piece_image_path):
+			push_error("PuzzleData: Missing piece texture: %s" % piece_image_path)
+			return false
 		piece.ID = x
 		piece.z_index = 2
-		sprite.texture = load(piece_image_path)
+		var piece_texture := _load_piece_texture(piece_image_path)
+		if piece_texture == null:
+			push_error("PuzzleData: Failed to load piece texture: %s" % piece_image_path)
+			return false
+		sprite.texture = piece_texture
 
 		piece.piece_height = sprite.texture.get_height()
 		piece.piece_width = sprite.texture.get_width()
@@ -147,6 +162,34 @@ func load_and_or_add_puzzle_random_loc(parent_node: Node, sprite_scene: PackedSc
 		PuzzleVar.ordered_pieces_array.append(piece)
 		if add:
 			parent_node.call_deferred("add_child", piece)
+	return true
+
+func _count_raster_png_files(raster_dir: String) -> int:
+	var count := 0
+	var da := DirAccess.open(raster_dir)
+	if da == null:
+		return 0
+	da.list_dir_begin()
+	var name := da.get_next()
+	while name != "":
+		if not da.current_is_dir() and name.to_lower().ends_with(".png"):
+			count += 1
+		name = da.get_next()
+	da.list_dir_end()
+	return count
+
+func _load_piece_texture(piece_image_path: String) -> Texture2D:
+	if ResourceLoader.exists(piece_image_path):
+		var resource := load(piece_image_path)
+		if resource is Texture2D:
+			return resource as Texture2D
+	if not FileAccess.file_exists(piece_image_path):
+		return null
+	var image := Image.load_from_file(piece_image_path)
+	if image == null or image.is_empty():
+		return null
+	var texture := ImageTexture.create_from_image(image)
+	return texture
 
 func get_avail_puzzles():
 	var ret_arr = []

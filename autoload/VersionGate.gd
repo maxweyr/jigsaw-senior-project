@@ -20,6 +20,9 @@ func _ready() -> void:
 
 # Ensure Firebase Auth is ready
 func _wait_for_firebase_auth() -> void:
+	while Firebase == null or Firebase.Auth == null:
+		await get_tree().process_frame
+
 	if not Firebase.Auth.needs_login():
 		return
 

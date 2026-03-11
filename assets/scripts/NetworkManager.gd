@@ -53,6 +53,24 @@ var lobby_puzzle: Dictionary = {}        # { lobby_number: puzzle_id }  # option
 var lobby_group_locks: Dictionary = {}   # { lobby_number: { group_id: { owner, expires_at } } }
 var lobby_piece_groups: Dictionary = {}  # { lobby_number: { piece_id: group_id } }
 
+func _build_choice_puzzle_identity(choice: Dictionary) -> String:
+	if not (choice is Dictionary) or choice.is_empty():
+		return ""
+	var puzzle_id := str(choice.get("id", choice.get("base_name", ""))).strip_edges()
+	if puzzle_id == "":
+		var cache_id := str(choice.get("cache_id", "")).strip_edges()
+		if cache_id != "":
+			puzzle_id = cache_id
+	var size := int(choice.get("size", 0))
+	if puzzle_id == "":
+		return ""
+	if size > 0:
+		var suffix := "_%d" % size
+		if puzzle_id.ends_with(suffix):
+			return puzzle_id
+		return "%s%s" % [puzzle_id, suffix]
+	return puzzle_id
+
 func _ready():
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	# load env file for server info
@@ -147,7 +165,9 @@ func set_offline_mode():
 func start_server():
 	print("NetworkManager starting headless server for ", str(SERVER_IP), " and port ", DEFAULT_PORT)
 	# For server, just pick a default puzzle ID (can be changed via args later)
-	var puzzle_id = PuzzleVar.default_path 
+	var puzzle_id := "remote_default"
+	if str(PuzzleVar.default_path) != "":
+		puzzle_id = str(PuzzleVar.default_path)
 	if OS.get_cmdline_args().size() > 1:
 		var args = OS.get_cmdline_args()
 		for i in range(args.size()):
@@ -584,9 +604,7 @@ func _on_connected_to_server():
 	
 	if FireAuth.is_online and FireAuth.get_nickname() != "":
 		print("NetworkManager: Sending hello for '", FireAuth.get_nickname(), "'")
-		var puzzle_id := ""
-		if PuzzleVar.choice is Dictionary and PuzzleVar.choice.has("base_file_path") and PuzzleVar.choice.has("size"):
-			puzzle_id = str(PuzzleVar.choice["base_file_path"]) + "_" + str(PuzzleVar.choice["size"])
+		var puzzle_id := _build_choice_puzzle_identity(PuzzleVar.choice)
 		rpc_id(1, "hello", FireAuth.get_nickname(), PuzzleVar.lobby_number, puzzle_id)
 	else:
 		print("ERROR::NetworkManager: Unable to register player, FireAuth is offline or box ID invalid")

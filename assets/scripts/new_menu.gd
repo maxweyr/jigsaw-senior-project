@@ -1,19 +1,26 @@
 extends Control
 
-const PuzzleCatalogService = preload("res://assets/scripts/puzzle/puzzle_catalog_service.gd")
+const PuzzleDownloader = preload("res://assets/scripts/puzzle/puzzle_downloader.gd")
+const RemotePuzzleSource = preload("res://assets/scripts/puzzle/remote_puzzle_source.gd")
 const PuzzleAssetCache = preload("res://assets/scripts/puzzle/puzzle_asset_cache.gd")
 
 var progress_arr = []
 var overlay
 @onready var nickname_label: Label = $VBoxContainer/NicknameLabel
+@onready var single_player_button: Button = $"VBoxContainer/select puzzle"
+@onready var play_online_button: Button = $VBoxContainer/PlayOnline
 var rename_popup: PopupPanel
 var nickname_line_edit: LineEdit
 var joining_online := false
 const STATUS_FONT = preload("res://assets/fonts/KiriFont.ttf")
 const STATUS_TEXT_COLOR = Color(0.941176, 0.67451, 0.0431373, 1)
-var _thumb_catalog := PuzzleCatalogService.new()
-var _thumb_cache := PuzzleAssetCache.new()
-var _thumbnail_preload_started := false
+const PREPARING_PREFIX := "Preparing puzzles"
+const DEFAULT_REMOTE_SIZE := 100
+var _join_downloader: Node
+var _remote_source := RemotePuzzleSource.new()
+var _asset_cache := PuzzleAssetCache.new()
+var _last_remote_resolve_error := ""
+var _connect_scene_change_queued := false
 
 func _ready():
 	rename_popup = get_node_or_null("RenamePopup")
@@ -38,19 +45,20 @@ func _ready():
 					PuzzleVar.images.append(file_name.replace(".import",""))
 				file_name = dir.get_next()
 			PuzzleVar.images.sort()
-		else:
-			print("An error occured trying to access the path")
 		PuzzleVar.open_first_time = false
 	
 	# Connect to network signals
 	if NetworkManager:
 		NetworkManager.client_connected.connect(_on_client_connected)
 		NetworkManager.connection_failed.connect(_on_connection_failed)
+	_join_downloader = PuzzleDownloader.new()
+	add_child(_join_downloader)
 	if FireAuth:
 		FireAuth.logged_in.connect(_on_login)
 		FireAuth.login_failed.connect(_on_login)
 	_refresh_nickname_display()
-	_start_thumbnail_preload()
+	_wire_catalog_cache()
+	_start_catalog_preload()
 
 	if PuzzleVar.auto_rejoin_online:
 		PuzzleVar.auto_rejoin_online = false
@@ -76,6 +84,14 @@ func _on_start_random_pressed():
 	get_tree().change_scene_to_file("res://assets/scenes/random_menu.tscn")
 
 func _on_select_puzzle_pressed():
+	if single_player_button and single_player_button.disabled:
+		var state := "idle"
+		if PuzzleCatalogCache:
+			state = str(PuzzleCatalogCache.get_progress().get("state", "idle"))
+		if state == "failed":
+			_show_simple_popup("Preparing Puzzles", "Unable to prepare remote puzzles. Retrying now.")
+			_start_catalog_preload(true)
+		return
 	$AudioStreamPlayer.play() # doesn't work, switches scenes too fast
 	# switches to a new scene that will ask you to
 	# actually select what image you want to solve
@@ -84,6 +100,8 @@ func _on_select_puzzle_pressed():
 
 func _on_play_online_pressed():
 	if joining_online:
+		return
+	if _is_catalog_loading():
 		return
 	$AudioStreamPlayer.play()
 	if !FireAuth.is_online:
@@ -97,7 +115,11 @@ func _on_play_online_pressed():
 
 	var lobby_choice := await FireAuth.get_lobby_choice(PuzzleVar.lobby_number)
 	if not lobby_choice.is_empty():
-		PuzzleVar.choice = lobby_choice
+		PuzzleVar.choice = await _resolve_choice_for_online_join(lobby_choice)
+		if PuzzleVar.choice.is_empty():
+			joining_online = false
+			_show_simple_popup("Puzzle Unavailable", _consume_remote_resolve_error("Unable to prepare selected puzzle assets for this client."))
+			return
 		_join_online_with_choice()
 		return
 
@@ -112,6 +134,9 @@ func _on_play_online_pressed():
 
 # Network signal handlers
 func _on_client_connected():
+	if _connect_scene_change_queued:
+		return
+	_connect_scene_change_queued = true
 	print("Connected to server successfully")
 	_clear_status_label("ConnectingLabel")
 	await FireAuth.update_my_player_entry(PuzzleVar.lobby_number)
@@ -133,10 +158,12 @@ func _on_client_connected():
 		timer.start()
 	else:
 		print("ERROR: network_manager is null!")
+		_connect_scene_change_queued = false
 
 func _on_connection_failed():
 	_clear_status_label("ConnectingLabel")
 	joining_online = false
+	_connect_scene_change_queued = false
 	
 	print("Connection to server failed")
 	
@@ -148,6 +175,7 @@ func _join_online_with_choice():
 		joining_online = false
 		_show_simple_popup("No Puzzle Selected", "Please wait for a puzzle selection before joining.")
 		return
+	_connect_scene_change_queued = false
 	_show_status_label("Connecting to server...", "ConnectingLabel")
 	print("Attempting to connect to server...")
 	if NetworkManager.join_server():
@@ -166,10 +194,21 @@ func _wait_for_lobby_choice_and_join():
 		attempts += 1
 	_clear_status_label("ConnectingLabel")
 	if choice.is_empty():
+		await FireAuth.release_lobby_selector(PuzzleVar.lobby_number)
+		var claimed := await FireAuth.try_claim_lobby_selector(PuzzleVar.lobby_number)
+		if claimed:
+			joining_online = false
+			PuzzleVar.is_online_selector = true
+			get_tree().change_scene_to_file("res://assets/scenes/select_puzzle.tscn")
+			return
 		joining_online = false
 		_show_simple_popup("Lobby Waiting", "No puzzle selected yet. Please try again in a moment.")
 		return
-	PuzzleVar.choice = choice
+	PuzzleVar.choice = await _resolve_choice_for_online_join(choice)
+	if PuzzleVar.choice.is_empty():
+		joining_online = false
+		_show_simple_popup("Puzzle Unavailable", _consume_remote_resolve_error("Unable to prepare selected puzzle assets for this client."))
+		return
 	_join_online_with_choice()
 
 func _auto_rejoin_after_kick():
@@ -181,8 +220,199 @@ func _auto_rejoin_after_kick():
 		_clear_status_label("ConnectingLabel")
 		_show_simple_popup("Reconnect", "Host selected a new puzzle. Please press Play Online to rejoin.")
 		return
-	PuzzleVar.choice = choice
+	PuzzleVar.choice = await _resolve_choice_for_online_join(choice)
+	if PuzzleVar.choice.is_empty():
+		joining_online = false
+		_clear_status_label("ConnectingLabel")
+		_show_simple_popup("Reconnect", _consume_remote_resolve_error("Host selected a puzzle that could not be prepared locally."))
+		return
 	_join_online_with_choice()
+
+func _resolve_choice_for_online_join(raw_choice: Dictionary) -> Dictionary:
+	_last_remote_resolve_error = ""
+	if raw_choice.is_empty():
+		return {}
+	if str(raw_choice.get("source", "local")) != "remote":
+		return raw_choice
+	var normalized := _normalize_remote_choice(raw_choice)
+	if normalized.is_empty():
+		_last_remote_resolve_error = "Puzzle metadata unavailable: missing puzzle identifier."
+		return {}
+	if _has_local_remote_assets(normalized):
+		return _build_local_remote_choice(normalized)
+
+	var canonical := _resolve_remote_choice_from_catalog(normalized)
+	if canonical.is_empty():
+		return {}
+
+	var selected_size := _resolve_choice_size(canonical)
+	var resolved := await _remote_source.resolve_choice(canonical, selected_size, _join_downloader)
+	return resolved
+
+func _normalize_remote_choice(raw_choice: Dictionary) -> Dictionary:
+	var normalized := raw_choice.duplicate(true)
+	normalized["source"] = "remote"
+	normalized["id"] = str(normalized.get("id", raw_choice.get("base_name", "")))
+	if normalized["id"] == "":
+		return {}
+	normalized["asset_version"] = int(raw_choice.get("asset_version", normalized.get("asset_version", 1)))
+	if int(normalized.get("asset_version", 0)) <= 0:
+		return {}
+	normalized["size"] = _resolve_choice_size(normalized)
+	if normalized.has("title") == false:
+		normalized["title"] = str(raw_choice.get("title", normalized["id"]))
+	return normalized
+
+func _resolve_remote_choice_from_catalog(choice: Dictionary) -> Dictionary:
+	var puzzle_id := str(choice.get("id", ""))
+	if puzzle_id == "":
+		_last_remote_resolve_error = "Puzzle metadata unavailable: missing puzzle identifier."
+		return {}
+	var entry := _find_catalog_entry_by_id(puzzle_id)
+	if entry.is_empty():
+		_last_remote_resolve_error = "Puzzle metadata unavailable for \"%s\". Please retry once catalog sync completes." % puzzle_id
+		return {}
+
+	var selected_size := _resolve_choice_size(choice)
+	var size_options = entry.get("size_options", [])
+	if size_options is Array and not size_options.is_empty():
+		var matched := false
+		for opt in size_options:
+			if int(opt) == selected_size:
+				matched = true
+				break
+		if not matched:
+			selected_size = int(size_options[0])
+			if selected_size <= 0:
+				selected_size = DEFAULT_REMOTE_SIZE
+
+	var requested_version := int(choice.get("asset_version", 1))
+	var catalog_version := int(entry.get("asset_version", requested_version))
+	if requested_version > 0 and catalog_version != requested_version:
+		_last_remote_resolve_error = "Puzzle version mismatch for \"%s\" (host v%d, catalog v%d)." % [puzzle_id, requested_version, catalog_version]
+		return {}
+	var bundle_paths = entry.get("bundle_paths", {})
+	var bundle_path := _dict_string_for_size(bundle_paths, selected_size)
+	if not _is_shareable_bundle_path(bundle_path):
+		_last_remote_resolve_error = "Puzzle bundle metadata for \"%s\" is incomplete. Please retry." % puzzle_id
+		return {}
+
+	return {
+		"id": puzzle_id,
+		"title": str(entry.get("title", choice.get("title", puzzle_id))),
+		"source": "remote",
+		"size": selected_size,
+		"asset_version": catalog_version,
+		"thumb_path": str(entry.get("thumb_path", "")),
+		"bundle_paths": bundle_paths,
+		"bundle_bytes": entry.get("bundle_bytes", {}),
+		"bundle_sha256": entry.get("bundle_sha256", {}),
+		"size_options": size_options if size_options is Array else [selected_size]
+	}
+
+func _find_catalog_entry_by_id(puzzle_id: String) -> Dictionary:
+	if not PuzzleCatalogCache:
+		return {}
+	for entry_raw in PuzzleCatalogCache.get_ready_snapshot():
+		if not (entry_raw is Dictionary):
+			continue
+		var entry: Dictionary = entry_raw
+		if str(entry.get("id", "")) != puzzle_id:
+			continue
+		return entry.duplicate(true)
+	return {}
+
+func _has_local_remote_assets(choice: Dictionary) -> bool:
+	if str(choice.get("source", "local")) != "remote":
+		return false
+	var resolved_dir := str(choice.get("resolved_dir", ""))
+	if resolved_dir != "" and FileAccess.file_exists(resolved_dir.path_join("pieces/pieces.json")):
+		return true
+	var puzzle_id := str(choice.get("id", choice.get("base_name", "")))
+	if puzzle_id == "":
+		return false
+	var size := _resolve_choice_size(choice)
+	var cache_id := _resolve_remote_cache_id(puzzle_id, size, choice.get("bundle_paths", {}))
+	var version := int(choice.get("asset_version", 1))
+	return _asset_cache.is_cached_and_valid(cache_id, version)
+
+func _build_local_remote_choice(choice: Dictionary) -> Dictionary:
+	var local_root := str(choice.get("resolved_dir", ""))
+	var size := _resolve_choice_size(choice)
+	if local_root == "":
+		var puzzle_id := str(choice.get("id", choice.get("base_name", "")))
+		var cache_id := _resolve_remote_cache_id(puzzle_id, size, choice.get("bundle_paths", {}))
+		var version := int(choice.get("asset_version", 1))
+		local_root = _asset_cache.get_version_dir(cache_id, version)
+	var ref_candidates = [
+		local_root.path_join("reference.jpg"),
+		local_root.path_join("images/full.jpg"),
+		local_root.path_join("thumb.jpg"),
+	]
+	var ref_image := ""
+	for path in ref_candidates:
+		if FileAccess.file_exists(path):
+			ref_image = path
+			break
+	if ref_image == "":
+		ref_image = local_root.path_join("thumb.jpg")
+	return {
+		"base_name": str(choice.get("id", choice.get("base_name", "remote_puzzle"))),
+		"base_file_path": local_root,
+		"file_path": ref_image,
+		"size": size,
+		"source": "remote",
+		"resolved_dir": local_root,
+		"asset_version": int(choice.get("asset_version", 1))
+	}
+
+func _resolve_remote_cache_id(puzzle_id: String, selected_size: int, _raw_bundle_paths) -> String:
+	if selected_size <= 0:
+		return puzzle_id
+	var suffix := "_%d" % selected_size
+	if puzzle_id.ends_with(suffix):
+		return puzzle_id
+	return "%s%s" % [puzzle_id, suffix]
+
+func _resolve_choice_size(choice: Dictionary) -> int:
+	var explicit := int(choice.get("size", 0))
+	if explicit > 0:
+		return explicit
+	var options = choice.get("size_options", [])
+	if options is Array and not options.is_empty():
+		var fallback := int(options[0])
+		if fallback > 0:
+			return fallback
+	return DEFAULT_REMOTE_SIZE
+
+func _is_shareable_bundle_path(bundle_path: String) -> bool:
+	if bundle_path == "":
+		return false
+	return not bundle_path.begins_with("cached://")
+
+func _dict_string_for_size(raw_map, selected_size: int) -> String:
+	if not (raw_map is Dictionary):
+		return ""
+	var dict_map: Dictionary = raw_map
+	if dict_map.has(str(selected_size)):
+		return str(dict_map[str(selected_size)])
+	if dict_map.has(selected_size):
+		return str(dict_map[selected_size])
+	var with_zip := "%d.zip" % selected_size
+	if dict_map.has(with_zip):
+		return str(dict_map[with_zip])
+	for key in dict_map.keys():
+		var parsed := int(str(key).trim_suffix(".zip"))
+		if parsed == selected_size:
+			return str(dict_map[key])
+	return ""
+
+func _consume_remote_resolve_error(default_message: String) -> String:
+	var msg := _last_remote_resolve_error
+	_last_remote_resolve_error = ""
+	if msg == "":
+		return default_message
+	return msg
 
 func _on_quit_pressed():
 	# Quit the game (desktop-safe). Avoid OS shutdown commands, which typically fail without
@@ -206,33 +436,96 @@ func _input(event):
 
 func _on_login() -> void:
 	overlay.visible = false # Hide the overlay after login completes
-	_start_thumbnail_preload()
+	_start_catalog_preload()
 
-func _start_thumbnail_preload() -> void:
-	if _thumbnail_preload_started:
+func _wire_catalog_cache() -> void:
+	if not PuzzleCatalogCache:
+		if single_player_button:
+			single_player_button.disabled = false
 		return
-	_thumbnail_preload_started = true
-	_preload_remote_thumbnails.call_deferred()
+	if not PuzzleCatalogCache.preload_started.is_connected(_on_catalog_preload_started):
+		PuzzleCatalogCache.preload_started.connect(_on_catalog_preload_started)
+	if not PuzzleCatalogCache.preload_progress.is_connected(_on_catalog_preload_progress):
+		PuzzleCatalogCache.preload_progress.connect(_on_catalog_preload_progress)
+	if not PuzzleCatalogCache.preload_ready.is_connected(_on_catalog_preload_ready):
+		PuzzleCatalogCache.preload_ready.connect(_on_catalog_preload_ready)
+	if not PuzzleCatalogCache.preload_failed.is_connected(_on_catalog_preload_failed):
+		PuzzleCatalogCache.preload_failed.connect(_on_catalog_preload_failed)
+	_apply_catalog_cache_state()
 
-func _preload_remote_thumbnails() -> void:
-	await get_tree().process_frame
-	var remote_entries = await _thumb_catalog.fetch_enabled_puzzles()
-	for entry in remote_entries:
-		var puzzle_id := str(entry.get("id", ""))
-		var version := int(entry.get("asset_version", 1))
-		var thumb_cache := _thumb_cache.get_version_dir(puzzle_id, version).path_join("thumb.jpg")
-		if FileAccess.file_exists(thumb_cache):
-			continue
+func _apply_catalog_cache_state() -> void:
+	if not PuzzleCatalogCache:
+		return
+	var progress := PuzzleCatalogCache.get_progress()
+	var state := str(progress.get("state", "idle"))
+	if state == "ready":
+		_set_single_player_ready()
+		return
+	if state == "loading":
+		var done := int(progress.get("done", 0))
+		var total := int(progress.get("total", 0))
+		var text := PREPARING_PREFIX
+		if total > 0:
+			text = "%s (%d/%d)" % [PREPARING_PREFIX, done, total]
+		_set_single_player_loading(text)
+		return
+	if state == "failed":
+		_set_single_player_ready()
+		return
+	_set_single_player_loading(PREPARING_PREFIX)
 
-		var thumb_path := str(entry.get("thumb_path", ""))
-		if thumb_path == "":
-			continue
-		var task = await Firebase.Storage.ref(thumb_path).get_data()
-		if task == null or int(task.result) != OK:
-			continue
-		if int(task.response_code) < 200 or int(task.response_code) >= 300:
-			continue
-		_thumb_cache.write_bytes(thumb_cache, task.data)
+func _start_catalog_preload(force := false) -> void:
+	if not PuzzleCatalogCache:
+		return
+	PuzzleCatalogCache.start_preload(force)
+	_apply_catalog_cache_state()
+
+func _on_catalog_preload_started() -> void:
+	_set_single_player_loading(PREPARING_PREFIX)
+
+func _on_catalog_preload_progress(done: int, total: int) -> void:
+	var text := PREPARING_PREFIX
+	if total > 0:
+		text = "%s (%d/%d)" % [PREPARING_PREFIX, done, total]
+	_set_single_player_loading(text)
+
+func _on_catalog_preload_ready() -> void:
+	_set_single_player_ready()
+
+func _on_catalog_preload_failed(_reason: String) -> void:
+	_set_single_player_ready()
+
+func _set_single_player_loading(text: String) -> void:
+	if not single_player_button:
+		return
+	single_player_button.disabled = true
+	single_player_button.text = text
+	_set_online_loading(text)
+
+func _set_single_player_ready() -> void:
+	if not single_player_button:
+		return
+	single_player_button.disabled = false
+	single_player_button.text = "Single Player"
+	_set_online_ready()
+
+func _set_online_loading(text: String) -> void:
+	if not play_online_button:
+		return
+	play_online_button.disabled = true
+	play_online_button.text = text
+
+func _set_online_ready() -> void:
+	if not play_online_button:
+		return
+	play_online_button.disabled = false
+	play_online_button.text = "Play Online"
+
+func _is_catalog_loading() -> bool:
+	if not PuzzleCatalogCache:
+		return false
+	var state := str(PuzzleCatalogCache.get_progress().get("state", "idle"))
+	return state == "loading"
 
 func _refresh_nickname_display():
 	if nickname_label:
