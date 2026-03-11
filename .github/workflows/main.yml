@@ -19,17 +19,21 @@ jobs:
       matrix:
         include:
           - preset: LinuxDesktop
-            out: build/linux/jigsaw.x86_64
-            artifact: Client-linux
+            artifact_suffix: LIN
+            artifact_ext: x86_64
+            include_version: false
           - preset: LinuxServer
-            out: build/server/jigsaw_server.x86_64
-            artifact: Server-linux
+            artifact_suffix: _server
+            artifact_ext: x86_64
+            include_version: false
           - preset: Windows
-            out: build/windows/jigsaw.exe
-            artifact: Client-windows
+            artifact_suffix: WIN
+            artifact_ext: exe
+            include_version: true
           - preset: macOS
-            out: build/mac/jigsaw.zip
-            artifact: Client-mac
+            artifact_suffix: MAC
+            artifact_ext: zip
+            include_version: true
 
     steps:
       - uses: actions/checkout@v4
@@ -55,7 +59,32 @@ jobs:
 
       - name: Make output folders
         run: |
-          mkdir -p build/linux build/server build/windows build/mac
+          mkdir -p build
+
+      - name: Derive artifact names from project config
+        id: meta
+        run: |
+          APP_NAME=$(sed -n 's/^config\/name="\([^"]*\)"/\1/p' project.godot | head -n 1)
+          APP_VERSION=$(sed -n 's/^config\/version="\([^"]*\)"/\1/p' project.godot | head -n 1)
+
+          if [ -z "$APP_NAME" ]; then
+            echo "Failed to read config/name from project.godot" >&2
+            exit 1
+          fi
+
+          FILE_NAME="${APP_NAME}${{ matrix.artifact_suffix }}"
+          if [ "${{ matrix.include_version }}" = "true" ]; then
+            if [ -z "$APP_VERSION" ]; then
+              echo "Failed to read config/version from project.godot" >&2
+              exit 1
+            fi
+            VERSION_UNDERSCORED=${APP_VERSION//./_}
+            FILE_NAME="${FILE_NAME}_${VERSION_UNDERSCORED}"
+          fi
+
+          FILE_NAME="${FILE_NAME}.${{ matrix.artifact_ext }}"
+          echo "artifact_name=$FILE_NAME" >> "$GITHUB_OUTPUT"
+          echo "out_path=build/$FILE_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Import project assets
         run: |
@@ -64,13 +93,13 @@ jobs:
       # Release export (change to --export-debug if you want debug builds)
       - name: Export
         run: |
-          godot --headless --path . --verbose --export-release "${{ matrix.preset }}" "${{ matrix.out }}"
+          godot --headless --path . --verbose --export-release "${{ matrix.preset }}" "${{ steps.meta.outputs.out_path }}"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
-          path: ${{ matrix.out }}
+          name: ${{ steps.meta.outputs.artifact_name }}
+          path: ${{ steps.meta.outputs.out_path }}
 
   deploy_beta:
     name: Deploy Server To Beta
@@ -87,8 +116,8 @@ jobs:
       - name: Download server artifact
         uses: actions/download-artifact@v4
         with:
-          name: Server-linux
-          path: build/server
+          name: jigsaw_server.x86_64
+          path: build
 
       - name: Configure SSH key
         run: |
@@ -100,7 +129,7 @@ jobs:
 
       - name: Upload server binary
         run: |
-          scp -i ~/.ssh/id_ed25519 build/server/jigsaw_server.x86_64 "$BETA_USER@$BETA_HOST:$BETA_REMOTE_DIR/jigsaw_server.x86_64"
+          scp -i ~/.ssh/id_ed25519 build/jigsaw_server.x86_64 "$BETA_USER@$BETA_HOST:$BETA_REMOTE_DIR/jigsaw_server.x86_64"
 
       - name: Verify SSH connection
         run: |
