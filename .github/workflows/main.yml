@@ -78,7 +78,7 @@ jobs:
               echo "Failed to read config/version from project.godot" >&2
               exit 1
             fi
-            VERSION_UNDERSCORED=${APP_VERSION//./_}
+            VERSION_UNDERSCORED=$(printf '%s' "$APP_VERSION" | tr '.' '_')
             FILE_NAME="${FILE_NAME}_${VERSION_UNDERSCORED}"
           fi
 
