@@ -19,21 +19,17 @@ jobs:
       matrix:
         include:
           - preset: LinuxDesktop
-            artifact_suffix: LIN
-            artifact_ext: x86_64
-            include_version: false
+            out: build/linux/jigsaw.x86_64
+            artifact: Client-linux
           - preset: LinuxServer
-            artifact_suffix: _server
-            artifact_ext: x86_64
-            include_version: false
+            out: build/server/jigsaw_server.x86_64
+            artifact: Server-linux
           - preset: Windows
-            artifact_suffix: WIN
-            artifact_ext: exe
-            include_version: true
+            out: build/windows/jigsaw.exe
+            artifact: Client-windows
           - preset: macOS
-            artifact_suffix: MAC
-            artifact_ext: zip
-            include_version: true
+            out: build/mac/jigsaw.zip
+            artifact: Client-mac
 
     steps:
       - uses: actions/checkout@v4
@@ -59,32 +55,7 @@ jobs:
 
       - name: Make output folders
         run: |
-          mkdir -p build
-
-      - name: Derive artifact names from project config
-        id: meta
-        run: |
-          APP_NAME=$(sed -n 's/^config\/name="\([^"]*\)"/\1/p' project.godot | head -n 1)
-          APP_VERSION=$(sed -n 's/^config\/version="\([^"]*\)"/\1/p' project.godot | head -n 1)
-
-          if [ -z "$APP_NAME" ]; then
-            echo "Failed to read config/name from project.godot" >&2
-            exit 1
-          fi
-
-          FILE_NAME="${APP_NAME}${{ matrix.artifact_suffix }}"
-          if [ "${{ matrix.include_version }}" = "true" ]; then
-            if [ -z "$APP_VERSION" ]; then
-              echo "Failed to read config/version from project.godot" >&2
-              exit 1
-            fi
-            VERSION_UNDERSCORED=$(printf '%s' "$APP_VERSION" | tr '.' '_')
-            FILE_NAME="${FILE_NAME}_${VERSION_UNDERSCORED}"
-          fi
-
-          FILE_NAME="${FILE_NAME}.${{ matrix.artifact_ext }}"
-          echo "artifact_name=$FILE_NAME" >> "$GITHUB_OUTPUT"
-          echo "out_path=build/$FILE_NAME" >> "$GITHUB_OUTPUT"
+          mkdir -p build/linux build/server build/windows build/mac
 
       - name: Import project assets
         run: |
@@ -93,13 +64,13 @@ jobs:
       # Release export (change to --export-debug if you want debug builds)
       - name: Export
         run: |
-          godot --headless --path . --verbose --export-release "${{ matrix.preset }}" "${{ steps.meta.outputs.out_path }}"
+          godot --headless --path . --verbose --export-release "${{ matrix.preset }}" "${{ matrix.out }}"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.meta.outputs.artifact_name }}
-          path: ${{ steps.meta.outputs.out_path }}
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.out }}
 
   deploy_beta:
     name: Deploy Server To Beta
@@ -116,8 +87,8 @@ jobs:
       - name: Download server artifact
         uses: actions/download-artifact@v4
         with:
-          name: jigsaw_server.x86_64
-          path: build
+          name: Server-linux
+          path: build/server
 
       - name: Configure SSH key
         run: |
@@ -127,10 +98,9 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "$BETA_HOST" >> ~/.ssh/known_hosts
 
-      - name: Remove old beta binary and upload replacement
+      - name: Upload server binary
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes "$BETA_USER@$BETA_HOST" "set -e; cd \"$BETA_REMOTE_DIR\"; pkill -f \"^\\./$BETA_REMOTE_BIN_NAME --server --stage=beta\$\" || true; pkill -f \"^\\./$BETA_REMOTE_BIN_NAME --stage=beta\$\" || true; pkill -f \"^\\./jigsaw_SERVER_.* --server --stage=beta\$\" || true; pkill -f \"^\\./jigsaw_SERVER_.* --stage=beta\$\" || true; rm -f \"$BETA_REMOTE_BIN_NAME\" jigsaw_server.x86_64"
-          scp -i ~/.ssh/id_ed25519 build/jigsaw_server.x86_64 "$BETA_USER@$BETA_HOST:$BETA_REMOTE_DIR/$BETA_REMOTE_BIN_NAME"
+          scp -i ~/.ssh/id_ed25519 build/server/jigsaw_server.x86_64 "$BETA_USER@$BETA_HOST:$BETA_REMOTE_DIR/jigsaw_server.x86_64"
 
       - name: Verify SSH connection
         run: |
@@ -138,4 +108,4 @@ jobs:
 
       - name: Replace and start beta server
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes "$BETA_USER@$BETA_HOST" "set -e; cd \"$BETA_REMOTE_DIR\"; chmod +x \"$BETA_REMOTE_BIN_NAME\"; pkill -f \"^\\./$BETA_REMOTE_BIN_NAME --server --stage=beta\$\" || true; pkill -f \"^\\./$BETA_REMOTE_BIN_NAME --stage=beta\$\" || true; pkill -f \"^\\./jigsaw_SERVER_.* --server --stage=beta\$\" || true; pkill -f \"^\\./jigsaw_SERVER_.* --stage=beta\$\" || true; nohup \"./$BETA_REMOTE_BIN_NAME\" --server --stage=beta > beta_server.log 2>&1 < /dev/null & sleep 2; pgrep -af \"^\\./$BETA_REMOTE_BIN_NAME --server --stage=beta\$\""
+          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes "$BETA_USER@$BETA_HOST" "set -e; cd \"$BETA_REMOTE_DIR\"; mv -f jigsaw_server.x86_64 \"$BETA_REMOTE_BIN_NAME\"; chmod +x \"$BETA_REMOTE_BIN_NAME\"; OLD_PIDS=\$(pgrep -f \"^\\./$BETA_REMOTE_BIN_NAME --stage=beta\$\" || true); if [ -n \"\$OLD_PIDS\" ]; then kill \$OLD_PIDS; fi; nohup \"./$BETA_REMOTE_BIN_NAME\" --stage=beta > beta_server.log 2>&1 < /dev/null & sleep 2; pgrep -af \"^\\./$BETA_REMOTE_BIN_NAME --stage=beta\$\""
