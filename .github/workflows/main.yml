@@ -127,9 +127,10 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "$BETA_HOST" >> ~/.ssh/known_hosts
 
-      - name: Upload server binary
+      - name: Remove old beta binary and upload replacement
         run: |
-          scp -i ~/.ssh/id_ed25519 build/jigsaw_server.x86_64 "$BETA_USER@$BETA_HOST:$BETA_REMOTE_DIR/jigsaw_server.x86_64"
+          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes "$BETA_USER@$BETA_HOST" "set -e; cd \"$BETA_REMOTE_DIR\"; pkill -f \"stage=beta\" || true; rm -f \"$BETA_REMOTE_BIN_NAME\" jigsaw_server.x86_64"
+          scp -i ~/.ssh/id_ed25519 build/jigsaw_server.x86_64 "$BETA_USER@$BETA_HOST:$BETA_REMOTE_DIR/$BETA_REMOTE_BIN_NAME"
 
       - name: Verify SSH connection
         run: |
@@ -137,4 +138,4 @@ jobs:
 
       - name: Replace and start beta server
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes "$BETA_USER@$BETA_HOST" "set -e; cd \"$BETA_REMOTE_DIR\"; mv -f jigsaw_server.x86_64 \"$BETA_REMOTE_BIN_NAME\"; chmod +x \"$BETA_REMOTE_BIN_NAME\"; OLD_PIDS=\$(pgrep -f \"stage=beta\" || true); if [ -n \"\$OLD_PIDS\" ]; then kill \$OLD_PIDS; fi; nohup \"./$BETA_REMOTE_BIN_NAME\" --server --stage=beta > beta_server.log 2>&1 < /dev/null & sleep 2; pgrep -af \"^\\./$BETA_REMOTE_BIN_NAME --server --stage=beta\$\""
+          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes "$BETA_USER@$BETA_HOST" "set -e; cd \"$BETA_REMOTE_DIR\"; chmod +x \"$BETA_REMOTE_BIN_NAME\"; OLD_PIDS=\$(pgrep -f \"stage=beta\" || true); if [ -n \"\$OLD_PIDS\" ]; then kill \$OLD_PIDS; fi; nohup \"./$BETA_REMOTE_BIN_NAME\" --server --stage=beta > beta_server.log 2>&1 < /dev/null & sleep 2; pgrep -af \"^\\./$BETA_REMOTE_BIN_NAME --server --stage=beta\$\""
