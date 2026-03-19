@@ -21,15 +21,19 @@ jobs:
           - preset: LinuxDesktop
             out: build/linux/jigsaw.x86_64
             artifact: Client-linux
+            artifact_path: build/linux/jigsaw.x86_64
           - preset: LinuxServer
             out: build/server/jigsaw_server.x86_64
             artifact: Server-linux
+            artifact_path: build/server
           - preset: Windows
             out: build/windows/jigsaw.exe
             artifact: Client-windows
+            artifact_path: build/windows/jigsaw.exe
           - preset: macOS
             out: build/mac/jigsaw.zip
             artifact: Client-mac
+            artifact_path: build/mac/jigsaw.zip
 
     steps:
       - uses: actions/checkout@v4
@@ -70,7 +74,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: ${{ matrix.out }}
+          path: ${{ matrix.artifact_path }}
 
   deploy_beta:
     name: Deploy Server To Beta
