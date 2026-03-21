@@ -11,7 +11,7 @@ const BETA_PORT := 8090
 const FIREBASE_PROD := {
 	"env_name": "prod",
 	"project_id": "jigsaw-59175",
-	"users_collection": "users",
+	"users_collection": "sp_users",
 	"servers_collection": "servers",
 }
 

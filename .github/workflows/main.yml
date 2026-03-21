@@ -1,14 +1,16 @@
-name: Build Godot Project (Release)
+name: Build Executables
 
 on:
   workflow_dispatch: {}
-  release:
-    types: [created]
+  push:
+    branches: [main]
 
 jobs:
-  export:
+  build:
+    name: Build Executables
     runs-on: ubuntu-latest
 
+    # Godot CI image
     container:
       image: barichello/godot-ci:4.6
       options: --user root
@@ -20,15 +22,19 @@ jobs:
           - preset: LinuxDesktop
             out: build/linux/jigsaw.x86_64
             artifact: Client-linux
+            artifact_path: build/linux/jigsaw.x86_64
           - preset: LinuxServer
             out: build/server/jigsaw_server.x86_64
             artifact: Server-linux
+            artifact_path: build/server
           - preset: Windows
             out: build/windows/jigsaw.exe
             artifact: Client-windows
+            artifact_path: build/windows/jigsaw.exe
           - preset: macOS
             out: build/mac/jigsaw.zip
             artifact: Client-mac
+            artifact_path: build/mac/jigsaw.zip
 
     steps:
       - uses: actions/checkout@v4
@@ -50,6 +56,19 @@ jobs:
       - name: Install Linux runtime deps
         run: |
           apt-get update
+          apt-get install -y curl unzip fontconfig libfontconfig1
+
+      - name: Install Godot export templates
+        run: |
+          TEMPLATE_VERSION="4.6.stable"
+          TEMPLATE_URL="https://github.com/godotengine/godot/releases/download/4.6-stable/Godot_v4.6-stable_export_templates.tpz"
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/$TEMPLATE_VERSION"
+
+          mkdir -p "$TEMPLATE_DIR"
+          curl -fsSL "$TEMPLATE_URL" -o /tmp/godot_export_templates.tpz
+          unzip -q -o /tmp/godot_export_templates.tpz -d /tmp/godot_export_templates
+          cp -r /tmp/godot_export_templates/templates/* "$TEMPLATE_DIR/"
+          ls -la "$TEMPLATE_DIR"
           apt-get install -y --no-install-recommends fontconfig libfontconfig1
           rm -rf /var/lib/apt/lists/*
 
@@ -57,12 +76,55 @@ jobs:
         run: |
           mkdir -p build/linux build/server build/windows build/mac
 
+      - name: Import project assets
+        run: |
+          godot --headless --path . --import
+
+      # Release export (change to --export-debug if you want debug builds)
       - name: Export
         run: |
-          godot --headless --verbose --export-release "${{ matrix.preset }}" "${{ matrix.out }}"
+          godot --headless --path . --verbose --export-release "${{ matrix.preset }}" "${{ matrix.out }}"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: ${{ matrix.out }}
+          path: ${{ matrix.artifact_path }}
+
+  deploy_beta:
+    name: Deploy Server To Beta
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    env:
+      BETA_HOST: ${{ secrets.BETA_HOST }}
+      BETA_USER: ${{ secrets.BETA_USER }}
+      BETA_SSH_PRIVATE_KEY: ${{ secrets.BETA_SSH_PRIVATE_KEY }}
+      BETA_REMOTE_DIR: ${{ vars.BETA_REMOTE_DIR }}
+      BETA_REMOTE_BIN_NAME: ${{ vars.BETA_REMOTE_BIN_NAME }}
+    steps:
+      - name: Download server artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Server-linux
+          path: build/server
+
+      - name: Configure SSH key
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$BETA_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$BETA_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload server binary
+        run: |
+          scp -i ~/.ssh/id_ed25519 build/server/jigsaw_server.x86_64 "$BETA_USER@$BETA_HOST:$BETA_REMOTE_DIR/jigsaw_server.x86_64"
+
+      - name: Verify SSH connection
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes "$BETA_USER@$BETA_HOST" "echo connected && whoami && pwd"
+
+      - name: Replace and start beta server
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes "$BETA_USER@$BETA_HOST" "set -e; cd \"$BETA_REMOTE_DIR\"; mv -f jigsaw_server.x86_64 \"$BETA_REMOTE_BIN_NAME\"; chmod +x \"$BETA_REMOTE_BIN_NAME\"; OLD_PIDS=\$(pgrep -f \"^\\./$BETA_REMOTE_BIN_NAME --stage=beta\$\" || true); if [ -n \"\$OLD_PIDS\" ]; then kill \$OLD_PIDS; fi; nohup \"./$BETA_REMOTE_BIN_NAME\" --stage=beta > beta_server.log 2>&1 < /dev/null & sleep 2; pgrep -af \"^\\./$BETA_REMOTE_BIN_NAME --stage=beta\$\""
